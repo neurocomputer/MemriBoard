@@ -52,10 +52,14 @@ class Serial():
         line = None
         connect = 1
         while connect:
-            line = self.ser.readline()
-            if line:
+            try:
+                line = self.ser.readline()
+                if line:
+                    break
+                connect -= 1
+            except OSError as se:
+                print("Ошибка порта:", str(se))
                 break
-            connect -= 1
         return line
 
     def com_close(self):
@@ -70,4 +74,9 @@ class Serial():
         """
         Запись в COM порт
         """
-        return self.ser.write(data)
+        status = -1
+        try:
+            status = self.ser.write(data)
+        except OSError as se:
+            print("Ошибка порта:", str(se))
+        return status

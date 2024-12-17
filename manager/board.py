@@ -153,6 +153,8 @@ class Connector():
                 rec_data = list(map(int, str(rx, 'utf-8').strip().split(',')))
             except ValueError:
                 pass
+            except TypeError:
+                pass
             # записать в журнал
             if not self.silent:
                 self.logger.info('Recieved data: %s', rx)

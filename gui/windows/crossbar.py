@@ -130,7 +130,7 @@ class Window(QMainWindow):
         Периодическая проверка коннекта по таймеру
         """
         self.timer.timeout.connect(self.check_connection)
-        self.timer.start(50)
+        self.timer.start(200)
 
     # методы открытия диалоговых окон
 
@@ -337,7 +337,10 @@ class Window(QMainWindow):
                                                   ticket['terminate'],
                                                   self.man.blank_type):
             result = self.man.conn.impact(task[0]) # result = (resistance, id)
-        last_resistance = int(a2r(self.man, result[0]))
+        try:
+            last_resistance = int(a2r(self.man, result[0]))
+        except IndexError:
+            last_resistance = 0
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
         _ = self.man.db.update_ticket(ticket_id, 'status', 1)
         _ = self.man.db.update_experiment_status(experiment_id, 1)
