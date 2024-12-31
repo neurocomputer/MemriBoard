@@ -167,3 +167,4 @@ start.sh
 base.db
 settings.ini
 ticket.png
+*.cb

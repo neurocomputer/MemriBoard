@@ -10,6 +10,8 @@ from logging import Logger
 from configparser import ConfigParser
 from manager.comport import Serial
 from manager.blanks import blanks, fill_blank, gather
+from manager.service import d2v
+from simulator.src import load_crossbar_array, send_task_to_crossbar
 
 class Connector():
     """
@@ -21,6 +23,9 @@ class Connector():
     logger: Logger
     config: ConfigParser
     c_type: str
+    # для симулятора
+    crossbar_array: list
+    crossbar_serial: str
 
     def __init__(self, silent, logger, config, c_type, cb_type):
         self.serial = Serial()
@@ -29,6 +34,8 @@ class Connector():
         self.config = config
         self.c_type = c_type
         self.cb_type = cb_type
+        # для симулятора
+        self.crossbar_serial = self.config['gui']['last_crossbar_serial']
 
     def _kick_board(self, attempts: int) -> bool:
         """
@@ -72,6 +79,9 @@ class Connector():
         """
         open_flag = False
         if self.cb_type == 'simulator':
+            # загрузка симулятора
+            if self.cb_type == 'simulator':
+                _, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
             open_flag = True
         else:
             # кол-во попыток получить данные
@@ -196,10 +206,27 @@ class Connector():
         # режим симулятор
         elif self.cb_type == 'simulator':
             task_id = task["id"]
+            vol = d2v(int(self.config['board']['dac_bit']),
+                      float(self.config['board']['vol_ref_dac']),
+                      task['vol'],
+                      sign=task['sign'])
+            duration = task['t_ms'] * 1000 + task['t_us']
+            res = (send_task_to_crossbar(self.crossbar_serial,
+                                         self.crossbar_array,
+                                         vol = vol,
+                                         duration = duration,
+                                         wl = task['wl'],
+                                         bl = task['bl'],
+                                         vol_read = float(self.config['board']['vol_read']),
+                                         res_load = float(self.config['board']['res_load']),
+                                         res_switches = float(self.config['board']['res_switches']),
+                                         gain = float(self.config['board']['gain']),
+                                         adc_bit = int(self.config['board']['adc_bit']),
+                                         vol_ref_adc = float(self.config['board']['vol_ref_adc'])
+                                         ), task_id)
             task = gather(task) # собираем из словаря строку
             if not self.silent:
                 self.logger.info('Send %s', task.rstrip())
-            res = (random.randint(0,2**int(self.config['board']['adc_bit'])), task_id)
             time.sleep(0.06)
             if not self.silent:
                 self.logger.info('Recieved data: %s', str(res))

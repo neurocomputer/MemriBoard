@@ -17,6 +17,7 @@ from manager.service import a2r
 from manager.model.src import create_empty_db_crossbar
 from manager.service.global_settings import *
 from manager.model.db import DBOperate
+from simulator.src import create_crossbar_array
 
 class Manager(Application):
     """
@@ -118,6 +119,8 @@ class Manager(Application):
             if status:
                 self.ap_logger.info('crossbar #%d with serial %s added', crossbar_id, serial)
                 status_add = status
+                if cb_type == 'simulator': # создаем модель кроссбара
+                    create_crossbar_array(serial, row_num, col_num)
         return status_add
 
     def get_recorded_results(self) -> bool:
