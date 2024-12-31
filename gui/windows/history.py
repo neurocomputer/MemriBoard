@@ -70,8 +70,14 @@ class History(QDialog):
             for i,item in enumerate(raw_dac):
                 file_wr.writerow([item,
                                   raw_adc[i],
-                                  str(d2v(self.parent.man,item)).replace('.',','),
-                                  str(a2r(self.parent.man,raw_adc[i])).replace('.',',')])
+                                  str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,item)).replace('.',','),
+                                  str(a2r(self.parent.man.gain,
+                                          self.parent.man.res_load,
+                                          self.parent.man.vol_read,
+                                          self.parent.man.adc_bit,
+                                          self.parent.man.vol_ref_adc,
+                                          self.parent.man.res_switches,
+                                          raw_adc[i])).replace('.',',')])
         show_warning_messagebox(f'Выгружено в файл {fname}')
 
     def load_experiment(self) -> None:

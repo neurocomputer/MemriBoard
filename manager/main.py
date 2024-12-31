@@ -17,6 +17,7 @@ from manager.service import a2r
 from manager.model.src import create_empty_db_crossbar
 from manager.service.global_settings import *
 from manager.model.db import DBOperate
+from simulator.src import create_crossbar_array
 
 class Manager(Application):
     """
@@ -118,6 +119,8 @@ class Manager(Application):
             if status:
                 self.ap_logger.info('crossbar #%d with serial %s added', crossbar_id, serial)
                 status_add = status
+                if cb_type == 'simulator': # создаем модель кроссбара
+                    create_crossbar_array(serial, row_num, col_num)
         return status_add
 
     def get_recorded_results(self) -> bool:
@@ -297,7 +300,13 @@ class Manager(Application):
                              self._done_tickets)
             # сохраняем в БД
             if result:
-                last_resistance = int(a2r(self, result[0]))
+                last_resistance = int(a2r(self.gain,
+                                          self.res_load,
+                                          self.vol_read,
+                                          self.adc_bit,
+                                          self.vol_ref_adc,
+                                          self.res_switches,
+                                          result[0]))
                 status_update_complited_ticket = db.update_complited_ticket(exp_id, mem_id, last_resistance)
                 if not status_update_complited_ticket:
                     self.ap_logger.critical("db exp_id:%d mem_id:%d result:%s", exp_id, mem_id, str(result))
