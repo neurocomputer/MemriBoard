@@ -21,14 +21,14 @@ class Application():
     ap_config_path: str # путь к конфигу
     ap_config: ConfigParser # конфиг
     ap_logger: Logger # логгер
-    _dac_bit: int # разрядность ЦАП
-    _vol_ref_dac: float # опорное напряжение ЦАП
-    _res_load: int # нагрузочный резистор
-    _vol_read: float # напряжение чтения
-    _adc_bit: int # разрядность АЦП
-    _vol_ref_adc: float # опорное напряжение АЦП
-    _res_switches: float # сопротивление переключателей
-    _gain: int # усиление
+    dac_bit: int # разрядность ЦАП
+    vol_ref_dac: float # опорное напряжение ЦАП
+    res_load: int # нагрузочный резистор
+    vol_read: float # напряжение чтения
+    adc_bit: int # разрядность АЦП
+    vol_ref_adc: float # опорное напряжение АЦП
+    res_switches: float # сопротивление переключателей
+    gain: int # усиление
     menu: dict # меню режимов
     blank_type: str # тип бланка
     _port: str # com порт
@@ -65,14 +65,14 @@ class Application():
         self._port = self.ap_config['connector']['com_port']
         self.blank_type = self.ap_config['connector']['c_type']
         # для отдельных настроек создаем алиасы
-        self._dac_bit = int(self.ap_config['board']['dac_bit'])
-        self._vol_ref_dac = float(self.ap_config['board']['vol_ref_dac'])
-        self._res_load = int(self.ap_config['board']['res_load'])
-        self._vol_read = float(self.ap_config['board']['vol_read'])
-        self._adc_bit = int(self.ap_config['board']['adc_bit'])
-        self._vol_ref_adc = float(self.ap_config['board']['vol_ref_adc'])
-        self._res_switches = float(self.ap_config['board']['res_switches'])
-        self._gain = float(self.ap_config['board']['gain'])
+        self.dac_bit = int(self.ap_config['board']['dac_bit'])
+        self.vol_ref_dac = float(self.ap_config['board']['vol_ref_dac'])
+        self.res_load = int(self.ap_config['board']['res_load'])
+        self.vol_read = float(self.ap_config['board']['vol_read'])
+        self.adc_bit = int(self.ap_config['board']['adc_bit'])
+        self.vol_ref_adc = float(self.ap_config['board']['vol_ref_adc'])
+        self.res_switches = float(self.ap_config['board']['res_switches'])
+        self.gain = float(self.ap_config['board']['gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
 
     def save_settings(self, **kwargs):

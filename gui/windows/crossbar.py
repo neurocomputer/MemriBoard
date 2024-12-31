@@ -338,7 +338,13 @@ class Window(QMainWindow):
                                                   self.man.blank_type):
             result = self.man.conn.impact(task[0]) # result = (resistance, id)
         try:
-            last_resistance = int(a2r(self.man, result[0]))
+            last_resistance = int(a2r(self.man.gain,
+                                      self.man.res_load,
+                                      self.man.vol_read,
+                                      self.man.adc_bit,
+                                      self.man.vol_ref_adc,
+                                      self.man.res_switches,
+                                      result[0]))
         except IndexError:
             last_resistance = 0
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)

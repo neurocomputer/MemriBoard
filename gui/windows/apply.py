@@ -17,33 +17,9 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from manager.service import d2v, a2r
+from manager.service import d2v, a2r, a2c
 from manager.service.saves import save_list_to_bytearray
 from gui.src import show_choose_window, show_warning_messagebox
-
-# todo: перенести в manager
-def convert_adc_to_current(config_data, adc, vol, sign):
-    """
-    Конвертировать значение АЦП в ток
-    """
-    current = 0
-    vol = d2v(config_data, vol)
-    if sign:
-        vol = - vol
-    res = a2r(config_data, adc)
-    if res != 0:
-        current = vol/res
-    return current
-
-# todo: перенести в manager (проверить на совпадение с d2v)
-def convert_dac_to_voltage(config_data,vol,sign):
-    """
-    Конвертировать значение ЦАП в напряжение
-    """
-    x_item = d2v(config_data, vol)
-    if sign:
-        x_item = - x_item
-    return x_item
 
 class Apply(QDialog):
     """
@@ -155,17 +131,49 @@ class Apply(QDialog):
                                                      pen=pg.mkPen(width=3, color = (255, 0, 0)))
         # задание функции для отрисовки осей
         if self.ylabel_text == 'сопротивление, кОм':
-            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man, y)/1000
+            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y)/1000
         elif self.ylabel_text == 'сопротивление, Ом':
-            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man, y)
+            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y)
         elif self.ylabel_text == 'отсчеты АЦП':
             self.y_value_process = lambda y,vol,sign: y
         elif self.ylabel_text == 'ток, мкА':
-            self.y_value_process = lambda y,vol,sign: convert_adc_to_current(self.parent.man,y,vol,sign)/1e6
+            self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
+                                                          self.parent.man.vol_ref_dac,
+                                                          self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y,
+                                                          vol,
+                                                          sign)/1e6
         elif self.ylabel_text == 'ток, мА':
-            self.y_value_process = lambda y,vol,sign: convert_adc_to_current(self.parent.man,y,vol,sign)/1e3
+            self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
+                                                          self.parent.man.vol_ref_dac,
+                                                          self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y,
+                                                          vol,
+                                                          sign)/1e3
         if self.xlabel_text == 'напряжение, В':
-            self.x_value_process = lambda vol,sign,count: convert_dac_to_voltage(self.parent.man,vol,sign)
+            self.x_value_process = lambda vol,sign,count: d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,vol,sign=sign)
         elif self.xlabel_text == 'отсчеты':
             self.x_value_process = lambda vol,sign,count: count
         self.update_label_mem_id()
@@ -458,7 +466,7 @@ class ApplyExp(QThread):
                     # посылаем задачу в плату
                     # start_time_iter = time.time()
                     # прогнозируем ток
-                    current_predict = d2v(self.parent.parent.man, task[0]['vol']) / resistance_previous
+                    current_predict = d2v(self.parent.parent.man.dac_bit, self.parent.parent.man.vol_ref_dac, task[0]['vol']) / resistance_previous
                     if (task[0]['sign'] == 0 and current_predict <= 0.04) or (task[0]['sign'] == 1 and current_predict <= self.parent.parent.man.soft_cc):
                         #print(task[1])
                         result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id)
@@ -466,7 +474,13 @@ class ApplyExp(QThread):
                         if result:
                             self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right}")
                             save_list_to_bytearray(file, task[0]['vol'], result[0])
-                            resistance_previous = a2r(self.parent.parent.man, result[0])
+                            resistance_previous = a2r(self.parent.parent.man.gain,
+                                                      self.parent.parent.man.res_load,
+                                                      self.parent.parent.man.vol_read,
+                                                      self.parent.parent.man.adc_bit,
+                                                      self.parent.parent.man.vol_ref_adc,
+                                                      self.parent.parent.man.res_switches,
+                                                      result[0])
                             # проверка прерывания тикета
                             interrupt = task[1](result)
                             if interrupt:
@@ -481,7 +495,13 @@ class ApplyExp(QThread):
                 file.close()
                 # сохраняем в БД статус завершения
                 if result:
-                    last_resistance = int(a2r(self.parent.parent.man, result[0]))
+                    last_resistance = int(a2r(self.parent.parent.man.gain,
+                                              self.parent.parent.man.res_load,
+                                              self.parent.parent.man.vol_read,
+                                              self.parent.parent.man.adc_bit,
+                                              self.parent.parent.man.vol_ref_adc,
+                                              self.parent.parent.man.res_switches,
+                                              result[0]))
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно обновить сопротивление")

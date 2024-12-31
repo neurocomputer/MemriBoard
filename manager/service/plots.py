@@ -64,7 +64,7 @@ def plot_input_signal(parent,
                                         ticket['terminate'],
                                         parent.blank_type)
 
-    READ_VOLTAGE = parent._vol_read
+    READ_VOLTAGE = parent.vol_read
     READ_TIME = int(parent.ap_config['board']['read_time'])
     BLANK_TIME = int(parent.ap_config['board']['blank_time'])
     result = [] # отсчеты сигнала
@@ -72,7 +72,7 @@ def plot_input_signal(parent,
     # генерируем отсчеты сигнала и заполняем
     for tsk in task[0](*task[1]):
         count += 1
-        vol = d2v(parent, tsk[0]['vol'])
+        vol = d2v(parent.dac_bit, parent.vol_ref_dac, tsk[0]['vol'])
         t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
         sign = tsk[0]['sign']
         if sign:
@@ -127,13 +127,13 @@ def plot_input_signal_stem(parent,
                                         ticket['terminate'],
                                         parent.blank_type)
 
-    READ_VOLTAGE = parent._vol_read
+    READ_VOLTAGE = parent.vol_read
     result = [] # отсчеты сигнала
     count = 0
     # генерируем отсчеты сигнала и заполняем
     for tsk in task[0](*task[1]):
         count += 1
-        vol = d2v(parent, tsk[0]['vol'])
+        vol = d2v(parent.dac_bit, parent.vol_ref_dac, tsk[0]['vol'])
         t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
         sign = tsk[0]['sign']
         if sign:
@@ -170,7 +170,7 @@ def plot_with_save(parent,
                                         ticket['terminate'],
                                         parent.blank_type)
 
-    READ_VOLTAGE = parent._vol_read
+    READ_VOLTAGE = parent.vol_read
     READ_TIME = int(parent.ap_config['board']['read_time'])
     BLANK_TIME = int(parent.ap_config['board']['blank_time'])
     result_stem = [] # отсчеты сигнала
@@ -179,7 +179,7 @@ def plot_with_save(parent,
     # генерируем отсчеты сигнала и заполняем
     for tsk in task[0](*task[1]):
         count += 1
-        vol = d2v(parent, tsk[0]['vol'])
+        vol = d2v(parent.dac_bit, parent.vol_ref_dac, tsk[0]['vol'])
         t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
         sign = tsk[0]['sign']
         if sign:

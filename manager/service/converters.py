@@ -6,7 +6,7 @@
 
 from typing import Union
 
-def convert_volt_to_dac(parent, vol_value: float) -> int:
+def convert_volt_to_dac(dac_bit: int, vol_ref_dac: float, vol_value: float) -> int:
     """
     Конвертация напряжения в число для ЦАП
 
@@ -16,30 +16,70 @@ def convert_volt_to_dac(parent, vol_value: float) -> int:
     Returns:
         dac_value -- число для ЦАП
     """
-    dac_value = int(round(vol_value*(2**parent._dac_bit-1)/parent._vol_ref_dac,0))
+    dac_value = int(round(vol_value*(2**dac_bit-1)/vol_ref_dac,0))
     return dac_value
 
-def convert_dac_to_volt(parent, dac_value: int) -> float:
+def convert_dac_to_volt(dac_bit: int, vol_ref_dac: float, dac_value: int, **kwargs) -> float:
     """
     Конвертация числа для ЦАП в напряжение
 
     Arguments:
         dac_value -- число для ЦАП
+        kwargs -- знак напряжения
 
     Returns:
         vol_value -- значение в вольтах
     """
-    vol_value = round(dac_value/((2**parent._dac_bit-1)/parent._vol_ref_dac),3)
+    vol_value = round(dac_value/((2**dac_bit-1)/vol_ref_dac),3)
+    if 'sign' in kwargs:
+        if kwargs['sign']: # если есть знак
+            vol_value = -vol_value
     return vol_value
 
-def convert_adc_to_volt(parent, adc_value: int) -> float:
+def convert_adc_to_current(dac_bit: int,
+                           vol_ref_dac: float,
+                           gain: float,
+                           res_load: float,
+                           vol_read: float,
+                           adc_bit: int,
+                           vol_ref_adc: float,
+                           res_switches: float,
+                           adc_value: Union[str, int],
+                           dac_value: int,
+                           sign: int):
+    """
+    Конвертация значения АЦП в ток
+    """
+    current = 0
+    vol = convert_dac_to_volt(dac_bit, vol_ref_dac, dac_value, sign=sign)
+    res = convert_adc_to_res(gain,
+                             res_load,
+                             vol_read,
+                             adc_bit,
+                             vol_ref_adc,
+                             res_switches,
+                             adc_value)
+    if res != 0:
+        current = vol/res
+    return current
+
+def convert_adc_to_volt(gain: float,
+                        adc_bit: int,
+                        vol_ref_adc: float,
+                        adc_value: int) -> float:
     """
     Конвертация числа с АЦП в напряжение
     """
-    vol_value = round(((adc_value * parent._vol_ref_adc) / ((2 ** parent._adc_bit)-1)) / parent._gain, 5)
+    vol_value = round(((adc_value * vol_ref_adc) / ((2 ** adc_bit)-1)) / gain, 5)
     return vol_value
 
-def convert_adc_to_res(parent, adc_value: Union[str, int]) -> float:
+def convert_adc_to_res(gain: float,
+                       res_load: float,
+                       vol_read: float,
+                       adc_bit: int,
+                       vol_ref_adc: float,
+                       res_switches: float,
+                       adc_value: Union[str, int]) -> float:
     """
     Функция для перевода из АЦП в сопротивление. Если значение АЦП
     равно 0, то возвращает 2 МОм. Если с АЦП пришло не корректное
@@ -54,8 +94,8 @@ def convert_adc_to_res(parent, adc_value: Union[str, int]) -> float:
     """
     adc_value = int(adc_value)
     try:
-        res = (parent._gain*parent._res_load*parent._vol_read*(2**parent._adc_bit))/ \
-            (adc_value*parent._vol_ref_adc) - parent._res_switches - parent._res_load
+        res = (gain*res_load*vol_read*(2**adc_bit))/ \
+            (adc_value*vol_ref_adc) - res_switches - res_load
         res = round(res, 2)
     except ZeroDivisionError:
         res = 2000000
@@ -63,7 +103,13 @@ def convert_adc_to_res(parent, adc_value: Union[str, int]) -> float:
         res = 1
     return res
 
-def convert_res_to_adc(parent, res: int) -> int:
+def convert_res_to_adc(gain: float,
+                       res_load: float,
+                       vol_read: float,
+                       adc_bit: int,
+                       vol_ref_adc: float,
+                       res_switches: float,
+                       res: int) -> int:
     """
     Функция для перевода из сопротивления в АЦП
 
@@ -73,21 +119,21 @@ def convert_res_to_adc(parent, res: int) -> int:
     Returns:
         adc_value -- значение с АЦП
     """
-    adc_value = int(round((parent._gain*parent._res_load*parent._vol_read*2**parent._adc_bit)/ \
-            (parent._vol_ref_adc*(parent._res_switches + parent._res_load + res)), 0))
+    adc_value = int(round((gain*res_load*vol_read*2**adc_bit)/ \
+            (vol_ref_adc*(res_switches + res_load + res)), 0))
 
     return adc_value
 
-def convert_res_to_weight(parent, res: int) -> float:
+def convert_res_to_weight(res_load: float, res: int) -> float:
     """
     Конвертер сопротивления в вес
     """
-    weight = parent._res_load/(parent._res_load + res)
+    weight = res_load/(res_load + res)
     return weight
 
-def convert_weight_to_res(parent, weight: float) -> int:
+def convert_weight_to_res(res_load: float, weight: float) -> int:
     """
     Конвертер веса в сопротивление
     """
-    res = round(parent._res_load/weight - parent._res_load, 0)
+    res = round(res_load/weight - res_load, 0)
     return int(res)

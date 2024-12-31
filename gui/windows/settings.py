@@ -33,8 +33,8 @@ class Settings(QDialog):
         """
         Заполнение основных настроек
         """
-        self.ui.choose_adc_bit.setCurrentText(str(self.parent.man._adc_bit))
-        self.ui.choose_gain.setValue(self.parent.man._gain)
+        self.ui.choose_adc_bit.setCurrentText(str(self.parent.man.adc_bit))
+        self.ui.choose_gain.setValue(self.parent.man.gain)
         self.ui.choose_software_cc.setValue(self.parent.man.soft_cc)
 
     def save_settings(self) -> None:

@@ -297,7 +297,13 @@ class Manager(Application):
                              self._done_tickets)
             # сохраняем в БД
             if result:
-                last_resistance = int(a2r(self, result[0]))
+                last_resistance = int(a2r(self.gain,
+                                          self.res_load,
+                                          self.vol_read,
+                                          self.adc_bit,
+                                          self.vol_ref_adc,
+                                          self.res_switches,
+                                          result[0]))
                 status_update_complited_ticket = db.update_complited_ticket(exp_id, mem_id, last_resistance)
                 if not status_update_complited_ticket:
                     self.ap_logger.critical("db exp_id:%d mem_id:%d result:%s", exp_id, mem_id, str(result))
