@@ -361,7 +361,7 @@ class Manager(Application):
                 self._saver_read_results += 1
                 # 1 записать в файл
                 if isinstance(result, tuple) and self.save_flag and file_opened:
-                    save_list_to_bytearray(file, result[0]['vol'], result[1])
+                    save_list_to_bytearray(file, result[0]['sign'], result[0]['vol'], result[1])
                     saved_results += 1
                 # 2 создать имя файла
                 elif isinstance(result, str) and 'начало' in result.split('_') and not file_opened:
@@ -376,7 +376,7 @@ class Manager(Application):
                     file_opened = True
                     files_created += 1
                     self.ap_logger.info('file %s created!', fname)
-                    save_list_to_bytearray(file, result[0]['vol'], result[1])
+                    save_list_to_bytearray(file, result[0]['sign'], result[0]['vol'], result[1])
                     saved_results += 1
                 # 4 закрыть файл
                 elif result == 'конец' and file_opened:

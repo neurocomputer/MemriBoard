@@ -473,7 +473,7 @@ class ApplyExp(QThread):
                         # учет выполнения
                         if result:
                             self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right}")
-                            save_list_to_bytearray(file, task[0]['vol'], result[0])
+                            save_list_to_bytearray(file, task[0]['sign'], task[0]['vol'], result[0])
                             resistance_previous = a2r(self.parent.parent.man.gain,
                                                       self.parent.parent.man.res_load,
                                                       self.parent.parent.man.vol_read,

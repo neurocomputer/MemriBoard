@@ -61,14 +61,16 @@ class History(QDialog):
         ticket_id = self.tickets[current_row][0]
         _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
         all_raw_data = results_from_bytes(ticket_result[0][0])
-        raw_dac = all_raw_data[0::2]
-        raw_adc = all_raw_data[1::2]
+        raw_sign = all_raw_data[0::3]
+        raw_dac = all_raw_data[1::3]
+        raw_adc = all_raw_data[2::3]
         fname = f'{self.tickets[current_row][1]}_{self.tickets[current_row][2]}.csv'
         with open(fname,'w',newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['dac', 'adc', 'vol', 'res'])
-            for i,item in enumerate(raw_dac):
+            file_wr.writerow(['sign', 'dac', 'adc', 'vol', 'res'])
+            for i, item in enumerate(raw_sign):
                 file_wr.writerow([item,
+                                  raw_dac[i],
                                   raw_adc[i],
                                   str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,item)).replace('.',','),
                                   str(a2r(self.parent.man.gain,
