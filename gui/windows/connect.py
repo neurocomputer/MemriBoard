@@ -44,6 +44,18 @@ class ConnectDialog(QDialog):
         self.ui.combo_cb_type.setEnabled(False)
         self.ui.combo_cb_serial.clear()
         self.ui.combo_cb_serial.addItems([self.parent.man.ap_config["gui"]["last_crossbar_serial"],])
+        # обновление спинбоксов
+        self.edit_cb_bl.valueChanged.connect(self.on_edit_cb_wl_bl_changed)
+        self.edit_cb_wl.valueChanged.connect(self.on_edit_cb_wl_bl_changed)
+
+    def on_edit_cb_wl_bl_changed(self) -> None:
+        """
+        Задание WL, BL
+        """
+        bl = self.edit_cb_bl.value()
+        wl = self.edit_cb_wl.value()
+        if bl > 1 or wl > 1:
+            self.ui.combo_c_type.setCurrentText('memardboard_crossbar')
 
     def on_com_name_changed(self) -> None:
         """
@@ -123,45 +135,48 @@ class ConnectDialog(QDialog):
         """
         Подключение к плате
         """
-        # получим данные из интерфейса о кроссбаре
-        combo_cb_serial = self.ui.combo_cb_serial.currentText()
-        edit_cb_serial = self.ui.edit_cb_serial.text()
-        if edit_cb_serial:
-            # проверить все ли поля заполнены
-            cb_comment = self.ui.edit_cb_comment.text()
-            bl = self.edit_cb_bl.value()
-            wl = self.edit_cb_wl.value()
-            cb_type = self.ui.combo_cb_type.currentText()
-            c_type = self.ui.combo_c_type.currentText()
-            if not cb_comment:
-                self.ui.label_status.setText('Добавьте коммент!')
-                return
-            # пытаемся создать новый
-            status_add = self.parent.man.add_chip(serial = edit_cb_serial,
-                                                  comment = cb_comment,
-                                                  row_num = bl,
-                                                  col_num = wl,
-                                                  cb_type = cb_type,
-                                                  c_type = c_type)
-            if not status_add:
-                self.ui.label_status.setText('Ошибка добавления!')
-                return
-            # используем новый
-            self.cb_serial = edit_cb_serial
-        elif combo_cb_serial:
-            # используем из списка
-            self.cb_serial = combo_cb_serial
+        if self.com_port == 'choose...':
+            self.ui.label_status.setText('Выберете порт для подключения!')
         else:
-            self.ui.label_status.setText('Выберете кроссбар!')
-            return
-        # выбираем чип
-        _, _ = self.parent.man.use_chip(self.cb_serial)
-        # попытка подключения
-        if self.parent.man.connect(self.com_port):
-            self.accept_connet()
-        else:
-            message = f"К порту \"{self.com_port}\" нет подключения!"
-            self.ui.label_status.setText(message)
+            # получим данные из интерфейса о кроссбаре
+            combo_cb_serial = self.ui.combo_cb_serial.currentText()
+            edit_cb_serial = self.ui.edit_cb_serial.text()
+            if edit_cb_serial:
+                # проверить все ли поля заполнены
+                cb_comment = self.ui.edit_cb_comment.text()
+                bl = self.edit_cb_bl.value()
+                wl = self.edit_cb_wl.value()
+                cb_type = self.ui.combo_cb_type.currentText()
+                c_type = self.ui.combo_c_type.currentText()
+                if not cb_comment:
+                    self.ui.label_status.setText('Добавьте коммент!')
+                    return
+                # пытаемся создать новый
+                status_add = self.parent.man.add_chip(serial = edit_cb_serial,
+                                                    comment = cb_comment,
+                                                    row_num = bl,
+                                                    col_num = wl,
+                                                    cb_type = cb_type,
+                                                    c_type = c_type)
+                if not status_add:
+                    self.ui.label_status.setText('Ошибка добавления в БД! Возможно такое устройство уже есть!')
+                    return
+                # используем новый
+                self.cb_serial = edit_cb_serial
+            elif combo_cb_serial:
+                # используем из списка
+                self.cb_serial = combo_cb_serial
+            else:
+                self.ui.label_status.setText('Выберете кроссбар!')
+                return
+            # выбираем чип
+            _, _ = self.parent.man.use_chip(self.cb_serial)
+            # попытка подключения
+            if self.parent.man.connect(self.com_port):
+                self.accept_connet()
+            else:
+                message = f"К порту \"{self.com_port}\" нет подключения!"
+                self.ui.label_status.setText(message)
 
     def accept_connet(self) -> None:
         """

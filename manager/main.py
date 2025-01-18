@@ -58,6 +58,7 @@ class Manager(Application):
     cb_type: str
     c_type: str
     conn: Connector
+    crossbar_serial: str
     _admin_thread: Thread
     _worker_thread: Thread
     _save_thread: Thread
@@ -87,6 +88,7 @@ class Manager(Application):
         """
         status, chip_data = self.db.get_chip_data(serial)
         if status:
+            self.crossbar_serial = serial
             self.crossbar_id = chip_data[0]
             self.row_num = chip_data[1]
             self.col_num = chip_data[2]
@@ -142,7 +144,8 @@ class Manager(Application):
                                self.ap_logger,
                                self.ap_config,
                                self.blank_type,
-                               self.cb_type)
+                               self.cb_type,
+                               crossbar_serial = self.crossbar_serial)
         self.connected_flag = self.conn.open_serial(port) # подключаемся к плате
         return self.connected_flag
 
@@ -369,7 +372,7 @@ class Manager(Application):
                     file_path = os.path.join(os.getcwd(),'results', fname)
                     # сохраняем в БД
                     exp_id = int(result.split('_')[1])
-                    _ = db.update_ticket_result_path(exp_id, fname) 
+                    _ = db.update_ticket_result_path(exp_id, fname)
                 # 3 открыть файл и записать
                 elif isinstance(result, tuple) and self.save_flag and not file_opened:
                     file = open(file_path, 'wb')

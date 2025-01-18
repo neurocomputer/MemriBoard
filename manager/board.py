@@ -27,7 +27,7 @@ class Connector():
     crossbar_array: list
     crossbar_serial: str
 
-    def __init__(self, silent, logger, config, c_type, cb_type):
+    def __init__(self, silent, logger, config, c_type, cb_type, **kwargs):
         self.serial = Serial()
         self.silent = silent
         self.logger = logger
@@ -35,7 +35,8 @@ class Connector():
         self.c_type = c_type
         self.cb_type = cb_type
         # для симулятора
-        self.crossbar_serial = self.config['gui']['last_crossbar_serial']
+        if 'crossbar_serial' in kwargs:
+            self.crossbar_serial = kwargs['crossbar_serial']
 
     def _kick_board(self, attempts: int) -> bool:
         """
@@ -81,8 +82,7 @@ class Connector():
         if self.cb_type == 'simulator':
             # загрузка симулятора
             if self.cb_type == 'simulator':
-                _, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
-            open_flag = True
+                open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
         else:
             # кол-во попыток получить данные
             attempts = int(self.config['connector']['attempts_to_kick'])
@@ -211,12 +211,22 @@ class Connector():
                       task['vol'],
                       sign=task['sign'])
             duration = task['t_ms'] * 1000 + task['t_us']
+            # если выбрали систему комманд для сигнальной платы
+            #todo: возможно логику нужно переделать, пока не понятно
+            if not 'wl' in task:
+                wl = 0
+            else:
+                wl = task['wl']
+            if not 'bl' in task:
+                bl = 0
+            else:
+                bl = task['bl']
             res = (send_task_to_crossbar(self.crossbar_serial,
                                          self.crossbar_array,
                                          vol = vol,
                                          duration = duration,
-                                         wl = task['wl'],
-                                         bl = task['bl'],
+                                         wl = wl,
+                                         bl = bl,
                                          vol_read = float(self.config['board']['vol_read']),
                                          res_load = float(self.config['board']['res_load']),
                                          res_switches = float(self.config['board']['res_switches']),
