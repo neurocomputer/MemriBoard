@@ -61,7 +61,7 @@ class Application():
         """
         Прочитать настройки платы
         """
-        self.ap_config.read(self.ap_config_path)  # читаем конфиг
+        self.ap_config.read(self.ap_config_path, encoding="utf-8")  # читаем конфиг
         self._port = self.ap_config['connector']['com_port']
         self.blank_type = self.ap_config['connector']['c_type']
         # для отдельных настроек создаем алиасы
