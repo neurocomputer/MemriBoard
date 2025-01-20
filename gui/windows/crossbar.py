@@ -35,6 +35,7 @@ from gui.windows.settings import Settings
 from gui.windows.history import History
 from gui.windows.requests import RequestsList
 from gui.windows.terminal import Terminal
+from gui.windows.testing import Testing
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -70,6 +71,7 @@ class Window(QMainWindow):
     requests_dialog: RequestsList
     history_dialog: History
     terminal_dialog: Terminal
+    testing_dialog: Testing
 
     opener: str
 
@@ -102,7 +104,7 @@ class Window(QMainWindow):
         self.ui.table_crossbar.itemDoubleClicked.connect(self.show_cell_info_dialog)
         # обработчики кнопок
         self.ui.button_rram.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
-        self.ui.button_tests.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
+        self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_snapshot.clicked.connect(self._snapshot)
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
@@ -213,6 +215,14 @@ class Window(QMainWindow):
         if not hasattr(self, 'settings_dialog'):
             self.settings_dialog = Settings(parent=self)
         self.settings_dialog.show()
+
+    def show_testing_dialog(self) -> None:
+        """
+        Отобразить окно тестирования
+        """
+        self.opener = 'testing'
+        self.testing_dialog = Testing(parent=self)
+        self.testing_dialog.show()
 
     # обработчики кнопок
 
