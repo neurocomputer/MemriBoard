@@ -36,6 +36,7 @@ from gui.windows.history import History
 from gui.windows.requests import RequestsList
 from gui.windows.terminal import Terminal
 from gui.windows.testing import Testing
+from gui.windows.map import Map
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -72,8 +73,9 @@ class Window(QMainWindow):
     history_dialog: History
     terminal_dialog: Terminal
     testing_dialog: Testing
+    map_dialog: Map
 
-    opener: str
+    opener: str = ''
 
     timer: QTimer
 
@@ -111,8 +113,10 @@ class Window(QMainWindow):
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         self.ui.button_reconnect.clicked.connect(self.reconnect)
         # хоткей
-        self.shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        self.shortcut.activated.connect(self.show_terminal_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
+        shortcut.activated.connect(self.show_terminal_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
+        shortcut.activated.connect(self.show_crossbar_weights_dialog)
         # таймер
         self.timer = QTimer()
         # диалоговое окно подключения
@@ -223,6 +227,21 @@ class Window(QMainWindow):
         self.opener = 'testing'
         self.testing_dialog = Testing(parent=self)
         self.testing_dialog.show()
+
+    def show_map_dialog(self) -> None:
+        """
+        Открытие карты
+        """
+        self.map_dialog = Map(parent=self)
+        self.map_dialog.show()
+
+    def show_crossbar_weights_dialog(self) -> None:
+        """
+        Отображение весов кроссбара
+        """
+        self.show_map_dialog()
+        self.map_dialog.fill_table(mode='weights')
+        self.map_dialog.set_prompt("Веса кроссбара")
 
     # обработчики кнопок
 
