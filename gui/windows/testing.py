@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QDialog, QFileDialog
 import numpy as np
 
 from manager.service import a2r
-from gui.src import show_warning_messagebox
+from gui.src import show_warning_messagebox, open_file_dialog, show_warning_messagebox
 from gui.windows.apply import ApplyExp
 
 def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
@@ -64,7 +64,7 @@ class Testing(QDialog):
     GUI_PATH = os.path.join("gui","uies","testing.ui")
     result_path: str
     application_status: str = 'stop'
-    coordinates: list
+    coordinates: list = []
     counter: int
     start_time: float
     live_memristors: list
@@ -72,6 +72,7 @@ class Testing(QDialog):
     crossbar_serial: str
     raw_data: list
     start_thread: ApplyExp
+    cell_list_from_file: bool = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -87,6 +88,7 @@ class Testing(QDialog):
         self.ui.button_choose_folder.clicked.connect(self.button_choose_folder_clicked)
         self.ui.button_reset_exp.clicked.connect(self.button_reset_exp_clicked)
         self.ui.button_result.clicked.connect(self.view_result)
+        self.ui.button_choose_cells.clicked.connect(self.button_choose_cells_clicked)
         # значения по умолчанию
         self.result_path = os.getcwd()
         self.set_up_init_values()
@@ -97,7 +99,7 @@ class Testing(QDialog):
         Установить по умолчанию
         """
         self.ui.path_folder_csv.setText(self.result_path)
-        self.coordinates = []
+        #self.coordinates = []
         self.raw_data = []
         self.start_time = 0.
         self.parent.exp_list = []
@@ -109,6 +111,60 @@ class Testing(QDialog):
         self.ui.label_time_status.setText("Время выполнения теста: н/д")
         self.ui.label_start_time.setText("Начало выполнения теста: н/д")
         self.ui.label_result.setText("Процент годных:")
+
+    def button_choose_cells_clicked(self):
+        """
+        Выбрать ячейки для эксперимента
+        """
+        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)")
+        if filepath:
+            # нужно сформировать список списков
+            cells = []
+            message = ''
+            wl_max = self.parent.man.col_num
+            bl_max = self.parent.man.row_num
+            try:
+                with open(filepath, 'r', newline='', encoding='utf-8') as csvfile:
+                    reader = csv.reader(csvfile)
+                    header = next(reader)  # Пропускаем заголовок
+                    # Проверяем, что в заголовке есть нужные колонки.
+                    if header != ['wl', 'bl']:
+                        raise ValueError("Файл CSV должен иметь столбцы 'wl' и 'bl' в указанном порядке")
+                    for row in reader:
+                        try:
+                            if len(row) > 2:
+                                raise ArithmeticError("В строке больше 2-х значений")
+                            else:
+                                wl = int(row[0]) # Преобразуем в число
+                                bl = int(row[1])
+                                if wl > wl_max or bl > bl_max:
+                                    raise ArithmeticError("WL или BL имеют не корректное значение")
+                                if [wl, bl] not in cells: # Без дубликатов
+                                    cells.append([wl, bl]) # Заполняем список
+                        except (ValueError, IndexError):
+                            message = f"Ошибка при преобразовании строки в числа: {row}"
+                        except ArithmeticError as e:
+                            message = f"Ошибка: {e}"
+                        continue # переходим к следующей строке
+            except FileNotFoundError:
+                message = f"Ошибка: Файл не найден: {filepath}"
+            except ValueError as e:
+                message = f"Ошибка: {e}"
+            except Exception as e:
+                message = f"Произошла ошибка: {e}"
+            if message:
+                show_warning_messagebox(message)
+            if cells:
+                self.coordinates = cells
+                self.cell_list_from_file = True
+                show_warning_messagebox(f'Тест выполнится для {len(cells)} ячеек!')
+            else:
+                show_warning_messagebox('Тест выполнится для всех ячеек!')
+                self.cell_list_from_file = False
+        else:
+            show_warning_messagebox('Тест выполнится для всех ячеек!')
+            self.cell_list_from_file = False
+        print(self.coordinates)
 
     def button_choose_exp_clicked(self):
         """
@@ -127,15 +183,16 @@ class Testing(QDialog):
         self.update_label_start_time()
         # блочим кнопки
         self.button_work_combination()
+        # список координат для теста
+        if not self.cell_list_from_file:
+            self.coordinates = []
+            for i in range(self.parent.man.row_num):
+                for j in range(self.parent.man.col_num):
+                    self.coordinates.append((j,i))
         # параметры прогресс бара
         self.counter = 0
         self.ui.progress_all.setValue(0)
-        self.ui.progress_all.setMaximum(self.parent.man.row_num*self.parent.man.col_num)
-        # список координат для теста
-        self.coordinates = []
-        for i in range(self.parent.man.row_num):
-            for j in range(self.parent.man.col_num):
-                self.coordinates.append((j,i))
+        self.ui.progress_all.setMaximum(len(self.coordinates))
         # параметры потока
         self.start_thread = ApplyExp(parent=self)
         self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
@@ -254,6 +311,7 @@ class Testing(QDialog):
         Отображение кнопок при старте эксперимента
         """
         self.ui.button_choose_exp.setEnabled(False)
+        self.ui.button_choose_cells.setEnabled(False)
         self.ui.button_start_exp.setEnabled(False)
         self.ui.button_choose_folder.setEnabled(False)
         self.ui.button_reset_exp.setEnabled(True)
@@ -263,6 +321,7 @@ class Testing(QDialog):
         Отображение кнопок при открытии окна
         """
         self.ui.button_choose_exp.setEnabled(True)
+        self.ui.button_choose_cells.setEnabled(True)
         self.ui.button_start_exp.setEnabled(False)
         self.ui.button_choose_folder.setEnabled(True)
         self.ui.button_reset_exp.setEnabled(False)
@@ -273,6 +332,7 @@ class Testing(QDialog):
         (после загрузки плана эксперимента)
         """
         self.ui.button_choose_exp.setEnabled(True)
+        self.ui.button_choose_cells.setEnabled(True)
         self.ui.button_start_exp.setEnabled(True)
         self.ui.button_choose_folder.setEnabled(True)
         self.ui.button_reset_exp.setEnabled(False)
