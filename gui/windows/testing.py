@@ -361,6 +361,7 @@ class Testing(QDialog):
             self.parent.fill_table()
             self.parent.color_table()
             self.set_up_init_values()
+            self.coordinates = []
             event.accept()
         elif self.application_status == 'work':
             show_warning_messagebox('Дождитесь или прервите!')
