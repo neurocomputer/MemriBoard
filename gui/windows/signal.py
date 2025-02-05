@@ -356,3 +356,6 @@ class SignalMod(QDialog):
         else: # событие вызвала кнопка отмена
             self.set_up_init_values()
             event.accept()
+        # удаление ticket.png при закрытии окна
+        if os.path.isfile(self.IMG_PATH):
+            os.remove(self.IMG_PATH)
