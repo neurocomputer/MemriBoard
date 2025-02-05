@@ -42,17 +42,20 @@ class RequestsList(QDialog):
         self.text_commands.appendPlainText(text)
 
     def save_requests(self) -> None:
-        # открытие окна сохранения файла
-        filepath, _ = QFileDialog.getSaveFileName()
-        if False == filepath.endswith(".txt"):
-            filepath = filepath + ".txt"
         # сохранение содержимого запроса
         request = ""
         for item in self.parent.exp_list:
             request += f"Тикет:{item[0]}, задачи:{item[3]}\n"
             for req in item[2]:
                 request += gather(req[0])
-        with open (filepath, "w") as f:
-            f.write(request)
-            f.close()
-        show_warning_messagebox(f'Выгружено в файл {filepath}')
+        if 0 < len(request):
+            # открытие окна сохранения файла
+            filepath, _ = QFileDialog.getSaveFileName()
+            if False == filepath.endswith(".txt"):
+                filepath = filepath + ".txt"
+            with open (filepath, "w") as f:
+                f.write(request)
+                f.close()
+            show_warning_messagebox(f'Выгружено в файл {filepath}')
+        else:
+            show_warning_messagebox('Список команд пуст!')
