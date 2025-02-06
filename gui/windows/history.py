@@ -72,7 +72,7 @@ class History(QDialog):
                 file_wr.writerow([item,
                                   raw_dac[i],
                                   raw_adc[i],
-                                  str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,item)).replace('.',','),
+                                  str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,raw_dac[i],sign=item)).replace('.',','),
                                   str(a2r(self.parent.man.gain,
                                           self.parent.man.res_load,
                                           self.parent.man.vol_read,
