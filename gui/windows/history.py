@@ -9,7 +9,7 @@ import csv
 from PyQt5 import uic
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QHeaderView
 
 from manager.service.saves import results_from_bytes
 from manager.service import  d2v, a2r
@@ -57,29 +57,35 @@ class History(QDialog):
         """
         Выгрузить данные по тикету из бд в csv
         """
-        current_row = self.ui.table_history_tickets.currentRow()
-        ticket_id = self.tickets[current_row][0]
-        _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
-        all_raw_data = results_from_bytes(ticket_result[0][0])
-        raw_sign = all_raw_data[0::3]
-        raw_dac = all_raw_data[1::3]
-        raw_adc = all_raw_data[2::3]
-        fname = f'{self.tickets[current_row][1]}_{self.tickets[current_row][2]}.csv'
+        fname = ''
+        selected_items = self.ui.table_history_tickets.selectedItems()
+        rows = []   #номера выделенных рядов
+        for item in range(len(selected_items)):
+            rows.append(self.ui.table_history_tickets.row(selected_items[item]))
+            fname = fname + "+" + str(self.ui.table_history_tickets.selectedItems()[item].text())
+        fname = str(QFileDialog.getExistingDirectory(self)) + "/" + f'{self.tickets[self.ui.table_history_tickets.currentRow()][1]}_'+fname+'.csv'
         with open(fname,'w',newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
             file_wr.writerow(['sign', 'dac', 'adc', 'vol', 'res'])
-            for i, item in enumerate(raw_sign):
-                file_wr.writerow([item,
-                                  raw_dac[i],
-                                  raw_adc[i],
-                                  str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,raw_dac[i],sign=item)).replace('.',','),
-                                  str(a2r(self.parent.man.gain,
-                                          self.parent.man.res_load,
-                                          self.parent.man.vol_read,
-                                          self.parent.man.adc_bit,
-                                          self.parent.man.vol_ref_adc,
-                                          self.parent.man.res_switches,
-                                          raw_adc[i])).replace('.',',')])
+            for row in rows:
+                ticket_id = self.tickets[row][0]
+                _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
+                all_raw_data = results_from_bytes(ticket_result[0][0])
+                raw_sign = all_raw_data[0::3]
+                raw_dac = all_raw_data[1::3]
+                raw_adc = all_raw_data[2::3]
+                for i, item in enumerate(raw_sign):
+                    file_wr.writerow([item,
+                                    raw_dac[i],
+                                    raw_adc[i],
+                                    str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,item)).replace('.',','),
+                                    str(a2r(self.parent.man.gain,
+                                            self.parent.man.res_load,
+                                            self.parent.man.vol_read,
+                                            self.parent.man.adc_bit,
+                                            self.parent.man.vol_ref_adc,
+                                            self.parent.man.res_switches,
+                                            raw_adc[i])).replace('.',',')])
         show_warning_messagebox(f'Выгружено в файл {fname}')
 
     def load_experiment(self) -> None:
