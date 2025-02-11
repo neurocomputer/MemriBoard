@@ -157,7 +157,10 @@ class History(QDialog):
             self.ui.label_image.setPixmap(pixmap)
             quick_data = "Дата проведения: " + self.experiments[current_row][1]
             quick_data += "\nНазвание: " + self.experiments[current_row][2]
-            quick_data += "\nСерийный номер кроссбара: "
+            _, mem_id = self.parent.man.db.get_memresistor_from_experiment(experiment_id)
+            _, crb_id = self.parent.man.db.get_crossbar_from_memresistor(mem_id)
+            _, serial = self.parent.man.db.get_crossbar_serial_from_id(crb_id)
+            quick_data += "\nСерийный номер кроссбара: " + str(serial)
             quick_data += "\nWL: " + str(self.parent.current_wl)
             quick_data += "\nBL: " + str(self.parent.current_bl)
             self.ui.quick_view.setText(quick_data)
