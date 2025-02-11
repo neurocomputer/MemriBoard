@@ -481,7 +481,7 @@ class DBOperate():
             except sqlite3.Error as er:
                 print('get_memresistor_from_experiment',er)
             except TypeError as er:
-                print('get_mget_memresistor_from_experimentem_id',er)
+                print('get_memresistor_from_experiment',er)
         self.db_disconnect()
         return status, mem_id
     
