@@ -463,3 +463,45 @@ class DBOperate():
                 print('get_crossbar_serial_from_id',er)
         self.db_disconnect()
         return status, serial
+
+    def get_memresistor_from_experiment(self, experiment_id):
+        """
+        Получить id мемрезистора из эксперимента
+        """
+        self.db_connect()
+        status = False
+        mem_id = ''
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT memristor_id FROM Experiments
+                WHERE id={experiment_id}"""
+                self.db_cursor.execute(QUERY)
+                mem_id = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_memresistor_from_experiment',er)
+            except TypeError as er:
+                print('get_mget_memresistor_from_experimentem_id',er)
+        self.db_disconnect()
+        return status, mem_id
+    
+    def get_crossbar_from_memresistor(self, memresistor_id):
+        """
+        Получить id кроссбара из мемрезистора
+        """
+        self.db_connect()
+        status = False
+        crb_id = ''
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT crossbar_id FROM Memristors
+                WHERE id={memresistor_id}"""
+                self.db_cursor.execute(QUERY)
+                crb_id = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_crossbar_from_memresistor',er)
+            except TypeError as er:
+                print('get_crossbar_from_memresistor',er)
+        self.db_disconnect()
+        return status, crb_id
