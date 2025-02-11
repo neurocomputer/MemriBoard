@@ -58,11 +58,18 @@ class History(QDialog):
         Выгрузить данные по тикету из бд в csv
         """
         fname = ''
-        selected_items = self.ui.table_history_tickets.selectedItems()
+        selected_items = self.ui.table_history_tickets.selectedItems()  #все выделенные ячейки
         rows = []   #номера выделенных рядов
         for item in range(len(selected_items)):
-            rows.append(self.ui.table_history_tickets.row(selected_items[item]))
-            fname = fname + "+" + str(self.ui.table_history_tickets.selectedItems()[item].text())
+            cur_item = self.ui.table_history_tickets.row(selected_items[item])
+            found = False
+            for row in rows:    # проверка на повторное вхождение
+                if row == cur_item:
+                    found = True
+                    break
+            if found == False:
+                rows.append(cur_item)
+                fname = fname + "+" + self.ui.table_history_tickets.item(cur_item, 1).text()
         fname = str(QFileDialog.getExistingDirectory(self)) + "/" + f'{self.tickets[self.ui.table_history_tickets.currentRow()][1]}_'+fname+'.csv'
         with open(fname,'w',newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
