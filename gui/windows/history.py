@@ -155,6 +155,12 @@ class History(QDialog):
             pixmap = QPixmap()
             pixmap.loadFromData(image)
             self.ui.label_image.setPixmap(pixmap)
+            quick_data = "Дата проведения: " + self.experiments[current_row][1]
+            quick_data += "\nНазвание: " + self.experiments[current_row][2]
+            quick_data += "\nСерийный номер кроссбара: "
+            quick_data += "\nWL: " + str(self.parent.current_wl)
+            quick_data += "\nBL: " + str(self.parent.current_bl)
+            self.ui.quick_view.setText(quick_data)
 
     def set_up_init_values(self) -> None:
         """
