@@ -463,3 +463,87 @@ class DBOperate():
                 print('get_crossbar_serial_from_id',er)
         self.db_disconnect()
         return status, serial
+
+    def get_memristor_id_from_experiment_id(self, experiment_id):
+        """
+        Получить id мемрезистора из эксперимента
+        """
+        self.db_connect()
+        status = False
+        mem_id = ''
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT memristor_id FROM Experiments
+                WHERE id={experiment_id}"""
+                self.db_cursor.execute(QUERY)
+                mem_id = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_memristor_id_from_experiment_id',er)
+            except TypeError as er:
+                print('get_memristor_id_from_experiment_id',er)
+        self.db_disconnect()
+        return status, mem_id
+    
+    def get_crossbar_id_from_memristor_id(self, memristor_id):
+        """
+        Получить id кроссбара из мемрезистора
+        """
+        self.db_connect()
+        status = False
+        crb_id = ''
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT crossbar_id FROM Memristors
+                WHERE id={memristor_id}"""
+                self.db_cursor.execute(QUERY)
+                crb_id = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_crossbar_id_from_memristor_id',er)
+            except TypeError as er:
+                print('get_crossbar_id_from_memristor_id',er)
+        self.db_disconnect()
+        return status, crb_id
+    
+    def get_wl_from_memristor_id(self, memristor_id):
+        """
+        Получить WL из мемрезистора
+        """
+        self.db_connect()
+        status = False
+        wl = ''
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT wl FROM Memristors
+                WHERE id={memristor_id}"""
+                self.db_cursor.execute(QUERY)
+                wl = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_wl_from_memristor_id',er)
+            except TypeError as er:
+                print('get_wl_from_memristor_id',er)
+        self.db_disconnect()
+        return status, wl
+    
+    def get_bl_from_memristor_id(self, memristor_id):
+        """
+        Получить BL из мемрезистора
+        """
+        self.db_connect()
+        status = False
+        bl = ''
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT bl FROM Memristors
+                WHERE id={memristor_id}"""
+                self.db_cursor.execute(QUERY)
+                bl = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_bl_from_memristor_id',er)
+            except TypeError as er:
+                print('get_bl_from_memristor_id',er)
+        self.db_disconnect()
+        return status, bl

@@ -96,7 +96,7 @@ class History(QDialog):
                                                 raw_adc[i])).replace('.',',')])
             show_warning_messagebox(f'Выгружено в файл {fname}')
         else:
-            show_warning_messagebox('Выберете тикеты!')
+            show_warning_messagebox('Выберите тикеты!')
 
     def load_experiment(self) -> None:
         """
@@ -158,6 +158,17 @@ class History(QDialog):
             pixmap = QPixmap()
             pixmap.loadFromData(image)
             self.ui.label_image.setPixmap(pixmap)
+            quick_data = "Дата проведения: " + self.experiments[current_row][1]
+            quick_data += "\nНазвание: " + self.experiments[current_row][2]
+            _, mem_id = self.parent.man.db.get_memristor_id_from_experiment_id(experiment_id)
+            _, crb_id = self.parent.man.db.get_crossbar_id_from_memristor_id(mem_id)
+            _, serial = self.parent.man.db.get_crossbar_serial_from_id(crb_id)
+            quick_data += "\nСерийный номер кроссбара: " + str(serial)
+            _, wl = self.parent.man.db.get_wl_from_memristor_id(mem_id)
+            quick_data += "\nWL: " + str(wl)
+            _, bl = self.parent.man.db.get_bl_from_memristor_id(mem_id)
+            quick_data += "\nBL: " + str(bl)
+            self.ui.quick_view.setText(quick_data)
 
     def set_up_init_values(self) -> None:
         """

@@ -60,6 +60,9 @@
            </widget>
           </item>
           <item>
+           <widget class="QTextEdit" name="quick_view"/>
+          </item>
+          <item>
            <widget class="QLabel" name="label_image">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
