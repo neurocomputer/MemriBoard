@@ -479,9 +479,9 @@ class DBOperate():
                 mem_id = self.db_cursor.fetchone()[0]
                 status = True
             except sqlite3.Error as er:
-                print('get_memristor_from_experiment',er)
+                print('get_memristor_id_from_experiment_id',er)
             except TypeError as er:
-                print('get_memristor_from_experiment',er)
+                print('get_memristor_id_from_experiment_id',er)
         self.db_disconnect()
         return status, mem_id
     
@@ -500,9 +500,9 @@ class DBOperate():
                 crb_id = self.db_cursor.fetchone()[0]
                 status = True
             except sqlite3.Error as er:
-                print('get_crossbar_from_memristor',er)
+                print('get_crossbar_id_from_memristor_id',er)
             except TypeError as er:
-                print('get_crossbar_from_memristor',er)
+                print('get_crossbar_id_from_memristor_id',er)
         self.db_disconnect()
         return status, crb_id
     
@@ -521,9 +521,9 @@ class DBOperate():
                 wl = self.db_cursor.fetchone()[0]
                 status = True
             except sqlite3.Error as er:
-                print('get_wl_from_memristor',er)
+                print('get_wl_from_memristor_id',er)
             except TypeError as er:
-                print('get_wl_from_memristor',er)
+                print('get_wl_from_memristor_id',er)
         self.db_disconnect()
         return status, wl
     
@@ -542,8 +542,8 @@ class DBOperate():
                 bl = self.db_cursor.fetchone()[0]
                 status = True
             except sqlite3.Error as er:
-                print('get_bl_from_memristor',er)
+                print('get_bl_from_memristor_id',er)
             except TypeError as er:
-                print('get_bl_from_memristor',er)
+                print('get_bl_from_memristor_id',er)
         self.db_disconnect()
         return status, bl
