@@ -58,42 +58,45 @@ class History(QDialog):
         Выгрузить данные по тикету из бд в csv
         """
         fname = ''
-        selected_items = self.ui.table_history_tickets.selectedItems()  #все выделенные ячейки
-        rows = []   #номера выделенных рядов
-        for item in range(len(selected_items)):
-            cur_item = self.ui.table_history_tickets.row(selected_items[item])
+        selected_items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
+        rows = [] # номера выделенных рядов
+        for item in selected_items:
+            cur_item = self.ui.table_history_tickets.row(item)
             found = False
-            for row in rows:    # проверка на повторное вхождение
+            for row in rows: # проверка на повторное вхождение
                 if row == cur_item:
                     found = True
                     break
-            if found == False:
+            if found is False:
                 rows.append(cur_item)
                 fname = fname + "+" + self.ui.table_history_tickets.item(cur_item, 1).text()
-        fname = str(QFileDialog.getExistingDirectory(self)) + "/" + f'{self.tickets[self.ui.table_history_tickets.currentRow()][1]}_'+fname+'.csv'
-        with open(fname,'w',newline='', encoding='utf-8') as file:
-            file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['sign', 'dac', 'adc', 'vol', 'res'])
-            for row in rows:
-                ticket_id = self.tickets[row][0]
-                _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
-                all_raw_data = results_from_bytes(ticket_result[0][0])
-                raw_sign = all_raw_data[0::3]
-                raw_dac = all_raw_data[1::3]
-                raw_adc = all_raw_data[2::3]
-                for i, item in enumerate(raw_sign):
-                    file_wr.writerow([item,
-                                    raw_dac[i],
-                                    raw_adc[i],
-                                    str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,item)).replace('.',','),
-                                    str(a2r(self.parent.man.gain,
-                                            self.parent.man.res_load,
-                                            self.parent.man.vol_read,
-                                            self.parent.man.adc_bit,
-                                            self.parent.man.vol_ref_adc,
-                                            self.parent.man.res_switches,
-                                            raw_adc[i])).replace('.',',')])
-        show_warning_messagebox(f'Выгружено в файл {fname}')
+        if rows:
+            fname = str(QFileDialog.getExistingDirectory(self)) + "/" + f'{self.tickets[self.ui.table_history_tickets.currentRow()][1]}_'+fname+'.csv'
+            with open(fname,'w',newline='', encoding='utf-8') as file:
+                file_wr = csv.writer(file, delimiter=";")
+                file_wr.writerow(['sign', 'dac', 'adc', 'vol', 'res'])
+                for row in rows:
+                    ticket_id = self.tickets[row][0]
+                    _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
+                    all_raw_data = results_from_bytes(ticket_result[0][0])
+                    raw_sign = all_raw_data[0::3]
+                    raw_dac = all_raw_data[1::3]
+                    raw_adc = all_raw_data[2::3]
+                    for i, item in enumerate(raw_sign):
+                        file_wr.writerow([item,
+                                        raw_dac[i],
+                                        raw_adc[i],
+                                        str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,raw_dac[i],sign=item)).replace('.',','),
+                                        str(a2r(self.parent.man.gain,
+                                                self.parent.man.res_load,
+                                                self.parent.man.vol_read,
+                                                self.parent.man.adc_bit,
+                                                self.parent.man.vol_ref_adc,
+                                                self.parent.man.res_switches,
+                                                raw_adc[i])).replace('.',',')])
+            show_warning_messagebox(f'Выгружено в файл {fname}')
+        else:
+            show_warning_messagebox('Выберите тикеты!')
 
     def load_experiment(self) -> None:
         """
