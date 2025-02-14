@@ -37,6 +37,7 @@ from gui.windows.requests import RequestsList
 from gui.windows.terminal import Terminal
 from gui.windows.testing import Testing
 from gui.windows.map import Map
+from gui.windows.cb_info import Cb_info
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -74,6 +75,7 @@ class Window(QMainWindow):
     terminal_dialog: Terminal
     testing_dialog: Testing
     map_dialog: Map
+    cb_info_dialog: Cb_info
 
     opener: str = ''
 
@@ -117,6 +119,8 @@ class Window(QMainWindow):
         shortcut.activated.connect(self.show_terminal_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
         shortcut.activated.connect(self.show_crossbar_weights_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
+        shortcut.activated.connect(self.show_cb_info_dialog)
         # таймер
         self.timer = QTimer()
         # диалоговое окно подключения
@@ -242,6 +246,13 @@ class Window(QMainWindow):
         self.show_map_dialog()
         self.map_dialog.fill_table(mode='weights')
         self.map_dialog.set_prompt("Веса кроссбара")
+    
+    def show_cb_info_dialog(self) -> None:
+        """
+        Открытие окна инормации о кроссбаре
+        """
+        self.cb_info_dialog = Cb_info(parent=self)
+        self.cb_info_dialog.show()
 
     # обработчики кнопок
 
