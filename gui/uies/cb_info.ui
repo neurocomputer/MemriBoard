@@ -36,22 +36,9 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>379</width>
-     <height>211</height>
+     <width>391</width>
+     <height>241</height>
     </rect>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="button_close">
-   <property name="geometry">
-    <rect>
-     <x>150</x>
-     <y>230</y>
-     <width>103</width>
-     <height>36</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Закрыть</string>
    </property>
   </widget>
  </widget>
