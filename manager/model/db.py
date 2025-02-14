@@ -547,3 +547,24 @@ class DBOperate():
                 print('get_bl_from_memristor_id',er)
         self.db_disconnect()
         return status, bl
+
+    def get_cb_info(self, cb_id):
+        """
+        Получить полную информацию о кроссбаре
+        """
+        self.db_connect()
+        status = False
+        info = []
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT * FROM Crossbars
+                WHERE id={cb_id}"""
+                self.db_cursor.execute(QUERY)
+                info = self.db_cursor.fetchall()
+                status = True
+            except sqlite3.Error as er:
+                print('get_cb_info',er)
+            except TypeError as er:
+                print('get_cb_info',er)
+        self.db_disconnect()
+        return status, info

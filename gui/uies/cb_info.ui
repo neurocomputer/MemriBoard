@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>350</height>
+    <width>420</width>
+    <height>270</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,36 +18,26 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>400</width>
-    <height>350</height>
+    <width>420</width>
+    <height>270</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>400</width>
-    <height>350</height>
+    <width>420</width>
+    <height>270</height>
    </size>
   </property>
   <property name="windowTitle">
    <string>Информация о кроссбаре</string>
   </property>
-  <widget class="QTextEdit" name="text_commentary">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>220</y>
-     <width>379</width>
-     <height>81</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QTableView" name="table_cb_info">
+  <widget class="QTableWidget" name="table_cb_info">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>10</y>
      <width>379</width>
-     <height>181</height>
+     <height>211</height>
     </rect>
    </property>
   </widget>
@@ -55,26 +45,13 @@
    <property name="geometry">
     <rect>
      <x>150</x>
-     <y>310</y>
+     <y>230</y>
      <width>103</width>
      <height>36</height>
     </rect>
    </property>
    <property name="text">
     <string>Закрыть</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>200</y>
-     <width>111</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Комментарии:</string>
    </property>
   </widget>
  </widget>
