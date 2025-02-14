@@ -40,7 +40,6 @@ class Cb_info(QDialog):
         for row in range (0, 4):
             self.ui.table_cb_info.setItem(row, 0, QTableWidgetItem(str(cb_info[0][row+1])))
         _, experiments = self.parent.man.db.get_experiments(self.parent.man.crossbar_id)
-        print(experiments)
         if len(experiments) == 0:
             self.ui.table_cb_info.setItem(4, 0, QTableWidgetItem("Экспериментов ещё нет!"))
             self.ui.table_cb_info.setItem(5, 0, QTableWidgetItem("Экспериментов ещё нет!"))
