@@ -43,12 +43,16 @@ class Cb_info(QDialog):
         for row in range (0, 4):
             self.ui.table_cb_info.setItem(row, 0, QTableWidgetItem(str(cb_info[0][row+1])))
         _, experiments = self.parent.man.db.get_experiments(self.parent.man.crossbar_id)
-        last = experiments[0][1]
-        for experiment in experiments:
-            if experiment[1] <= last:
-                last = experiment[1]
-        self.ui.table_cb_info.setItem(4, 0, QTableWidgetItem(str(len(experiments))))
-        self.ui.table_cb_info.setItem(5, 0, QTableWidgetItem(last))
+        if len(experiments) == 0:
+            self.ui.table_cb_info.setItem(4, 0, QTableWidgetItem("Экспериментов ещё нет!"))
+            self.ui.table_cb_info.setItem(5, 0, QTableWidgetItem("Экспериментов ещё нет!"))
+        else:
+            last = experiments[0][1]
+            for experiment in experiments:
+                if experiment[1] <= last:
+                    last = experiment[1]
+            self.ui.table_cb_info.setItem(4, 0, QTableWidgetItem(str(len(experiments))))
+            self.ui.table_cb_info.setItem(5, 0, QTableWidgetItem(last))
         # ресайз таблицы
         self.ui.table_cb_info.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.ui.table_cb_info.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
