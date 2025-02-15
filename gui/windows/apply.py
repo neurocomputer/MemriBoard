@@ -159,7 +159,7 @@ class Apply(QDialog):
                                                           self.parent.man.res_switches,
                                                           y,
                                                           vol,
-                                                          sign)/1e6
+                                                          sign)*1e6
         elif self.ylabel_text == 'ток, мА':
             self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
                                                           self.parent.man.vol_ref_dac,
@@ -171,7 +171,7 @@ class Apply(QDialog):
                                                           self.parent.man.res_switches,
                                                           y,
                                                           vol,
-                                                          sign)/1e3
+                                                          sign)*1e3
         if self.xlabel_text == 'напряжение, В':
             self.x_value_process = lambda vol,sign,count: d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,vol,sign=sign)
         elif self.xlabel_text == 'отсчеты':

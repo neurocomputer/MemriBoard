@@ -26,6 +26,7 @@ class Connector():
     # для симулятора
     crossbar_array: list
     crossbar_serial: str
+    request_id: int = 0
 
     def __init__(self, silent, logger, config, c_type, cb_type, **kwargs):
         self.serial = Serial()
@@ -198,11 +199,21 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
+            self.inc_req_id() # увеличиваем счечик id
+            task["id"] = self.request_id # записываем id в тикет
             _ = self.push(gather(task))
             try:
                 res = self.pull()
-            except ValueError:
-                self.logger.critical('ValueError in board.py:pull!')
+                if not res: # если нет результата
+                    time.sleep(task["t_ms"]/1000) # ждем
+                    res = self.pull() # снова пытаемся получить
+                if res[1] != self.request_id:
+                    print(f'Не совпадение id: req:{res[1]}, ans:{self.request_id} (adc:{res[0]})')
+                    raise ValueError
+                # else: print(f'{task["id"]}, {self.request_id}, {res[1]}, adc:{res[0]}')
+            except (ValueError, IndexError):
+                self.logger.critical('ValueError, IndexError in board.py:pull!')
+                # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
         # режим симулятор
         elif self.cb_type == 'simulator':
             task_id = task["id"]
@@ -273,3 +284,12 @@ class Connector():
             res = (random.randint(0,2**int(self.config['board']['adc_bit'])), 0)
         # можно добавить работу с другими платами
         return res
+
+    def inc_req_id(self):
+        """
+        Инкремент id запроса
+        """
+        if self.request_id < 4096: #todo: вынести в настройки
+            self.request_id += 1
+        else:
+            self.request_id = 0
