@@ -174,6 +174,7 @@ class ConnectDialog(QDialog):
             _, _ = self.parent.man.use_chip(self.cb_serial)
             # попытка подключения
             if self.com_port == 'offline':
+                self.parent.ui.button_reconnect.setEnabled(False)
                 self.accept_connet()
             elif self.parent.man.connect(self.com_port):
                 self.accept_connet()
