@@ -221,7 +221,7 @@ class DBOperate():
         cb_list = []
         if self.db_connection:
             try:
-                QUERY = f"""SELECT serial FROM Crossbars"""
+                QUERY = "SELECT serial FROM Crossbars"
                 self.db_cursor.execute(QUERY)
                 for item in self.db_cursor.fetchall():
                     cb_list.append(item[0])
@@ -274,7 +274,7 @@ class DBOperate():
                 print('get_exp_name',er)
         self.db_disconnect()
         return status, exp_name
-    
+
     def get_experiment_tickets(self, experiment_id):
         """
         Тикеты эксперимента
@@ -305,7 +305,7 @@ class DBOperate():
         history = []
         if self.db_connection:
             try:
-                QUERY = f"""SELECT id, datestamp, name, status FROM Experiments
+                QUERY = f"""SELECT id, datestamp, name, status, last_resistance FROM Experiments
                 WHERE memristor_id={memristor_id} ORDER BY id DESC"""
                 self.db_cursor.execute(QUERY)
                 history = self.db_cursor.fetchall()
@@ -327,7 +327,7 @@ class DBOperate():
         history = []
         if self.db_connection:
             try:
-                QUERY = f"""SELECT e.id, e.datestamp, e.name, e.status FROM Crossbars AS c JOIN Memristors AS m ON m.crossbar_id=c.id JOIN Experiments AS e ON e.memristor_id=m.id WHERE m.crossbar_id={crossbar_id} ORDER BY e.datestamp DESC"""
+                QUERY = f"""SELECT e.id, e.datestamp, e.name, e.status, e.last_resistance FROM Crossbars AS c JOIN Memristors AS m ON m.crossbar_id=c.id JOIN Experiments AS e ON e.memristor_id=m.id WHERE m.crossbar_id={crossbar_id} ORDER BY e.datestamp DESC"""
                 self.db_cursor.execute(QUERY)
                 history = self.db_cursor.fetchall()
                 status = True
@@ -421,7 +421,7 @@ class DBOperate():
                 print('get_tickets',er)
         self.db_disconnect()
         return status, tickets
-    
+
     def get_ticket_from_id(self, ticket_id):
         """
         Получить тикет по id
@@ -442,7 +442,7 @@ class DBOperate():
                 print('get_ticket_from_id',er)
         self.db_disconnect()
         return status, ticket
-    
+
     def get_crossbar_serial_from_id(self, crossbar_id):
         """
         Получить серийный номер кроссбара по id
@@ -484,7 +484,7 @@ class DBOperate():
                 print('get_memristor_id_from_experiment_id',er)
         self.db_disconnect()
         return status, mem_id
-    
+
     def get_crossbar_id_from_memristor_id(self, memristor_id):
         """
         Получить id кроссбара из мемрезистора
@@ -505,7 +505,7 @@ class DBOperate():
                 print('get_crossbar_id_from_memristor_id',er)
         self.db_disconnect()
         return status, crb_id
-    
+
     def get_wl_from_memristor_id(self, memristor_id):
         """
         Получить WL из мемрезистора
@@ -526,7 +526,7 @@ class DBOperate():
                 print('get_wl_from_memristor_id',er)
         self.db_disconnect()
         return status, wl
-    
+
     def get_bl_from_memristor_id(self, memristor_id):
         """
         Получить BL из мемрезистора
@@ -568,3 +568,27 @@ class DBOperate():
                 print('get_cb_info',er)
         self.db_disconnect()
         return status, info
+
+    def add_column_if_not_exist(self, table_name, column_name):
+        """
+        Добавить столбец если не существует
+        """
+        self.db_connect()
+        status = False
+        if self.db_connection:
+            try:
+                QUERY = f'PRAGMA table_info({table_name})'
+                self.db_cursor.execute(QUERY)
+                info = self.db_cursor.fetchall()
+                column_names = []
+                for item in info:
+                    column_names.append(item[1]) 
+                if column_name not in column_names:
+                    # добавление столбца
+                    ADD_COLUMN_LAST_RES = f'ALTER TABLE {table_name} ADD COLUMN {column_name} INTEGER'
+                    self.db_cursor.execute(ADD_COLUMN_LAST_RES)
+                    status = True
+            except sqlite3.Error as er:
+                print('add_column_if_not_exist', er)
+        self.db_disconnect()
+        return status

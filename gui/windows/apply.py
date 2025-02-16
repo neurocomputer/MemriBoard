@@ -493,7 +493,7 @@ class ApplyExp(QThread):
                     counter += 1
                     self.count_changed.emit(counter)
                 #print("Весь цикл:", time.time()-start_time_loop)
-                # закрываем файл рещультата
+                # закрываем файл результата
                 file.close()
                 # сохраняем в БД статус завершения
                 if result:
@@ -505,6 +505,7 @@ class ApplyExp(QThread):
                                               self.parent.parent.man.res_switches,
                                               result[0]))
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
+                    status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно обновить сопротивление")
                 if self.need_stop:

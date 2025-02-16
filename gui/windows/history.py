@@ -33,8 +33,8 @@ class History(QDialog):
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # параметры таблицы table_history_experiments
         self.ui.table_history_experiments.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.ui.table_history_experiments.setColumnCount(3)
-        self.ui.table_history_experiments.setHorizontalHeaderLabels(["Дата", "Название", "Статус"])
+        self.ui.table_history_experiments.setColumnCount(4)
+        self.ui.table_history_experiments.setHorizontalHeaderLabels(["Дата", "Название", "Статус", "Сопротивление"])
         self.ui.table_history_experiments.itemClicked.connect(self.show_experiment_tickets)
         # параметры таблицы table_history_tickets
         self.ui.table_history_tickets.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -129,6 +129,7 @@ class History(QDialog):
             self.ui.table_history_experiments.setItem(row_position, 0, QTableWidgetItem(item[1]))
             self.ui.table_history_experiments.setItem(row_position, 1, QTableWidgetItem(item[2]))
             self.ui.table_history_experiments.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3])))
+            self.ui.table_history_experiments.setItem(row_position, 3, QTableWidgetItem(str(item[4])))
         self.ui.table_history_experiments.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     def show_experiment_tickets(self) -> None:

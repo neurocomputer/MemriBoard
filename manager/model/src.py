@@ -93,6 +93,7 @@ def create_empty_db_crossbar(db_path,
                                     image BLOB,
                                     status INTEGER NOT NULL,
                                     memristor_id INTEGER NOT NULL,
+                                    last_resistance INTEGER,
                                     FOREIGN KEY (memristor_id) REFERENCES Memristors(id) 
                                     ON DELETE CASCADE
                                     );'''
