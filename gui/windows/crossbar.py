@@ -114,6 +114,8 @@ class Window(QMainWindow):
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         self.ui.button_reconnect.clicked.connect(self.reconnect)
+        if self.man._port == 'offline':
+            self.ui.button_reconnect.setEnabled(False)
         # хоткей
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         shortcut.activated.connect(self.show_terminal_dialog)
