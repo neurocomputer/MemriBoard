@@ -8,6 +8,7 @@ check_exp
 
 import os
 import pickle
+from copy import deepcopy
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import QtWidgets
@@ -65,6 +66,7 @@ class ExpSettings(QDialog):
         self.ui.button_check_exp.clicked.connect(self.check_exp)
         self.ui.button_load_exp.clicked.connect(lambda: self.parent.show_history_dialog(mode="all"))
         self.ui.button_apply_all.clicked.connect(self.apply_exp_all)
+        self.ui.button_duplicate.clicked.connect(self.duplicate_ticket)
         # блок кнопок
         if parent.opener == 'testing':
             self.ui.button_apply_exp.setEnabled(False)
@@ -277,3 +279,19 @@ class ExpSettings(QDialog):
         for ticket in tickets:
             tick = pickle.loads(ticket[0])
             self._add_exp_to_list(ticket=tick)
+
+    def duplicate_ticket(self) -> None:
+        """
+        Дублировать сигнал
+        """
+        # определяем номер тикета
+        ticket_position = self.ui.plan_list.currentIndex().row()
+        ticket = deepcopy(self.parent.exp_list[ticket_position][1])
+        task_list, count = calculate_counts_for_ticket(self.parent.man, deepcopy(ticket))
+        # копируем выбранный тикет
+        self.parent.exp_list.append((ticket["name"], deepcopy(ticket), deepcopy(task_list), count))
+        # обновляем параметры
+        self.parent.exp_list_params['total_tickets'] += 1
+        self.parent.exp_list_params['total_tasks'] += count
+        self._refresh_exp_list()
+        self.label_total_update()
