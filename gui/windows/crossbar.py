@@ -371,8 +371,8 @@ class Window(QMainWindow):
         ticket["params"]["bl"] = bl
         # временное решение, лучше переписать на потоки
         _, memristor_id = self.man.db.get_memristor_id(wl, bl, self.man.crossbar_id)
-        _, experiment_id = self.man.db.add_experiment('measure', memristor_id)
-        _, ticket_id = self.man.db.add_ticket(ticket, experiment_id)
+        # _, experiment_id = self.man.db.add_experiment('measure', memristor_id)
+        # _, ticket_id = self.man.db.add_ticket(ticket, experiment_id)
         for task in self.man.menu[ticket['mode']](ticket['params'],
                                                   ticket['terminate'],
                                                   self.man.blank_type):
@@ -388,8 +388,8 @@ class Window(QMainWindow):
         except IndexError:
             last_resistance = 0
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
-        _ = self.man.db.update_ticket(ticket_id, 'status', 1)
-        _ = self.man.db.update_experiment_status(experiment_id, 1)
+        # _ = self.man.db.update_ticket(ticket_id, 'status', 1)
+        # _ = self.man.db.update_experiment_status(experiment_id, 1)
         return last_resistance
 
     def _read_all(self) -> None:

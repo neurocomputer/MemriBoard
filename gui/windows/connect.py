@@ -117,6 +117,7 @@ class ConnectDialog(QDialog):
                 com_port = port.portName()
             port_list.append(com_port)
         port_list.append("simulator")
+        port_list.append("offline")
         port_list.insert(0, self.parent.man.ap_config["connector"]["com_port"]) # default
         self.ui.combo_com_name.clear()
         self.ui.combo_com_name.addItems(port_list)
@@ -172,7 +173,10 @@ class ConnectDialog(QDialog):
             # выбираем чип
             _, _ = self.parent.man.use_chip(self.cb_serial)
             # попытка подключения
-            if self.parent.man.connect(self.com_port):
+            if self.com_port == 'offline':
+                self.parent.ui.button_reconnect.setEnabled(False)
+                self.accept_connet()
+            elif self.parent.man.connect(self.com_port):
                 self.accept_connet()
             else:
                 message = f"К порту \"{self.com_port}\" нет подключения!"
@@ -193,8 +197,8 @@ class ConnectDialog(QDialog):
         # все сопротивления
         self.parent.number_cells = self.parent.man.col_num*self.parent.man.row_num
         self.parent.all_resistances = [[0 for _ in range(self.parent.man.col_num)] for _ in range(self.parent.man.row_num)]
-        if self.com_port != 'simulator':
-            self.parent.check_connection_start() # проверка подключения порта по таймеру
+        # if self.com_port != 'simulator': #todo: починить
+        #     self.parent.check_connection_start() # проверка подключения порта по таймеру
         self.close()
 
     def closeEvent(self, event): # pylint: disable=C0103,W0613

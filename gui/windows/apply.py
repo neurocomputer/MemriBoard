@@ -159,7 +159,7 @@ class Apply(QDialog):
                                                           self.parent.man.res_switches,
                                                           y,
                                                           vol,
-                                                          sign)/1e6
+                                                          sign)*1e6
         elif self.ylabel_text == 'ток, мА':
             self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
                                                           self.parent.man.vol_ref_dac,
@@ -171,7 +171,7 @@ class Apply(QDialog):
                                                           self.parent.man.res_switches,
                                                           y,
                                                           vol,
-                                                          sign)/1e3
+                                                          sign)*1e3
         if self.xlabel_text == 'напряжение, В':
             self.x_value_process = lambda vol,sign,count: d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,vol,sign=sign)
         elif self.xlabel_text == 'отсчеты':
@@ -493,7 +493,7 @@ class ApplyExp(QThread):
                     counter += 1
                     self.count_changed.emit(counter)
                 #print("Весь цикл:", time.time()-start_time_loop)
-                # закрываем файл рещультата
+                # закрываем файл результата
                 file.close()
                 # сохраняем в БД статус завершения
                 if result:
@@ -505,6 +505,7 @@ class ApplyExp(QThread):
                                               self.parent.parent.man.res_switches,
                                               result[0]))
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
+                    status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно обновить сопротивление")
                 if self.need_stop:
