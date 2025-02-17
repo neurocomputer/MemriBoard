@@ -592,3 +592,23 @@ class DBOperate():
                 print('add_column_if_not_exist', er)
         self.db_disconnect()
         return status
+
+    def get_all_experiments(self):
+        """
+        Получить все эксперименты в базе
+        """
+        self.db_connect()
+        status = False
+        history = []
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT * FROM Experiments ORDER BY datestamp DESC"""
+                self.db_cursor.execute(QUERY)
+                history = self.db_cursor.fetchall()
+                status = True
+            except sqlite3.Error as er:
+                print('get_all_experiments',er)
+            except TypeError as er:
+                print('get_all_experiments',er)
+        self.db_disconnect()
+        return status, history
