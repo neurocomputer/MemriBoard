@@ -592,3 +592,23 @@ class DBOperate():
                 print('add_column_if_not_exist', er)
         self.db_disconnect()
         return status
+
+    def get_last_experiment(self):
+        """
+        Получить id последнего запроса
+        """
+        self.db_connect()
+        status = False
+        last = None
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT MAX(id) FROM Experiments"""
+                self.db_cursor.execute(QUERY)
+                last = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_all_experiments',er)
+            except TypeError as er:
+                print('get_all_experiments',er)
+        self.db_disconnect()
+        return status, last
