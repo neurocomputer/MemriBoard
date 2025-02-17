@@ -593,22 +593,22 @@ class DBOperate():
         self.db_disconnect()
         return status
 
-    def get_all_experiments(self):
+    def get_last_experiment(self):
         """
-        Получить все эксперименты в базе
+        Получить id последнего запроса
         """
         self.db_connect()
         status = False
-        history = []
+        last = None
         if self.db_connection:
             try:
-                QUERY = f"""SELECT * FROM Experiments ORDER BY datestamp DESC"""
+                QUERY = f"""SELECT MAX(id) FROM Experiments"""
                 self.db_cursor.execute(QUERY)
-                history = self.db_cursor.fetchall()
+                last = self.db_cursor.fetchone()[0]
                 status = True
             except sqlite3.Error as er:
                 print('get_all_experiments',er)
             except TypeError as er:
                 print('get_all_experiments',er)
         self.db_disconnect()
-        return status, history
+        return status, last
