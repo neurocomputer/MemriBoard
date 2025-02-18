@@ -51,7 +51,10 @@ class ExpSettings(QDialog):
         self._refresh_exp_list()
         self.ui.plan_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.plan_list.doubleClicked.connect(self._edit_ticket)
-        self.ui.exp_name.setText("Эксперимент_" + str(self.parent.man.db.get_last_experiment()[1]+1))
+        last_exp_id = self.parent.man.db.get_last_experiment()[1]
+        if last_exp_id is None:
+            last_exp_id = 0
+        self.ui.exp_name.setText("Эксперимент_" + str(last_exp_id + 1))
         # обработка кнопок
         self.ui.button_new_signal.clicked.connect(lambda: self.parent.show_signal_dialog("blank",
                                                                                          "create"))
