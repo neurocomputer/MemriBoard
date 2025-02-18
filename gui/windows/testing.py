@@ -4,6 +4,7 @@
 
 # pylint: disable=E0611,C0103,I1101,C0301,W0107
 
+import re
 import os
 import csv
 import time
@@ -13,9 +14,31 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
 import numpy as np
 
-from manager.service import a2r
+from manager.service import a2r, d2v
 from gui.src import show_warning_messagebox, open_file_dialog, show_warning_messagebox
 from gui.windows.apply import ApplyExp
+
+def load_csv_with_csv(filepath, gain, res_load, vol_read, adc_bit, vol_ref_adc, res_switches, dac_bit, vol_ref_dac):
+    """
+    Загрузка csv
+    """
+    data = []
+    with open(filepath, 'r', encoding='utf-8') as file:
+        csv_reader = csv.reader(file, delimiter=';')
+        header = next(csv_reader) # Получаем заголовок
+        for row in csv_reader:
+            data.append([d2v(dac_bit,
+                             vol_ref_dac,
+                             int(row[1]),
+                             sign=int(row[0])),
+                         a2r(gain,
+                             res_load,
+                             vol_read,
+                             adc_bit,
+                             vol_ref_adc,
+                             res_switches,
+                             int(row[2]))])
+    return header, data
 
 def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     """
@@ -91,6 +114,7 @@ class Testing(QDialog):
         self.ui.button_reset_exp.clicked.connect(self.button_reset_exp_clicked)
         self.ui.button_result.clicked.connect(self.view_result)
         self.ui.button_choose_cells.clicked.connect(self.button_choose_cells_clicked)
+        self.ui.button_graphs.clicked.connect(self.save_graph_vol_res)
         # значения по умолчанию
         self.result_path = os.getcwd()
         self.set_up_init_values()
@@ -218,7 +242,7 @@ class Testing(QDialog):
         time.sleep(1) # чтобы всё успело сохраниться на диск
         self.application_status = 'stop'
         self.set_up_init_values()
-        self.button_open_combination()
+        self.button_finish_combination()
 
     def on_count_changed(self, value: int) -> None:
         """
@@ -325,6 +349,8 @@ class Testing(QDialog):
         self.ui.button_start_exp.setEnabled(False)
         self.ui.button_choose_folder.setEnabled(False)
         self.ui.button_reset_exp.setEnabled(True)
+        self.ui.button_result.setEnabled(False)
+        #self.ui.button_graphs.setEnabled(False)
 
     def button_open_combination(self):
         """
@@ -335,6 +361,8 @@ class Testing(QDialog):
         self.ui.button_start_exp.setEnabled(False)
         self.ui.button_choose_folder.setEnabled(True)
         self.ui.button_reset_exp.setEnabled(False)
+        self.ui.button_result.setEnabled(False)
+        #self.ui.button_graphs.setEnabled(False)
 
     def button_ready_combination(self):
         """
@@ -346,7 +374,21 @@ class Testing(QDialog):
         self.ui.button_start_exp.setEnabled(True)
         self.ui.button_choose_folder.setEnabled(True)
         self.ui.button_reset_exp.setEnabled(False)
+        self.ui.button_result.setEnabled(False)
+        #self.ui.button_graphs.setEnabled(False)
         self.update_label_time_status()
+
+    def button_finish_combination(self):
+        """
+        Отображение кнопок при открытии окна
+        """
+        self.ui.button_choose_exp.setEnabled(True)
+        self.ui.button_choose_cells.setEnabled(True)
+        self.ui.button_start_exp.setEnabled(True)
+        self.ui.button_choose_folder.setEnabled(True)
+        self.ui.button_reset_exp.setEnabled(False)
+        self.ui.button_result.setEnabled(True)
+        #self.ui.button_graphs.setEnabled(True)
 
     def update_label_time_status(self):
         """
@@ -460,3 +502,35 @@ class Testing(QDialog):
         title = f'Серийный номер: {self.crossbar_serial}\nДата: {formatted_date}\nГодные мемристоры: {np.round(good_mem_count/all_cells_count*100,2)}%\nСНС мемристоры: {np.round(LRS_mem_count/all_cells_count*100,2)}%\nСВС мемристоры: {np.round(HRS_mem_count/all_cells_count*100,2)}%'
         custom_shaphop(hot_map, title, save_flag=True, save_path=self.result_path)
         self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/all_cells_count*100,2)}%")
+
+    def save_graph_vol_res(self):
+        """
+        График для результатов тестов ячеек
+        """
+        csv_name_list = os.listdir(self.result_path)
+        wl = self.parent.man.col_num
+        bl = self.parent.man.row_num
+        fig, axs = plt.subplots(bl, wl, figsize=(20*4, 20*9))
+        for csv_name in csv_name_list:
+            match = re.search(r'_(\d+)\.csv$', csv_name)
+            if match:
+                filepath = os.path.join(self.result_path, csv_name)
+                _, data = load_csv_with_csv(filepath,
+                                            self.parent.man.gain,
+                                            self.parent.man.res_load,
+                                            self.parent.man.vol_read,
+                                            self.parent.man.adc_bit,
+                                            self.parent.man.vol_ref_adc,
+                                            self.parent.man.res_switches,
+                                            self.parent.man.dac_bit,
+                                            self.parent.man.vol_ref_dac)
+                all_data = np.array(data)
+                bl = int(csv_name.split('.')[-2].split('_')[-1])
+                wl = int(csv_name.split('.')[-2].split('_')[-2])
+                axs[bl,wl].plot(all_data[:,0],all_data[:,1],marker='o', linestyle='-')
+                axs[bl,wl].set_title(f"BL = {bl}, WL = {wl}")
+                axs[bl,wl].set_xlabel("Напряжение, В")
+                axs[bl,wl].set_ylabel("Сопротивление, Ом")
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.result_path,'rv_curve.png'), dpi=300)
