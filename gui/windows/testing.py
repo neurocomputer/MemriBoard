@@ -30,9 +30,9 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     plt.xticks(x[:-1]+0.5, labels=x[:-1])
     # Меняем цифры на оси Y
     plt.yticks(y[:-1]+0.5, labels=y[:-1])
-    levels = ["СНС", "Рабочий", "СВС"]  # Соответствующие текстовые категории
+    levels = ["Нет теста", "СНС", "Рабочий", "СВС"]  # Соответствующие текстовые категории
     # настройка цветовой карты и границ
-    bounds = [0, 1, 2]
+    bounds = [0, 1, 2, 3]
     # создание colorbar и замена числовых делений на текстовые
     cbar = plt.colorbar(ticks=bounds) # добавляем colorbar, сдвигая деления для корректного отображения
     def format_func(value):
@@ -45,6 +45,8 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
             return levels[1]
         elif value == bounds[2]:
             return levels[2]
+        elif value == bounds[3]:
+            return levels[3]
         else:
             return ""
     cbar.ax.set_yticklabels([format_func(tick) for tick in cbar.get_ticks()])
@@ -164,7 +166,6 @@ class Testing(QDialog):
         else:
             show_warning_messagebox('Тест выполнится для всех ячеек!')
             self.cell_list_from_file = False
-        print(self.coordinates)
 
     def button_choose_exp_clicked(self):
         """
@@ -177,7 +178,9 @@ class Testing(QDialog):
         """
         Старт обработки
         """
-        self.raw_adc_all = []
+        wl = self.parent.man.col_num
+        bl = self.parent.man.row_num
+        self.raw_adc_all = [[[] for j in range(wl)] for i in range(bl)]
         self.application_status = 'work'
         self.start_time = time.time()
         self.update_label_start_time()
@@ -256,11 +259,18 @@ class Testing(QDialog):
                              f'{self.crossbar_serial}_{self.parent.exp_name}_{wl}_{bl}.csv')
         with open(fname,'w', newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['sign','dac','adc'])
+            file_wr.writerow(['sign','dac','adc','res'])
             for _, item in enumerate(self.raw_data):
-                file_wr.writerow([item[0],item[1],item[2]])
+                res = a2r(self.parent.man.gain,
+                          self.parent.man.res_load,
+                          self.parent.man.vol_read,
+                          self.parent.man.adc_bit,
+                          self.parent.man.vol_ref_adc,
+                          self.parent.man.res_switches,
+                          int(item[2])) # проверить нужно ли int
+                file_wr.writerow([item[0],item[1],item[2],str(res)]) # проверить нужно ли str
         # сохранение в переменную
-        self.raw_adc_all.append([item[2] for item in self.raw_data])
+        self.raw_adc_all[bl][wl] = [item[2] for item in self.raw_data]
         # прогрессбар
         self.counter += 1
         self.ui.progress_all.setValue(self.counter)
@@ -342,7 +352,11 @@ class Testing(QDialog):
         """
         Обновить время выполнения
         """
-        message_time = round((((self.parent.exp_list_params['total_tasks'] * self.parent.man.row_num * self.parent.man.col_num)* 55) / 1000) / 60, 0) # todo: скорректировать время
+        if self.cell_list_from_file:
+            num_cells = len(self.coordinates)
+        else:
+            num_cells = self.parent.man.row_num * self.parent.man.col_num
+        message_time = round((((self.parent.exp_list_params['total_tasks'] * num_cells) * 55) / 1000) / 60, 0) # todo: скорректировать время
         self.ui.label_time_status.setText(f"Время выполнения теста: {message_time} мин.")
 
     def update_label_start_time(self):
@@ -362,6 +376,7 @@ class Testing(QDialog):
             self.parent.color_table()
             self.set_up_init_values()
             self.coordinates = []
+            self.cell_list_from_file = False
             event.accept()
         elif self.application_status == 'work':
             show_warning_messagebox('Дождитесь или прервите!')
@@ -378,36 +393,70 @@ class Testing(QDialog):
         LRS_mem_count = 0
         HRS_mem_count = 0
         hot_map = np.zeros((bl, wl))
-        count_mem = 0
         # среднее значение adc живого мемристора
         all_mean_adc = []
         for i in range(bl):
             for j in range(wl):
                 try:
-                    if (max(self.raw_adc_all[count_mem])/min(self.raw_adc_all[count_mem])) >= treshhold:
-                        hot_map[i][j] = 1
-                        all_mean_adc.append(np.mean(self.raw_adc_all[count_mem]))
-                        good_mem_count+=1
+                    max_adc = max(self.raw_adc_all[i][j])
+                    min_adc = min(self.raw_adc_all[i][j])
+                    max_res = a2r(self.parent.man.gain,
+                                    self.parent.man.res_load,
+                                    self.parent.man.vol_read,
+                                    self.parent.man.adc_bit,
+                                    self.parent.man.vol_ref_adc,
+                                    self.parent.man.res_switches,
+                                    min_adc)
+                    min_res = a2r(self.parent.man.gain,
+                                    self.parent.man.res_load,
+                                    self.parent.man.vol_read,
+                                    self.parent.man.adc_bit,
+                                    self.parent.man.vol_ref_adc,
+                                    self.parent.man.res_switches,
+                                    max_adc)
+                    if self.cell_list_from_file:
+                        if [j, i] in self.coordinates:
+                            if max_res/min_res >= treshhold:
+                                hot_map[i][j] = 2
+                                all_mean_adc.append(np.mean(self.raw_adc_all[i][j]))
+                                good_mem_count+=1
+                    else:
+                        if max_res/min_res >= treshhold:
+                            hot_map[i][j] = 2
+                            all_mean_adc.append(np.mean(self.raw_adc_all[i][j]))
+                            good_mem_count+=1
                 except:
                     pass
-                count_mem+=1
-        count_mem = 0
         # среднее значение  adc всех живых мемристоров
         avg_adc = np.mean(all_mean_adc)
         for i in range(bl):
             for j in range(wl):
                 try:
-                    if hot_map[i][j]==0:
-                        if np.mean(self.raw_adc_all[count_mem])<avg_adc:
-                            hot_map[i][j] = 2
-                            HRS_mem_count+=1
-                        else:
-                            LRS_mem_count+=1
+                    if self.cell_list_from_file:
+                        if [j, i] in self.coordinates:
+                            if hot_map[i][j] == 0:
+                                if np.mean(self.raw_adc_all[i][j]) < avg_adc:
+                                    hot_map[i][j] = 3
+                                    HRS_mem_count += 1
+                                else:
+                                    hot_map[i][j] = 1
+                                    LRS_mem_count += 1
+                    else:
+                        if hot_map[i][j] == 0:
+                            if np.mean(self.raw_adc_all[i][j]) < avg_adc:
+                                hot_map[i][j] = 3
+                                HRS_mem_count += 1
+                            else:
+                                hot_map[i][j] = 1
+                                LRS_mem_count += 1
                 except:
                     pass
-                count_mem+=1
         now = datetime.datetime.now()
         formatted_date = now.strftime("%d.%m.%Y %H:%M:%S")
-        title = f'Серийный номер: {self.crossbar_serial}\nДата: {formatted_date}\nГодные мемристоры: {np.round(good_mem_count/(wl*bl)*100,2)}%\nСНС мемристоры: {np.round(LRS_mem_count/(wl*bl)*100,2)}%\nСВС мемристоры: {np.round(HRS_mem_count/(wl*bl)*100,2)}%'
+        if self.cell_list_from_file:
+            all_cells_count = len(self.coordinates)
+        else:
+            all_cells_count = wl*bl
+        title = f'Серийный номер: {self.crossbar_serial}\nДата: {formatted_date}\nГодные мемристоры: {np.round(good_mem_count/all_cells_count*100,2)}%\nСНС мемристоры: {np.round(LRS_mem_count/all_cells_count*100,2)}%\nСВС мемристоры: {np.round(HRS_mem_count/all_cells_count*100,2)}%'
         custom_shaphop(hot_map, title, save_flag=True, save_path=self.result_path)
-        self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/(wl*bl)*100,2)}%")
+        self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/all_cells_count*100,2)}%")

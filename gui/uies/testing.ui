@@ -28,7 +28,11 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="path_folder_csv"/>
+       <widget class="QLineEdit" name="path_folder_csv">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="button_choose_folder">
@@ -121,7 +125,7 @@
         <item>
          <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>Порог:</string>
+           <string>Порог Rmax/Rmin:</string>
           </property>
          </widget>
         </item>

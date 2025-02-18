@@ -251,6 +251,7 @@ class ExpSettings(QDialog):
         if self.parent.opener == 'testing':
             if self.parent.exp_list:
                 self.parent.testing_dialog.button_ready_combination()
+                self.parent.testing_dialog.update_label_time_status()
         else:
             self.set_up_init_values()
             self.parent.update_current_cell_info()
