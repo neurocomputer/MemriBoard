@@ -49,6 +49,7 @@ class History(QDialog):
         # обработчики кнопок
         self.ui.button_load.clicked.connect(self.load_experiment)
         self.ui.button_load_from_db.clicked.connect(self.export_ticket_from_db)
+        self.ui.button_export_to_json.clicked.connect(self.export_ticket_to_json)
         self.ui.button_cancel.clicked.connect(self.close)
         self.ui.button_load.setDisabled(True)
         self.ui.button_load_from_db.setDisabled(True)
@@ -171,6 +172,11 @@ class History(QDialog):
             _, bl = self.parent.man.db.get_bl_from_memristor_id(mem_id)
             quick_data += "\nBL: " + str(bl)
             self.ui.quick_view.setText(quick_data)
+
+    def export_ticket_to_json(self) -> None:
+        """
+        Экспортировать тикет в json
+        """
 
     def set_up_init_values(self) -> None:
         """
