@@ -612,3 +612,23 @@ class DBOperate():
                 print('get_all_experiments',er)
         self.db_disconnect()
         return status, last
+
+    def get_BLOB_from_ticket_id(self, ticket_id):
+        """
+        Получить BLOB тикета
+        """
+        self.db_connect()
+        status = False
+        blob = None
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT ticket FROM Tickets WHERE id = {ticket_id}"""
+                self.db_cursor.execute(QUERY)
+                blob = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_BLOB_from_ticket_id',er)
+            except TypeError as er:
+                print('get_BLOB_from_ticket_id',er)
+        self.db_disconnect()
+        return status, blob

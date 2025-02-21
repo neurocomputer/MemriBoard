@@ -57,7 +57,7 @@
         <item>
          <widget class="QTabWidget" name="tab_history_info">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab_brief">
            <attribute name="title">
@@ -118,11 +118,22 @@
                <widget class="QTableWidget" name="table_history_tickets"/>
               </item>
               <item>
-               <widget class="QPushButton" name="button_load_from_db">
-                <property name="text">
-                 <string>Выгрузить в csv</string>
-                </property>
-               </widget>
+               <layout class="QHBoxLayout" name="horizontalLayout_2">
+                <item>
+                 <widget class="QPushButton" name="button_load_from_db">
+                  <property name="text">
+                   <string>Выгрузить в csv</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="button_export_to_json">
+                  <property name="text">
+                   <string>Экспортировать тикет</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </item>
