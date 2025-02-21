@@ -6,11 +6,14 @@
 
 import os
 import csv
+import json
+import pickle
 from PyQt5 import uic
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QHeaderView
 
+from manager.service.global_settings import TICKET_PATH
 from manager.service.saves import results_from_bytes
 from manager.service import  d2v, a2r
 from gui.src import show_warning_messagebox, bool_to_label
@@ -53,6 +56,7 @@ class History(QDialog):
         self.ui.button_cancel.clicked.connect(self.close)
         self.ui.button_load.setDisabled(True)
         self.ui.button_load_from_db.setDisabled(True)
+        self.ui.button_export_to_json.setDisabled(True)
 
     def export_ticket_from_db(self) -> None:
         """
@@ -155,6 +159,7 @@ class History(QDialog):
         if self.parent.man._port != 'offline':    
             self.ui.button_load.setDisabled(False)
         self.ui.button_load_from_db.setDisabled(False)
+        self.ui.button_export_to_json.setDisabled(False)
         # поучаем рисунок
         status, image = self.parent.man.db.get_img_experiment(experiment_id)
         if status:
@@ -176,7 +181,41 @@ class History(QDialog):
     def export_ticket_to_json(self) -> None:
         """
         Экспортировать тикет в json
-        """
+        """ 
+        items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
+        # проверки на выбор
+        ok = True
+        if len(items) == 0:
+            show_warning_messagebox('Выберите тикет для экспортирования!')
+            ok = False
+        elif len(items) > 3:
+            show_warning_messagebox('Выберите один тикет!')
+            ok = False
+        rows = []
+        for item in items:
+            cur_row = self.ui.table_history_tickets.row(item)
+            more_than_one = False
+            for row in rows:
+                if row != cur_row:
+                    more_than_one = True
+                    break
+            if more_than_one:
+                show_warning_messagebox('Выберите один тикет!')
+                ok = False
+            else:
+                rows.append(cur_row)
+        # экспорт тикета
+        if ok:
+            ticket_id = self.tickets[cur_row][0]
+            blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
+            ticket_info = pickle.loads(blob)
+            fname = ticket_info["name"] + "_" + str(ticket_id)
+            with open(os.path.join(TICKET_PATH,
+                                fname+'.json'),
+                                'w', encoding='utf-8') as outfile:
+                json.dump(ticket_info, outfile)
+                outfile.close()
+            show_warning_messagebox("Тикет экспортирован в " + str(TICKET_PATH) + "/" + fname + ".json")
 
     def set_up_init_values(self) -> None:
         """
