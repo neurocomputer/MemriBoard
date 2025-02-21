@@ -175,6 +175,10 @@ class ConnectDialog(QDialog):
             # попытка подключения
             if self.com_port == 'offline':
                 self.parent.ui.button_reconnect.setEnabled(False)
+                self.parent.ui.button_rram.setEnabled(False)
+                self.parent.ui.button_net.setEnabled(False)
+                self.parent.ui.button_tests.setEnabled(False)
+                self.parent.ui.button_math.setEnabled(False)
                 self.accept_connet()
             elif self.parent.man.connect(self.com_port):
                 self.accept_connet()
