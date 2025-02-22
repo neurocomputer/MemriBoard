@@ -222,12 +222,8 @@ class History(QDialog):
         """
         Отобразить окно сигнала для выбранного тикета
         """
-        fname = TICKET_PATH + "/" \
-                            + self.tickets[self.ui.table_history_tickets.currentRow()][2] + "_" \
-                            + str(self.tickets[self.ui.table_history_tickets.currentRow()][0])
-        if not os.path.isfile(fname + ".json"):
-            self.export_ticket_to_json()
-        self.parent.show_signal_dialog(fname, "create")
+        blob = self.parent.man.db.get_BLOB_from_ticket_id(self.tickets[self.ui.table_history_tickets.currentRow()][0])[1]
+        self.parent.show_signal_dialog(pickle.loads(blob), "edit")
 
     def set_up_init_values(self) -> None:
         """
