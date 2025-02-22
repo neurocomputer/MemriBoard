@@ -223,7 +223,7 @@ class History(QDialog):
         Отобразить окно сигнала для выбранного тикета
         """
         blob = self.parent.man.db.get_BLOB_from_ticket_id(self.tickets[self.ui.table_history_tickets.currentRow()][0])[1]
-        self.parent.show_signal_dialog(pickle.loads(blob), "edit")
+        self.parent.show_signal_dialog(pickle.loads(blob), "view")
 
     def set_up_init_values(self) -> None:
         """
