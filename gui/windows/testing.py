@@ -510,7 +510,7 @@ class Testing(QDialog):
         csv_name_list = os.listdir(self.result_path)
         wl = self.parent.man.col_num
         bl = self.parent.man.row_num
-        fig, axs = plt.subplots(bl, wl, figsize=(20*4, 20*9))
+        _, axs = plt.subplots(bl, wl, figsize=(20*4, 20*9))
         for csv_name in csv_name_list:
             match = re.search(r'_(\d+)\.csv$', csv_name)
             if match:

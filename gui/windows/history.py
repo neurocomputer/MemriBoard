@@ -77,7 +77,8 @@ class History(QDialog):
                 rows.append(cur_item)
                 fname = fname + "+" + self.ui.table_history_tickets.item(cur_item, 1).text()
         if rows:
-            fname = str(QFileDialog.getExistingDirectory(self)) + "/" + f'{self.tickets[self.ui.table_history_tickets.currentRow()][1]}_'+fname+'.csv'
+            fname = os.path.join(str(QFileDialog.getExistingDirectory(self)),
+                                 f'{self.tickets[self.ui.table_history_tickets.currentRow()][1]}_'+fname+'.csv')
             with open(fname,'w',newline='', encoding='utf-8') as file:
                 file_wr = csv.writer(file, delimiter=";")
                 file_wr.writerow(['sign', 'dac', 'adc', 'vol', 'res'])
@@ -157,7 +158,7 @@ class History(QDialog):
             self.ui.table_history_tickets.setItem(row_position, 1, QTableWidgetItem(item[2]))
             self.ui.table_history_tickets.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3])))
         self.ui.table_history_tickets.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        if self.parent.man._port != 'offline':    
+        if self.parent.man.connected_port != 'offline':
             self.ui.button_load.setDisabled(False)
         self.ui.button_load_from_db.setDisabled(False)
         self.ui.button_export_to_json.setDisabled(False)
@@ -182,7 +183,7 @@ class History(QDialog):
     def export_ticket_to_json(self) -> None:
         """
         Экспортировать тикет в json
-        """ 
+        """
         items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
         # проверки на выбор
         ok = True

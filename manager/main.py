@@ -157,7 +157,7 @@ class Manager(Application):
         Попытка открыть COM порт
         """
         if not self.connected_flag:
-            self.connected_flag = self.conn.open_serial(self._port) # подключаемся к плате
+            self.connected_flag = self.conn.open_serial(self.connected_port) # подключаемся к плате
 
     def _admin(self) -> None:
         """

@@ -2,13 +2,15 @@
 Окно информации о кроссбаре
 """
 
+# pylint: disable=I1101,E0611
+
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtWidgets import QHeaderView, QTableWidgetItem
 from PyQt5 import QtWidgets
 
-class Cb_info(QDialog):
+class CbInfo(QDialog):
     """
     Информация о кроссбаре
     """
@@ -33,7 +35,12 @@ class Cb_info(QDialog):
         self.ui.table_cb_info.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_cb_info.setRowCount(6)
         self.ui.table_cb_info.setColumnCount(1)
-        self.ui.table_cb_info.setVerticalHeaderLabels(["Серийный номер кроссбара", "Комментарий", "Количество BL", "Количество WL", "Количество экспериментов", "Последний эксперимент"])
+        self.ui.table_cb_info.setVerticalHeaderLabels(["Серийный номер кроссбара",
+                                                       "Комментарий",
+                                                       "Количество BL",
+                                                       "Количество WL",
+                                                       "Количество экспериментов",
+                                                       "Последний эксперимент"])
         self.ui.table_cb_info.setHorizontalHeaderLabels(["Данные"])
         # заполнение данных
         _, cb_info = self.parent.man.db.get_cb_info(self.parent.man.crossbar_id)

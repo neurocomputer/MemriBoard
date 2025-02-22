@@ -37,7 +37,7 @@ from gui.windows.requests import RequestsList
 from gui.windows.terminal import Terminal
 from gui.windows.testing import Testing
 from gui.windows.map import Map
-from gui.windows.cb_info import Cb_info
+from gui.windows.cb_info import CbInfo
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -75,7 +75,7 @@ class Window(QMainWindow):
     terminal_dialog: Terminal
     testing_dialog: Testing
     map_dialog: Map
-    cb_info_dialog: Cb_info
+    cb_info_dialog: CbInfo
 
     opener: str = ''
 
@@ -246,12 +246,12 @@ class Window(QMainWindow):
         self.show_map_dialog()
         self.map_dialog.fill_table(mode='weights')
         self.map_dialog.set_prompt("Веса кроссбара")
-    
+
     def show_cb_info_dialog(self) -> None:
         """
         Открытие окна инормации о кроссбаре
         """
-        self.cb_info_dialog = Cb_info(parent=self)
+        self.cb_info_dialog = CbInfo(parent=self)
         self.cb_info_dialog.show()
 
     # обработчики кнопок
@@ -261,7 +261,7 @@ class Window(QMainWindow):
         Переподключение к плате
         """
         self.man.conn.close_serial()
-        if self.man.connect(self.man._port):
+        if self.man.connect(self.man.connected_port):
             show_warning_messagebox("Переподключились успешно!")
         else:
             show_warning_messagebox("Что-то пошло не так!")

@@ -31,7 +31,7 @@ class Application():
     gain: int # усиление
     menu: dict # меню режимов
     blank_type: str # тип бланка
-    _port: str # com порт
+    connected_port: str # com порт
     row_num: int # кол-во строк
     col_num: int # кол-во столбцов
     db: DBOperate
@@ -62,7 +62,7 @@ class Application():
         Прочитать настройки платы
         """
         self.ap_config.read(self.ap_config_path, encoding="utf-8")  # читаем конфиг
-        self._port = self.ap_config['connector']['com_port']
+        self.connected_port = self.ap_config['connector']['com_port']
         self.blank_type = self.ap_config['connector']['c_type']
         # для отдельных настроек создаем алиасы
         self.dac_bit = int(self.ap_config['board']['dac_bit'])
