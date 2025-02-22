@@ -61,6 +61,11 @@ class SignalMod(QDialog):
         elif self.mode == "edit":
             self.base_ticket_name = base_ticket_name["name"]
             self.base_json = base_ticket_name
+        elif self.mode == "view":
+            self.base_ticket_name = base_ticket_name["name"]
+            self.base_json = base_ticket_name
+            self.ui.button_save.setEnabled(False)
+            self.ui.json_name.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
 
     def set_up_init_values(self) -> None:

@@ -39,6 +39,7 @@ class History(QDialog):
         self.ui.table_history_experiments.setColumnCount(4)
         self.ui.table_history_experiments.setHorizontalHeaderLabels(["Дата", "Название", "Статус", "Сопротивление"])
         self.ui.table_history_experiments.itemClicked.connect(self.show_experiment_tickets)
+        self.ui.table_history_tickets.itemDoubleClicked.connect(self.show_ticket)
         # параметры таблицы table_history_tickets
         self.ui.table_history_tickets.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_history_tickets.setColumnCount(3)
@@ -216,6 +217,13 @@ class History(QDialog):
                 json.dump(ticket_info, outfile)
                 outfile.close()
             show_warning_messagebox("Тикет экспортирован в " + str(TICKET_PATH) + "/" + fname + ".json")
+
+    def show_ticket(self) -> None:
+        """
+        Отобразить окно сигнала для выбранного тикета
+        """
+        blob = self.parent.man.db.get_BLOB_from_ticket_id(self.tickets[self.ui.table_history_tickets.currentRow()][0])[1]
+        self.parent.show_signal_dialog(pickle.loads(blob), "view")
 
     def set_up_init_values(self) -> None:
         """
