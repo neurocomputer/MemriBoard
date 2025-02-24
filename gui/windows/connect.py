@@ -201,7 +201,7 @@ class ConnectDialog(QDialog):
         # все сопротивления
         self.parent.number_cells = self.parent.man.col_num*self.parent.man.row_num
         self.parent.all_resistances = [[0 for _ in range(self.parent.man.col_num)] for _ in range(self.parent.man.row_num)]
-        # if self.com_port != 'simulator': #todo: починить
+        # if self.com_port != 'simulator': # todo: починить
         #     self.parent.check_connection_start() # проверка подключения порта по таймеру
         self.close()
 

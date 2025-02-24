@@ -17,7 +17,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from manager.service import d2v, a2r, a2c
+from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
 from gui.src import show_choose_window, show_warning_messagebox
 
@@ -282,7 +282,13 @@ class Apply(QDialog):
         self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
         self.start_thread.start()
 
-    def on_finished_exp(self, value: int) -> None: ...
+    def on_finished_exp(self, value: int) -> None:
+        """
+        Завершили эксперимент аварийно
+        """
+        if value == 2:
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+            self.stop_exp()
 
     def on_ticket_finished(self, value: str) -> None:
         """
@@ -424,6 +430,21 @@ class ApplyExp(QThread):
             # читаем перед экспериментом
             resistance_previous = self.parent.parent.read_cell(item[0], # wl
                                                                item[1]) # bl
+            # проверка проблем с АЦП
+            current_adc = r2a(self.parent.parent.man.gain,
+                              self.parent.parent.man.res_load,
+                              self.parent.parent.man.vol_read,
+                              self.parent.parent.man.adc_bit,
+                              self.parent.parent.man.vol_ref_adc,
+                              self.parent.parent.man.res_switches,
+                              resistance_previous)
+            adc_vol = a2v(self.parent.parent.man.gain,
+                          self.parent.parent.man.adc_bit,
+                          self.parent.parent.man.vol_ref_adc,
+                          current_adc)
+            if adc_vol > 3.5: # todo: вынести 3.5 в константы
+                self.need_stop = 1
+                break
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
             status, memristor_id = self.parent.parent.man.db.get_memristor_id(item[0], # wl

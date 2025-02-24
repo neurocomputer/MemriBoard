@@ -208,7 +208,7 @@ class SignalMod(QDialog):
                 try:
                     if self.mode == "create":
                         fname = self.ui.json_name.text()
-                        # имя из одник пробелов
+                        # имя из одних пробелов
                         # todo: сменить логику на более подробную
                         if fname.replace(" ", "") == '':
                             raise ValueError

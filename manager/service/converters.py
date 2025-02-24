@@ -100,7 +100,7 @@ def convert_adc_to_res(gain: float,
     except ZeroDivisionError:
         res = 2000000
     if res <= 0:
-        res = 1
+        res = 0.00000001
     return res
 
 def convert_res_to_adc(gain: float,
