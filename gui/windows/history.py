@@ -85,21 +85,44 @@ class History(QDialog):
                 for row in rows:
                     ticket_id = self.tickets[row][0]
                     _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
+                    _, experiment_id = self.parent.man.db.get_experiment_id_from_ticket_id(ticket_id)
                     all_raw_data = results_from_bytes(ticket_result[0][0])
                     raw_sign = all_raw_data[0::3]
                     raw_dac = all_raw_data[1::3]
                     raw_adc = all_raw_data[2::3]
+                    _, meta_info = self.parent.man.db.get_meta_info_from_experiment_id(experiment_id)
+                    if isinstance(meta_info, dict):
+                        dac_bit = meta_info['dac_bit']
+                        vol_ref_dac = meta_info['vol_ref_dac']
+                        gain = meta_info['gain']
+                        res_load = meta_info['res_load']
+                        vol_read = meta_info['vol_read']
+                        adc_bit = meta_info['adc_bit']
+                        vol_ref_adc = meta_info['vol_ref_adc']
+                        res_switches = meta_info['res_switches']
+                    else:
+                        dac_bit = self.parent.man.dac_bit
+                        vol_ref_dac = self.parent.man.vol_ref_dac
+                        gain = self.parent.man.gain
+                        res_load = self.parent.man.res_load
+                        vol_read = self.parent.man.vol_read
+                        adc_bit = self.parent.man.adc_bit
+                        vol_ref_adc = self.parent.man.vol_ref_adc
+                        res_switches = self.parent.man.res_switches
                     for i, item in enumerate(raw_sign):
                         file_wr.writerow([item,
                                         raw_dac[i],
                                         raw_adc[i],
-                                        str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,raw_dac[i],sign=item)).replace('.',','),
-                                        str(a2r(self.parent.man.gain,
-                                                self.parent.man.res_load,
-                                                self.parent.man.vol_read,
-                                                self.parent.man.adc_bit,
-                                                self.parent.man.vol_ref_adc,
-                                                self.parent.man.res_switches,
+                                        str(d2v(dac_bit,
+                                                vol_ref_dac,
+                                                raw_dac[i],
+                                                sign=item)).replace('.',','),
+                                        str(a2r(gain,
+                                                res_load,
+                                                vol_read,
+                                                adc_bit,
+                                                vol_ref_adc,
+                                                res_switches,
                                                 raw_adc[i])).replace('.',',')])
             show_warning_messagebox(f'Выгружено в файл {fname}')
         else:
@@ -178,6 +201,10 @@ class History(QDialog):
             quick_data += "\nWL: " + str(wl)
             _, bl = self.parent.man.db.get_bl_from_memristor_id(mem_id)
             quick_data += "\nBL: " + str(bl)
+            _, meta_info = self.parent.man.db.get_meta_info_from_experiment_id(experiment_id)
+            if isinstance(meta_info, dict):
+                for key in meta_info:
+                    quick_data += f"\n{key}: {meta_info[key]}"
             self.ui.quick_view.setText(quick_data)
 
     def export_ticket_to_json(self) -> None:

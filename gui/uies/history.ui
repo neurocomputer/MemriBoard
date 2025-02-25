@@ -57,7 +57,7 @@
         <item>
          <widget class="QTabWidget" name="tab_history_info">
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_brief">
            <attribute name="title">

@@ -215,4 +215,5 @@ def plot_with_save(parent,
     plt.tight_layout()
     if save_path:
         plt.savefig(fname=save_path, dpi=100)
+        plt.close()
     return count
