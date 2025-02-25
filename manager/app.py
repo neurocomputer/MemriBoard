@@ -5,6 +5,7 @@ Application
 # pylint: disable=W0401,W0614,R0902,C0321
 
 import logging
+from copy import deepcopy
 from configparser import ConfigParser
 from logging import Logger
 from manager.menu import menu
@@ -95,3 +96,21 @@ class Application():
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
         self.read_settings()
+
+    def get_meta_info(self):
+        """
+        Вернуть словарь с метаинформацией
+        """
+        meta_info = {}
+        meta_info['dac_bit'] = self.dac_bit
+        meta_info['adc_bit'] = self.adc_bit
+        meta_info['gain'] = self.gain
+        meta_info['soft_cc'] = self.soft_cc
+        meta_info['vol_ref_dac'] = self.vol_ref_dac
+        meta_info['vol_ref_adc'] = self.vol_ref_adc
+        meta_info['vol_read'] = self.vol_read
+        meta_info['res_load'] = self.res_load
+        meta_info['res_switches'] = self.res_switches
+        meta_info['blank_type'] = self.blank_type
+        meta_info['connected_port'] = self.connected_port
+        return deepcopy(meta_info)

@@ -283,6 +283,7 @@ class Window(QMainWindow):
         plt.tight_layout()
         if save_flag:
             plt.savefig(os.path.join(save_path,"result_map.png"))
+            plt.close()
         else:
             plt.show()
 

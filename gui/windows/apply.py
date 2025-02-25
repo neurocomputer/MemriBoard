@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import time
+import pickle
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 from PyQt5 import uic
@@ -346,6 +347,7 @@ class Apply(QDialog):
         plt.grid(True, linestyle='--')
         plt.tight_layout()
         plt.savefig(fname, dpi=100)
+        plt.close()
         with open(fname, 'rb') as file:
             img_data = file.read()
             # записываем в базу
@@ -455,6 +457,13 @@ class ApplyExp(QThread):
             status, experiment_id = self.parent.parent.man.db.add_experiment(name, memristor_id)
             if not status:
                 self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно добавить эксперимент")
+            meta_info = self.parent.parent.man.get_meta_info()
+            _, info = self.parent.parent.man.conn.get_tech_info()
+            if isinstance(meta_info, dict):
+                meta_info['board'] = str(info)
+            status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
+            if not status:
+                self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно добавить метаинформацию")
             # инициируем цикл по тикетам
             counter = 0
             for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, task_list, count

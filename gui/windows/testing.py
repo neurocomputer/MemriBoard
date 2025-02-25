@@ -78,6 +78,7 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     plt.tight_layout()
     if save_flag:
         plt.savefig(os.path.join(save_path,"result_map.png"))
+        plt.close()
     else:
         plt.show()
 
@@ -271,6 +272,7 @@ class Testing(QDialog):
         plt.grid(True, linestyle='--')
         plt.tight_layout()
         plt.savefig(fname, dpi=100)
+        plt.close()
         with open(fname, 'rb') as file:
             img_data = file.read()
             # записываем в базу
@@ -350,7 +352,7 @@ class Testing(QDialog):
         self.ui.button_choose_folder.setEnabled(False)
         self.ui.button_reset_exp.setEnabled(True)
         self.ui.button_result.setEnabled(False)
-        #self.ui.button_graphs.setEnabled(False)
+        self.ui.button_graphs.setEnabled(False)
 
     def button_open_combination(self):
         """
@@ -362,7 +364,7 @@ class Testing(QDialog):
         self.ui.button_choose_folder.setEnabled(True)
         self.ui.button_reset_exp.setEnabled(False)
         self.ui.button_result.setEnabled(False)
-        #self.ui.button_graphs.setEnabled(False)
+        self.ui.button_graphs.setEnabled(False)
 
     def button_ready_combination(self):
         """
@@ -375,7 +377,7 @@ class Testing(QDialog):
         self.ui.button_choose_folder.setEnabled(True)
         self.ui.button_reset_exp.setEnabled(False)
         self.ui.button_result.setEnabled(False)
-        #self.ui.button_graphs.setEnabled(False)
+        self.ui.button_graphs.setEnabled(False)
         self.update_label_time_status()
 
     def button_finish_combination(self):
@@ -388,7 +390,7 @@ class Testing(QDialog):
         self.ui.button_choose_folder.setEnabled(True)
         self.ui.button_reset_exp.setEnabled(False)
         self.ui.button_result.setEnabled(True)
-        #self.ui.button_graphs.setEnabled(True)
+        self.ui.button_graphs.setEnabled(True)
 
     def update_label_time_status(self):
         """
@@ -502,6 +504,16 @@ class Testing(QDialog):
         title = f'Серийный номер: {self.crossbar_serial}\nДата: {formatted_date}\nГодные мемристоры: {np.round(good_mem_count/all_cells_count*100,2)}%\nСНС мемристоры: {np.round(LRS_mem_count/all_cells_count*100,2)}%\nСВС мемристоры: {np.round(HRS_mem_count/all_cells_count*100,2)}%'
         custom_shaphop(hot_map, title, save_flag=True, save_path=self.result_path)
         self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/all_cells_count*100,2)}%")
+        # запись csv
+        fname = os.path.join(self.result_path,
+                             f'{self.crossbar_serial}_{self.parent.exp_name}_good_cells.csv')
+        with open(fname,'w', newline='', encoding='utf-8') as file:
+            file_wr = csv.writer(file, delimiter=",")
+            file_wr.writerow(['wl','bl'])
+            for i in range(bl):
+                for j in range(wl):
+                    if hot_map[i][j] == 2:
+                        file_wr.writerow([j, i]) # проверить нужно ли str
 
     def save_graph_vol_res(self):
         """
@@ -510,6 +522,7 @@ class Testing(QDialog):
         csv_name_list = os.listdir(self.result_path)
         wl = self.parent.man.col_num
         bl = self.parent.man.row_num
+        plt.clf()
         _, axs = plt.subplots(bl, wl, figsize=(20*4, 20*9))
         for csv_name in csv_name_list:
             match = re.search(r'_(\d+)\.csv$', csv_name)
@@ -534,3 +547,4 @@ class Testing(QDialog):
 
         plt.tight_layout()
         plt.savefig(os.path.join(self.result_path,'rv_curve.png'), dpi=300)
+        plt.close()

@@ -5,11 +5,18 @@
 import pickle
 import datetime
 import sqlite3
-from manager.service.global_settings import *
+from manager.service.global_settings import DB_PATH
+
+# pylint: disable=C0103
 
 # todo: добавить логгер базы
-TIMEOUT = 5
+
 class DBOperate():
+    """
+    Методы работы с базой
+    """
+    db_cursor = None
+    db_connection = None
 
     def db_connect(self):
         """
@@ -569,7 +576,7 @@ class DBOperate():
         self.db_disconnect()
         return status, info
 
-    def add_column_if_not_exist(self, table_name, column_name):
+    def add_column_if_not_exist(self, table_name, column_name, column_type):
         """
         Добавить столбец если не существует
         """
@@ -582,10 +589,10 @@ class DBOperate():
                 info = self.db_cursor.fetchall()
                 column_names = []
                 for item in info:
-                    column_names.append(item[1]) 
+                    column_names.append(item[1])
                 if column_name not in column_names:
                     # добавление столбца
-                    ADD_COLUMN_LAST_RES = f'ALTER TABLE {table_name} ADD COLUMN {column_name} INTEGER'
+                    ADD_COLUMN_LAST_RES = f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'
                     self.db_cursor.execute(ADD_COLUMN_LAST_RES)
                     status = True
             except sqlite3.Error as er:
@@ -602,7 +609,7 @@ class DBOperate():
         last = None
         if self.db_connection:
             try:
-                QUERY = f"""SELECT MAX(id) FROM Experiments"""
+                QUERY = "SELECT MAX(id) FROM Experiments"
                 self.db_cursor.execute(QUERY)
                 last = self.db_cursor.fetchone()[0]
                 status = True
@@ -632,3 +639,45 @@ class DBOperate():
                 print('get_BLOB_from_ticket_id',er)
         self.db_disconnect()
         return status, blob
+
+    def get_meta_info_from_experiment_id(self, experiment_id):
+        """
+        Получить метаинформацию об эксперименте по experiment_id
+        """
+        self.db_connect()
+        meta_info = None
+        status = False
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT meta_info FROM Experiments
+                WHERE id={experiment_id}"""
+                self.db_cursor.execute(QUERY)
+                meta_info = self.db_cursor.fetchone()[0]
+                meta_info = pickle.loads(meta_info)
+                status = True
+            except sqlite3.Error as er:
+                print('get_meta_info_from_experiment_id',er)
+            except TypeError as er:
+                print('get_meta_info_from_experiment_id',er)
+        self.db_disconnect()
+        return status, meta_info
+
+    def get_experiment_id_from_ticket_id(self, ticket_id):
+        """
+        Получить experiment_id по ticket_id
+        """
+        self.db_connect()
+        experiment_id = None
+        status = False
+        if self.db_connection:
+            try:
+                QUERY = f"""SELECT experiment_id FROM Tickets WHERE id = {ticket_id}"""
+                self.db_cursor.execute(QUERY)
+                experiment_id = self.db_cursor.fetchone()[0]
+                status = True
+            except sqlite3.Error as er:
+                print('get_experiment_id_from_ticket_id',er)
+            except TypeError as er:
+                print('get_experiment_id_from_ticket_id',er)
+        self.db_disconnect()
+        return status, experiment_id
