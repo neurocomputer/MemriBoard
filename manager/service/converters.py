@@ -93,12 +93,14 @@ def convert_adc_to_res(gain: float,
         res -- сопротивление мемристора
     """
     adc_value = int(adc_value)
+    if adc_value == 0:
+        adc_value = 1
     try:
         res = (gain*res_load*vol_read*(2**adc_bit))/ \
             (adc_value*vol_ref_adc) - res_switches - res_load
         res = round(res, 2)
     except ZeroDivisionError:
-        res = 2000000
+        res = 2000000 # todo: эта ветка больше не должна работать
     if res <= 0:
         res = 0.00000001
     return res
