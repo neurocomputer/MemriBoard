@@ -176,15 +176,22 @@ class Connector():
         """
         Получить техническую информацию
         """
+        # работа с реальным кроссбаром
         rec_data = []
-        send_flag = self.push('100\n')
-        self.serial.com_whait_ready(float(self.config['connector']['timeout']))
-        if self.serial.com_can_read_line():
-            rx = self.serial.com_read_line()
-            try:
-                rec_data = str(rx, 'utf-8').strip().split(',')
-            except ValueError:
-                pass
+        send_flag = False
+        if self.cb_type == 'real':
+            send_flag = self.push('100\n')
+            self.serial.com_whait_ready(float(self.config['connector']['timeout']))
+            if self.serial.com_can_read_line():
+                rx = self.serial.com_read_line()
+                try:
+                    rec_data = str(rx, 'utf-8').strip().split(',')
+                except ValueError:
+                    pass
+        # режим симулятор
+        elif self.cb_type == 'simulator':
+            send_flag = True
+            rec_data = ['simulator']
         return send_flag, rec_data
 
     def impact(self, task: dict):
