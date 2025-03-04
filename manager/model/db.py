@@ -681,3 +681,20 @@ class DBOperate():
                 print('get_experiment_id_from_ticket_id',er)
         self.db_disconnect()
         return status, experiment_id
+    
+    def bd_backup(self, bkp_way) -> None:
+        """
+        Резервное копирование базы
+        """
+        status = False
+        try:
+            base = sqlite3.connect(DB_PATH)
+            # позднее путь будет взят из настроек,
+            # а пока вручную
+            backup = sqlite3.connect(bkp_way + 'backup.db')
+            base.backup(backup)
+            backup.close()
+            base.close()
+        except sqlite3.Error as er:
+            print("bd_backup",er)
+        return status

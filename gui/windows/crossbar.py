@@ -9,6 +9,7 @@ https://stackoverflow.com/questions/57891219/how-to-make-a-fast-matplotlib-live-
 # pylint: disable=E0611,I1101,C0301,R0903,C0103,W0212
 
 import os
+import platform
 import time
 import json
 import numpy as np
@@ -125,6 +126,11 @@ class Window(QMainWindow):
         self.timer = QTimer()
         # диалоговое окно подключения
         self.show_connect_dialog()
+        # поиск и удаление удаление бэкапа
+        cur_os = platform.system()
+        if cur_os == "Linux" or cur_os == "Windows":
+            if os.path.exists("/home/Reko/Repo/qwerty/MemriBoard/backup.db"):
+                os.remove("/home/Reko/Repo/qwerty/MemriBoard/backup.db")
 
     # обработка по таймеру
 
@@ -467,6 +473,9 @@ class Window(QMainWindow):
         """
         Безопасное завершение
         """
+        # резервное копирование дб
+        _ = self.man.db.bd_backup("/home/Reko/Repo/qwerty/MemriBoard/")
+        # закрытие программы
         self.man.abort()
         self.man.close()
         time.sleep(0.1) # может и не надо
