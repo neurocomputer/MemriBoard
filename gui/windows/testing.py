@@ -53,7 +53,7 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     plt.xticks(x[:-1]+0.5, labels=x[:-1])
     # Меняем цифры на оси Y
     plt.yticks(y[:-1]+0.5, labels=y[:-1])
-    levels = ["Нет теста", "СНС", "Рабочий", "СВС"]  # Соответствующие текстовые категории
+    levels = ["Нет теста", "Не годная", "Годная"]  # Соответствующие текстовые категории
     # настройка цветовой карты и границ
     bounds = [0, 1, 2, 3]
     # создание colorbar и замена числовых делений на текстовые
@@ -68,8 +68,6 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
             return levels[1]
         elif value == bounds[2]:
             return levels[2]
-        elif value == bounds[3]:
-            return levels[3]
         else:
             return ""
     cbar.ax.set_yticklabels([format_func(tick) for tick in cbar.get_ticks()])
@@ -167,7 +165,7 @@ class Testing(QDialog):
                                 if wl > wl_max or bl > bl_max:
                                     raise ArithmeticError("WL или BL имеют не корректное значение")
                                 if [wl, bl] not in cells: # Без дубликатов
-                                    cells.append([wl, bl]) # Заполняем список
+                                    cells.append((wl, bl)) # Заполняем список
                         except (ValueError, IndexError):
                             message = f"Ошибка при преобразовании строки в числа: {row}"
                         except ArithmeticError as e:
@@ -428,83 +426,82 @@ class Testing(QDialog):
 
     def view_result(self):
         """
-        Показать результат
+        Показать результат:
+        0 - ячейка не тестировалась
+        1 - ячейка не отвечает на стимулы
+        2 - ячейка имеет резистивное переключение
         """
+        # параметры оценки
         treshhold = float(self.ui.spinbox_tresh.value())
+        rmin = float(self.ui.spinbox_rmin.value())
+        rmax = float(self.ui.spinbox_rmax.value())
+        # todo: переделать функцию под работу с файлами
         wl = self.parent.man.col_num
         bl = self.parent.man.row_num
         good_mem_count = 0
-        LRS_mem_count = 0
-        HRS_mem_count = 0
-        hot_map = np.zeros((bl, wl))
+        bad_mem_count = 0
+        lrs_mem_count = 0
+        hrs_mem_count = 0
+        hot_map = np.zeros((bl, wl)) # все нули - не провереные ячейки
         # среднее значение adc живого мемристора
-        all_mean_adc = []
         for i in range(bl):
             for j in range(wl):
                 try:
-                    max_adc = max(self.raw_adc_all[i][j])
-                    min_adc = min(self.raw_adc_all[i][j])
-                    max_res = a2r(self.parent.man.gain,
-                                    self.parent.man.res_load,
-                                    self.parent.man.vol_read,
-                                    self.parent.man.adc_bit,
-                                    self.parent.man.vol_ref_adc,
-                                    self.parent.man.res_switches,
-                                    min_adc)
-                    min_res = a2r(self.parent.man.gain,
-                                    self.parent.man.res_load,
-                                    self.parent.man.vol_read,
-                                    self.parent.man.adc_bit,
-                                    self.parent.man.vol_ref_adc,
-                                    self.parent.man.res_switches,
-                                    max_adc)
-                    if self.cell_list_from_file:
-                        if [j, i] in self.coordinates:
-                            if max_res/min_res >= treshhold:
-                                hot_map[i][j] = 2
-                                all_mean_adc.append(np.mean(self.raw_adc_all[i][j]))
-                                good_mem_count+=1
-                    else:
-                        if max_res/min_res >= treshhold:
-                            hot_map[i][j] = 2
-                            all_mean_adc.append(np.mean(self.raw_adc_all[i][j]))
-                            good_mem_count+=1
-                except:
-                    pass
-        # среднее значение  adc всех живых мемристоров
-        avg_adc = np.mean(all_mean_adc)
-        for i in range(bl):
-            for j in range(wl):
-                try:
-                    if self.cell_list_from_file:
-                        if [j, i] in self.coordinates:
-                            if hot_map[i][j] == 0:
-                                if np.mean(self.raw_adc_all[i][j]) < avg_adc:
-                                    hot_map[i][j] = 3
-                                    HRS_mem_count += 1
-                                else:
-                                    hot_map[i][j] = 1
-                                    LRS_mem_count += 1
-                    else:
-                        if hot_map[i][j] == 0:
-                            if np.mean(self.raw_adc_all[i][j]) < avg_adc:
-                                hot_map[i][j] = 3
-                                HRS_mem_count += 1
-                            else:
-                                hot_map[i][j] = 1
-                                LRS_mem_count += 1
-                except:
-                    pass
+                    if (j, i) in self.coordinates: # если ячейка в списке координат
+                        # оцениваем сопротивление
+                        max_adc = max(self.raw_adc_all[i][j])
+                        min_adc = min(self.raw_adc_all[i][j])
+                        max_res = a2r(self.parent.man.gain,
+                                        self.parent.man.res_load,
+                                        self.parent.man.vol_read,
+                                        self.parent.man.adc_bit,
+                                        self.parent.man.vol_ref_adc,
+                                        self.parent.man.res_switches,
+                                        min_adc)
+                        min_res = a2r(self.parent.man.gain,
+                                        self.parent.man.res_load,
+                                        self.parent.man.vol_read,
+                                        self.parent.man.adc_bit,
+                                        self.parent.man.vol_ref_adc,
+                                        self.parent.man.res_switches,
+                                        max_adc)
+                        # условия годности
+                        hrmin = True # условие больше rmin
+                        lrmax = True # условие меньше rmax
+                        resrel = True # условие диапазона
+                        # проверяем условия
+                        if self.ui.checkbox_rmin.isChecked():
+                            if min_res < rmin: # меньше минимального сопротивления
+                                hrmin = False
+                                lrs_mem_count += 1
+                        if self.ui.checkbox_rmax.isChecked():
+                            if max_res > rmax: # больше максимального сопротивления
+                                lrmax = False
+                                hrs_mem_count += 1
+                        if max_res/min_res < treshhold: # меньше трешхолда
+                            resrel = False
+                        # собираем условие в одно
+                        work_status = hrmin and lrmax and resrel
+                        if work_status:
+                            hot_map[i][j] = 2 # ячейка рабочая
+                            good_mem_count += 1
+                        else:
+                            hot_map[i][j] = 1 # ячейка не рабочая
+                            bad_mem_count += 1
+                except Exception as ex:
+                    show_warning_messagebox(str(ex))
+        # сохраняем картинку с результатом
         now = datetime.datetime.now()
         formatted_date = now.strftime("%d.%m.%Y %H:%M:%S")
-        if self.cell_list_from_file:
-            all_cells_count = len(self.coordinates)
-        else:
-            all_cells_count = wl*bl
-        title = f'Серийный номер: {self.crossbar_serial}\nДата: {formatted_date}\nГодные мемристоры: {np.round(good_mem_count/all_cells_count*100,2)}%\nСНС мемристоры: {np.round(LRS_mem_count/all_cells_count*100,2)}%\nСВС мемристоры: {np.round(HRS_mem_count/all_cells_count*100,2)}%'
+        all_cells_count = len(self.coordinates)
+        serial_label = f'Серийный номер: {self.crossbar_serial}\n'
+        data_label = f'Дата: {formatted_date}\n'
+        status_label = f'Процент годных: {np.round(good_mem_count/all_cells_count*100, 2)}%\n'
+        all_data_label = f'Всего: {wl*bl}, Тест: {all_cells_count} из них с РП: {good_mem_count}, остальных: {bad_mem_count}'
+        title = serial_label + data_label + status_label + all_data_label
         custom_shaphop(hot_map, title, save_flag=True, save_path=self.result_path)
-        self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/all_cells_count*100,2)}%")
-        # запись csv
+        self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/all_cells_count*100, 2)}%")
+        # запись csv годные
         fname = os.path.join(self.result_path,
                              f'{self.crossbar_serial}_{self.parent.exp_name}_good_cells.csv')
         with open(fname,'w', newline='', encoding='utf-8') as file:
@@ -512,7 +509,18 @@ class Testing(QDialog):
             file_wr.writerow(['wl','bl'])
             for i in range(bl):
                 for j in range(wl):
-                    if hot_map[i][j] == 2:
+                    if hot_map[i][j] == 2: # есть РП
+                        file_wr.writerow([j, i]) # проверить нужно ли str
+        fname = os.path.join(self.result_path,
+                             f'{self.crossbar_serial}_{self.parent.exp_name}_bad_cells.csv')
+        # запись csv не годные
+        # todo: сделать отдельной функцией чтобы не дублировать код
+        with open(fname,'w', newline='', encoding='utf-8') as file:
+            file_wr = csv.writer(file, delimiter=",")
+            file_wr.writerow(['wl','bl'])
+            for i in range(bl):
+                for j in range(wl):
+                    if hot_map[i][j] == 1: # 1 - нет РП
                         file_wr.writerow([j, i]) # проверить нужно ли str
 
     def save_graph_vol_res(self):
@@ -540,10 +548,10 @@ class Testing(QDialog):
                 all_data = np.array(data)
                 bl = int(csv_name.split('.')[-2].split('_')[-1])
                 wl = int(csv_name.split('.')[-2].split('_')[-2])
-                axs[bl,wl].plot(all_data[:,0],all_data[:,1],marker='o', linestyle='-')
-                axs[bl,wl].set_title(f"BL = {bl}, WL = {wl}")
-                axs[bl,wl].set_xlabel("Напряжение, В")
-                axs[bl,wl].set_ylabel("Сопротивление, Ом")
+                axs[bl, wl].plot(all_data[:,0],all_data[:,1],marker='o', linestyle='-')
+                axs[bl, wl].set_title(f"BL = {bl}, WL = {wl}")
+                axs[bl, wl].set_xlabel("Напряжение, В")
+                axs[bl, wl].set_ylabel("Сопротивление, Ом")
 
         plt.tight_layout()
         plt.savefig(os.path.join(self.result_path,'rv_curve.png'), dpi=300)
