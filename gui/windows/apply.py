@@ -287,9 +287,7 @@ class Apply(QDialog):
         """
         Завершили эксперимент аварийно
         """
-        if value == 2:
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
-            self.stop_exp()
+        pass
 
     def on_ticket_finished(self, value: str) -> None:
         """
@@ -334,6 +332,8 @@ class Apply(QDialog):
             show_warning_messagebox("Эксперимент выполнен!")
         elif exp_status == 2:
             show_warning_messagebox("Эксперимент прерван!")
+        elif exp_status == 3:
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
         if flag_soft_cc:
             show_warning_messagebox("Срабатывало программное ограничение!")
         self.application_status = "stop"
@@ -422,6 +422,7 @@ class ApplyExp(QThread):
         self.parent = parent
         self.need_pause = 0 # нужна пауза
         self.need_stop = 0 # нужна остановка
+        self.adc_warning = 0 # высокое напряжение на АЦП
 
     def run(self):
         """
@@ -446,6 +447,7 @@ class ApplyExp(QThread):
                           current_adc)
             if adc_vol > 3.5: # todo: вынести 3.5 в константы
                 self.need_stop = 1
+                self.adc_warning = 1
                 break
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
@@ -560,8 +562,11 @@ class ApplyExp(QThread):
             if self.need_stop:
                 break
             time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
-        if self.need_stop:
-            self.finished_exp.emit(2) # прерван
+        if self.need_stop: # прерван
+            if self.adc_warning:
+                self.finished_exp.emit(3) # по причине высокого напряжения на АЦП
+            else:
+                self.finished_exp.emit(2) # пользователь прервал
         else:
             self.finished_exp.emit(1) # успешно завершен
         time.sleep(self.PAUSE_TIME)
