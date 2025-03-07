@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>488</width>
-    <height>411</height>
+    <height>399</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -158,7 +158,7 @@
            <string/>
           </property>
           <property name="checked">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -176,9 +176,23 @@
          </widget>
         </item>
         <item>
+         <widget class="QComboBox" name="combo_rmin_mode">
+          <item>
+           <property name="text">
+            <string>больше</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>меньше</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
          <widget class="QSpinBox" name="spinbox_rmin">
           <property name="maximum">
-           <number>100000</number>
+           <number>1000000</number>
           </property>
           <property name="singleStep">
            <number>10</number>
@@ -190,6 +204,12 @@
         </item>
         <item>
          <widget class="QLabel" name="label_4">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="text">
            <string>Ом</string>
           </property>
@@ -211,7 +231,7 @@
            <string/>
           </property>
           <property name="checked">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -229,20 +249,40 @@
          </widget>
         </item>
         <item>
+         <widget class="QComboBox" name="combo_rmax_mode">
+          <item>
+           <property name="text">
+            <string>больше</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>меньше</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
          <widget class="QSpinBox" name="spinbox_rmax">
           <property name="maximum">
            <number>10000000</number>
           </property>
           <property name="singleStep">
-           <number>1000</number>
+           <number>10</number>
           </property>
           <property name="value">
-           <number>100000</number>
+           <number>100</number>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QLabel" name="label_6">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="text">
            <string>Ом</string>
           </property>

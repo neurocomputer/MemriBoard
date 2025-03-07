@@ -95,8 +95,12 @@ class Testing(QDialog):
     raw_adc_all: list
     crossbar_serial: str
     raw_data: list
+    data_for_plot_x: list
+    data_for_plot_y: list
     start_thread: ApplyExp
     cell_list_from_file: bool = False
+    xlabel_text: str = 'Напряжение, В'
+    ylabel_text: str = 'Сопротивление, Ом'
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -126,6 +130,8 @@ class Testing(QDialog):
         self.ui.path_folder_csv.setText(self.result_path)
         #self.coordinates = []
         self.raw_data = []
+        self.data_for_plot_x = []
+        self.data_for_plot_y = []
         self.start_time = 0.
         self.parent.exp_list = []
         self.parent.exp_name = ''
@@ -254,28 +260,6 @@ class Testing(QDialog):
         Завершился поток для одного мемристора
         """
         value = value.split(",")
-        experiment_id = int(value[0])
-        # сохранить картинку
-        fname = "temp.png"
-        plt.clf()
-        plt.plot([i for i in range(len(self.raw_data))], list(map(lambda x: a2r(self.parent.man.gain,
-                                                                                self.parent.man.res_load,
-                                                                                self.parent.man.vol_read,
-                                                                                self.parent.man.adc_bit,
-                                                                                self.parent.man.vol_ref_adc,
-                                                                                self.parent.man.res_switches,
-                                                                                x[2]), self.raw_data)), 'o-')
-        plt.xlabel('Отсчеты')
-        plt.ylabel("Сопротивление, Ом")
-        plt.grid(True, linestyle='--')
-        plt.tight_layout()
-        plt.savefig(fname, dpi=100)
-        plt.close()
-        with open(fname, 'rb') as file:
-            img_data = file.read()
-            # записываем в базу
-            self.parent.man.db.update_experiment(experiment_id, 'image', img_data)
-        os.remove(fname)
         # сохранение файла
         wl = int(value[3])
         bl = int(value[4])
@@ -291,14 +275,16 @@ class Testing(QDialog):
                           self.parent.man.adc_bit,
                           self.parent.man.vol_ref_adc,
                           self.parent.man.res_switches,
-                          int(item[2])) # проверить нужно ли int
-                file_wr.writerow([item[0],item[1],item[2],str(res)]) # проверить нужно ли str
+                          item[2]) # проверить нужно ли int
+                file_wr.writerow([item[0],item[1],item[2],res]) # проверить нужно ли str
         # сохранение в переменную
         self.raw_adc_all[bl][wl] = [item[2] for item in self.raw_data]
         # прогрессбар
         self.counter += 1
         self.ui.progress_all.setValue(self.counter)
         self.raw_data = []
+        self.data_for_plot_x = []
+        self.data_for_plot_y = []
 
     def on_value_got(self, value: str) -> None:
         """
@@ -309,20 +295,23 @@ class Testing(QDialog):
         sign = int(value[3])
         value = int(value[1])
         self.raw_data.append((sign,vol,value))
+        self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
+                                        self.parent.man.vol_ref_dac,
+                                        vol,
+                                        sign=sign))
+        self.data_for_plot_y.append(a2r(self.parent.man.gain,
+                                        self.parent.man.res_load,
+                                        self.parent.man.vol_read,
+                                        self.parent.man.adc_bit,
+                                        self.parent.man.vol_ref_adc,
+                                        self.parent.man.res_switches,
+                                        value))
 
     def on_ticket_finished(self, value: str) -> None:
         """
         Закончился тикет
         """
-        # сохраняем результат
-        value = value.split(",")
-        ticket_id = int(value[0])
-        result_file_path = value[1]
-        with open(result_file_path, 'rb') as file:
-            result_data = file.read()
-            # записываем в базу
-            self.parent.man.db.update_ticket(ticket_id, 'result', result_data)
-        os.remove(result_file_path)
+        pass
 
     def button_reset_exp_clicked(self):
         """
@@ -470,12 +459,23 @@ class Testing(QDialog):
                         lrmax = True # условие меньше rmax
                         resrel = True # условие диапазона
                         # проверяем условия
+                        answer = False
                         if self.ui.checkbox_rmin.isChecked():
-                            if min_res < rmin: # меньше минимального сопротивления
+                            mode = self.ui.combo_rmin_mode.currentText()
+                            if mode == 'больше':
+                                answer = min_res > rmin
+                            elif mode == 'меньше':
+                                answer = min_res < rmin
+                            if not answer:
                                 hrmin = False
                                 lrs_mem_count += 1
                         if self.ui.checkbox_rmax.isChecked():
-                            if max_res > rmax: # больше максимального сопротивления
+                            mode = self.ui.combo_rmax_mode.currentText()
+                            if mode == 'больше':
+                                answer = max_res > rmax
+                            elif mode == 'меньше':
+                                answer = max_res < rmax
+                            if not answer:
                                 lrmax = False
                                 hrs_mem_count += 1
                         if max_res/min_res < treshhold: # меньше трешхолда
