@@ -43,6 +43,7 @@ pip install -r requirements.txt
 |-|-|-|
 |2025.02.16|[Скачать zip-архив](https://disk.yandex.ru/d/mRvaQKJZvJ8cKg)||
 |2025.02.18|[Скачать zip-архив](https://disk.yandex.ru/d/sDn3gHRMWB_Ngw)|Обновлено тестирование|
+|2025.02.28|[Скачать zip-архив](https://disk.yandex.ru/d/0tTmugFL6xE7eQ)|Внесено много исправлений|
 
 ## Обратная связь
 При возникновении вопросов, ошибок и предложений пишите на почту `seach@inbox.ru`.

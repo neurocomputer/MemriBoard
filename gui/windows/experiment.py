@@ -32,6 +32,7 @@ class ExpSettings(QDialog):
     ticket_files: list = []
     list_experiments: QStandardItemModel
     list_model: QStandardItemModel
+    apply_exp_all_button_clicked: bool = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -82,6 +83,7 @@ class ExpSettings(QDialog):
         Задать начальные значения
         """
         self.ticket_files = []
+        self.apply_exp_all_button_clicked = False
         self.parent.exp_list = []
         self.parent.exp_name = ''
         self.parent.exp_list_params = {}
@@ -239,6 +241,7 @@ class ExpSettings(QDialog):
             exp_name = self.ui.exp_name.text()
             if exp_name:
                 self.parent.exp_name = exp_name
+        self.apply_exp_all_button_clicked = True
         self.close()
 
     def _view_requests(self) -> None:
@@ -252,7 +255,7 @@ class ExpSettings(QDialog):
         Выход из планировщика
         """
         if self.parent.opener == 'testing':
-            if self.parent.exp_list:
+            if self.parent.exp_list and self.apply_exp_all_button_clicked:
                 self.parent.testing_dialog.button_ready_combination()
                 self.parent.testing_dialog.update_label_time_status()
         else:
