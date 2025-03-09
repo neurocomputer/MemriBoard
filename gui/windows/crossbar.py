@@ -9,7 +9,6 @@ https://stackoverflow.com/questions/57891219/how-to-make-a-fast-matplotlib-live-
 # pylint: disable=E0611,I1101,C0301,R0903,C0103,W0212
 
 import os
-import platform
 import time
 import json
 import numpy as np
