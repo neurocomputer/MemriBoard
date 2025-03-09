@@ -682,16 +682,14 @@ class DBOperate():
         self.db_disconnect()
         return status, experiment_id
     
-    def bd_backup(self, bkp_way) -> None:
+    def db_backup(self, backup_path) -> None:
         """
         Резервное копирование базы
         """
         status = False
         try:
             base = sqlite3.connect(DB_PATH)
-            # позднее путь будет взят из настроек,
-            # а пока вручную
-            backup = sqlite3.connect(bkp_way + 'backup.db')
+            backup = sqlite3.connect(backup_path + 'backup.db')
             base.backup(backup)
             backup.close()
             base.close()

@@ -126,11 +126,12 @@ class Window(QMainWindow):
         self.timer = QTimer()
         # диалоговое окно подключения
         self.show_connect_dialog()
-        # поиск и удаление удаление бэкапа
-        cur_os = platform.system()
-        if cur_os == "Linux" or cur_os == "Windows":
-            if os.path.exists("/home/Reko/Repo/qwerty/MemriBoard/backup.db"):
-                os.remove("/home/Reko/Repo/qwerty/MemriBoard/backup.db")
+        # поиск и удаление бэкапа
+        backup = self.man.get_meta_info()["backup"]+"backup.db"
+        if os.path.exists(backup):
+            os.remove(backup)
+        elif os.path.exists(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db"):
+            os.remove(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db")
 
     # обработка по таймеру
 
@@ -474,7 +475,10 @@ class Window(QMainWindow):
         Безопасное завершение
         """
         # резервное копирование дб
-        _ = self.man.db.bd_backup("/home/Reko/Repo/qwerty/MemriBoard/")
+        backup_path = self.man.get_meta_info()["backup"]
+        if not os.path.isdir(backup_path):
+            backup_path = os.path.join(os.getcwd(), "base.db")[:-7]
+        _ = self.man.db.db_backup(backup_path)
         # закрытие программы
         self.man.abort()
         self.man.close()
