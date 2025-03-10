@@ -65,7 +65,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
     # декремент dir
     try:
         dir_dec = np.arange(params['v_dir_strt_dec'],
-                            params['v_dir_stop_dec'] + params['v_dir_step_dec'],
+                            params['v_dir_stop_dec'] - params['v_dir_step_dec'],
                             -params['v_dir_step_dec'])
         dir_dec = [int(item) for item in dir_dec]
     except ZeroDivisionError:
@@ -81,7 +81,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
     # декремент rev
     try:
         rev_dec = np.arange(params['v_rev_strt_dec'],
-                            params['v_rev_stop_dec'] + params['v_rev_step_dec'],
+                            params['v_rev_stop_dec'] - params['v_rev_step_dec'],
                             -params['v_rev_step_dec'])
         rev_dec = [int(item) for item in rev_dec]
     except ZeroDivisionError:

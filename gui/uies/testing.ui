@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -58,6 +58,12 @@
    </item>
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -101,14 +107,13 @@
           </layout>
          </item>
          <item>
-          <widget class="QProgressBar" name="progress_all">
-           <property name="value">
-            <number>0</number>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QLabel" name="label_all_cells_count">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Выбрано ячеек:</string>
            </property>
@@ -118,6 +123,12 @@
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
             <widget class="QLabel" name="label_start_time">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="text">
               <string>Начало выполнения теста: н/д </string>
              </property>
@@ -125,12 +136,25 @@
            </item>
            <item>
             <widget class="QLabel" name="label_time_status">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="text">
               <string>Время выполнения теста: н/д</string>
              </property>
             </widget>
            </item>
           </layout>
+         </item>
+         <item>
+          <widget class="QProgressBar" name="progress_all">
+           <property name="value">
+            <number>0</number>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
@@ -416,7 +440,7 @@
        <item>
         <widget class="QPushButton" name="button_generate_images">
          <property name="text">
-          <string>Генерировать</string>
+          <string>Построить графики</string>
          </property>
         </widget>
        </item>

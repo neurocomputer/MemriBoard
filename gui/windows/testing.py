@@ -486,7 +486,7 @@ class Testing(QDialog):
             serial_label = f'Серийный номер: {self.crossbar_serial}\n'
             data_label = f'Дата: {formatted_date}\n'
             status_label = f'Процент годных: {np.round(good_mem_count/all_tested_count*100, 2)}%\n'
-            all_data_label = f'Всего: {all_cells_count}, Тест: {all_tested_count} из них с РП: {good_mem_count}, остальных: {bad_mem_count}'
+            all_data_label = f'Всего: {all_cells_count}, Тест: {all_tested_count} из них годных: {good_mem_count}, остальных: {bad_mem_count}'
             title = serial_label + data_label + status_label + all_data_label
             custom_shaphop(copy.deepcopy(heat_map), title, save_flag=True, save_path=os.path.join(self.result_path, analyses_path))
             self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/all_tested_count*100, 2)}%")
