@@ -168,3 +168,5 @@ base.db
 settings.ini
 ticket.png
 *.cb
+base.db-shm
+base.db-wal

@@ -10,7 +10,7 @@ from configparser import ConfigParser
 from logging import Logger
 from manager.menu import menu
 from manager.model.db import DBOperate
-from manager.service.global_settings import LOG_PATH, SETTINGS_PATH
+from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
 
 class Application():
@@ -42,22 +42,31 @@ class Application():
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
         prepare()
-        self.ap_log_path = LOG_PATH
+        # чтение настроек
         self.ap_config_path = SETTINGS_PATH
         self.ap_config = ConfigParser() # создаём объекта парсера
-        self.ap_logger = logging.getLogger(__name__)
         self.read_settings() # читаем настройки
-        logging.basicConfig(level=logging.INFO, # настраиваем логгер
-                            filename=self.ap_log_path,
-                            filemode=self.ap_config["logging"]["filemode"],
-                            format="%(asctime)s %(levelname)s %(message)s")
+        # настраиваем логгер приложения
+        self.ap_log_path = LOG_PATH
+        self.ap_logger = logging.getLogger(__name__)
         self.ap_logger.setLevel(logging.WARNING)
+        handler = logging.FileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"])
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        self.ap_logger.addHandler(handler)
+        # настраиваем логгер базы данных
+        self.db_log_path = DB_LOG_PATH
+        self.db_logger = logging.getLogger('db_logger')
+        self.db_logger.setLevel(logging.WARNING)
+        handler = logging.FileHandler(self.db_log_path, mode=self.ap_config["logging"]["filemode"])
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        self.db_logger.addHandler(handler)
+        # другие нужные подготовки
         self.menu = menu
-        self.db = DBOperate()
-        status_db_connect = self.db.db_connect()
+        self.db = DBOperate(parent=self)
+        status_db_connect = self.db.db_connect('app.__init__()')
         if not status_db_connect:
             assert 0 # нет подключения к БД
-        self.db.db_disconnect()
+        self.db.db_disconnect('app.__init__()')
 
     def read_settings(self) -> None:
         """
