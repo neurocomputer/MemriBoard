@@ -467,6 +467,17 @@ class Window(QMainWindow):
         """
         Безопасное завершение
         """
+        # поиск и удаление бэкапа
+        backup = self.man.get_meta_info()["backup"]
+        if os.path.exists(backup+"backup.db"):
+            os.remove(backup+"backup.db")
+        elif os.path.exists(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db"):
+            os.remove(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db")
+        # резервное копирование дб
+        if not os.path.isdir(backup):
+            backup = os.path.join(os.getcwd(), "base.db")[:-7]
+        _ = self.man.db.db_backup(backup)
+        # закрытие программы
         self.man.abort()
         self.man.close()
         time.sleep(0.1) # может и не надо

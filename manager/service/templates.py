@@ -66,4 +66,9 @@ soft_cc=0.02
 last_crossbar_serial=
 ; тикет для чтения
 measure_ticket=measure.json
+
+; бэкап датабазы
+[backup]
+; путь для бэкапа
+backup_path=
 """
