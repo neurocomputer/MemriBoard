@@ -13,7 +13,7 @@ import os
 import time
 import pickle
 import pyqtgraph as pg
-import matplotlib.pyplot as plt
+import plotly.express as px
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -37,8 +37,8 @@ class Apply(QDialog):
     _term_left_for_plot_x: list
     _term_right_for_plot_y: list
     _term_right_for_plot_x: list
-    _data_for_plot_y: list
-    _data_for_plot_x: list
+    data_for_plot_y: list
+    data_for_plot_x: list
     coordinates: list
 
     def __init__(self, parent=None) -> None:
@@ -97,8 +97,8 @@ class Apply(QDialog):
         """
         self.graph_result.clear()
         # массивы данных для отображения результатов
-        self._data_for_plot_y = []
-        self._data_for_plot_x = []
+        self.data_for_plot_y = []
+        self.data_for_plot_x = []
         # массивы данных для отображения терминаторов
         self._term_left_for_plot_y = []
         self._term_left_for_plot_x = []
@@ -112,16 +112,16 @@ class Apply(QDialog):
         self.graph_result.showGrid(x=True, y=True)
         plt_type = self.ui.plot_type_combobox.currentText()
         if plt_type == 'линия':
-            self.data_line = self.graph_result.plot(self._data_for_plot_x,
-                                                    self._data_for_plot_y,
+            self.data_line = self.graph_result.plot(self.data_for_plot_x,
+                                                    self.data_for_plot_y,
                                                     pen=pg.mkPen(width=3, color = (0, 128, 255)))
         elif plt_type == 'точки':
-            self.data_line = self.graph_result.plot(self._data_for_plot_x,
-                                                    self._data_for_plot_y,
+            self.data_line = self.graph_result.plot(self.data_for_plot_x,
+                                                    self.data_for_plot_y,
                                                     symbol='o')
         elif plt_type == 'звездочки':
-            self.data_line = self.graph_result.plot(self._data_for_plot_x,
-                                                    self._data_for_plot_y,
+            self.data_line = self.graph_result.plot(self.data_for_plot_x,
+                                                    self.data_for_plot_y,
                                                     symbol='star')
 
         self.termline_left = self.graph_result.plot(self._term_left_for_plot_x,
@@ -287,9 +287,7 @@ class Apply(QDialog):
         """
         Завершили эксперимент аварийно
         """
-        if value == 2:
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
-            self.stop_exp()
+        pass
 
     def on_ticket_finished(self, value: str) -> None:
         """
@@ -302,15 +300,6 @@ class Apply(QDialog):
         self._term_right_for_plot_x = []
         self.termline_left.setData(self._term_left_for_plot_x, self._term_left_for_plot_y)
         self.termline_right.setData(self._term_right_for_plot_x, self._term_right_for_plot_y)
-        # сохраняем результат
-        value = value.split(",")
-        ticket_id = int(value[0])
-        result_file_path = value[1]
-        with open(result_file_path, 'rb') as file:
-            result_data = file.read()
-            # записываем в базу
-            self.parent.man.db.update_ticket(ticket_id, 'result', result_data)
-        os.remove(result_file_path)
 
     def on_count_changed(self, value: int) -> None:
         """
@@ -326,7 +315,6 @@ class Apply(QDialog):
         Завершение выполнения
         """
         value = value.split(",")
-        experiment_id = int(value[0])
         exp_status = int(value[1])
         flag_soft_cc = int(value[2])
         # блочим запуск
@@ -334,25 +322,12 @@ class Apply(QDialog):
             show_warning_messagebox("Эксперимент выполнен!")
         elif exp_status == 2:
             show_warning_messagebox("Эксперимент прерван!")
+        elif exp_status == 3:
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
         if flag_soft_cc:
             show_warning_messagebox("Срабатывало программное ограничение!")
         self.application_status = "stop"
         self.stop_exp()
-        # сохранить картинку
-        fname = "temp.png"
-        plt.clf()
-        plt.plot(self._data_for_plot_x, self._data_for_plot_y, 'o-')
-        plt.xlabel(self.ui.xaxes_combobox.currentText())
-        plt.ylabel(self.ui.yaxes_combobox.currentText())
-        plt.grid(True, linestyle='--')
-        plt.tight_layout()
-        plt.savefig(fname, dpi=100)
-        plt.close()
-        with open(fname, 'rb') as file:
-            img_data = file.read()
-            # записываем в базу
-            self.parent.man.db.update_experiment(experiment_id, 'image', img_data)
-        os.remove(fname)
 
     def on_value_got(self, value: str) -> None:
         """
@@ -374,14 +349,14 @@ class Apply(QDialog):
             y_item = self.y_value_process(value, vol, sign)
             x_item = self.x_value_process(vol, sign, count)
             size = 3000 # todo: глубина отрисовки, вынести в константы
-            data_len = len(self._data_for_plot_y)
+            data_len = len(self.data_for_plot_y)
             if data_len > size:
-                self._data_for_plot_y = self._data_for_plot_y[1:] + [y_item]
-                self._data_for_plot_x = self._data_for_plot_x[1:] + [x_item]
+                self.data_for_plot_y = self.data_for_plot_y[1:] + [y_item]
+                self.data_for_plot_x = self.data_for_plot_x[1:] + [x_item]
             else:
-                self._data_for_plot_y.append(y_item)
-                self._data_for_plot_x.append(x_item)
-            self.data_line.setData(self._data_for_plot_x, self._data_for_plot_y)
+                self.data_for_plot_y.append(y_item)
+                self.data_for_plot_x.append(x_item)
+            self.data_line.setData(self.data_for_plot_x, self.data_for_plot_y)
             # отображение терминаторов
             if term_left:
                 # левый
@@ -422,6 +397,7 @@ class ApplyExp(QThread):
         self.parent = parent
         self.need_pause = 0 # нужна пауза
         self.need_stop = 0 # нужна остановка
+        self.adc_warning = 0 # высокое напряжение на АЦП
 
     def run(self):
         """
@@ -446,6 +422,7 @@ class ApplyExp(QThread):
                           current_adc)
             if adc_vol > 3.5: # todo: вынести 3.5 в константы
                 self.need_stop = 1
+                self.adc_warning = 1
                 break
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
@@ -453,17 +430,19 @@ class ApplyExp(QThread):
                                                                               item[1], # bl
                                                                               self.parent.parent.man.crossbar_id)
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно получить id мемристора")
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно получить id мемристора")
             status, experiment_id = self.parent.parent.man.db.add_experiment(name, memristor_id)
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно добавить эксперимент")
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить эксперимент")
             meta_info = self.parent.parent.man.get_meta_info()
-            _, info = self.parent.parent.man.conn.get_tech_info()
+            status, info = self.parent.parent.man.conn.get_tech_info()
+            if not status:
+                self.parent.parent.man.ap_logger.warning("Ошибка подключения: не возможно получить метаинформацию")
             if isinstance(meta_info, dict):
                 meta_info['board'] = str(info)
             status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно добавить метаинформацию")
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить метаинформацию")
             # инициируем цикл по тикетам
             counter = 0
             for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, task_list, count
@@ -476,10 +455,10 @@ class ApplyExp(QThread):
                 # сохраняем в БД
                 status, ticket_id = self.parent.parent.man.db.add_ticket(ticket, experiment_id)
                 if not status:
-                    self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно добавить тикет")
+                    self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить тикет")
                 # временный файл для результата
-                fname = time.strftime("%Y%m%d-%H%M%S")
-                file = open(fname, 'wb')
+                result_file_path = time.strftime("%Y%m%d-%H%M%S")
+                result_file = open(result_file_path, 'wb')
                 #for task in task_list:
                 #start_time_loop = time.time()
                 # инициируем цикл по таскам
@@ -505,7 +484,7 @@ class ApplyExp(QThread):
                         # учет выполнения
                         if result:
                             self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right}")
-                            save_list_to_bytearray(file, task[0]['sign'], task[0]['vol'], result[0])
+                            save_list_to_bytearray(result_file, task[0]['sign'], task[0]['vol'], result[0])
                             resistance_previous = a2r(self.parent.parent.man.gain,
                                                       self.parent.parent.man.res_load,
                                                       self.parent.parent.man.vol_read,
@@ -524,7 +503,7 @@ class ApplyExp(QThread):
                     self.count_changed.emit(counter)
                 #print("Весь цикл:", time.time()-start_time_loop)
                 # закрываем файл результата
-                file.close()
+                result_file.close()
                 # сохраняем в БД статус завершения
                 if result:
                     last_resistance = int(a2r(self.parent.parent.man.gain,
@@ -535,18 +514,40 @@ class ApplyExp(QThread):
                                               self.parent.parent.man.res_switches,
                                               result[0]))
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
+                    if not status:
+                        self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить информацию о сопротивлении")
                     status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
                     if not status:
-                        self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно обновить сопротивление")
+                        self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить сопротивление в эксперименте")
                 if self.need_stop:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 1)
+                if not status:
+                    self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить тикет")
                 # обновляем значения результата и изображения в БД (можно и здесь конечно)
-                time.sleep(self.PAUSE_TIME)
-                self.ticket_finished.emit(f"{ticket_id},{fname}")
-                time.sleep(self.PAUSE_TIME)
-            time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
+                #time.sleep(self.PAUSE_TIME)
+                # сохраняем результат выполнения тикета
+                with open(result_file_path, 'rb') as result_file:
+                    result_data = result_file.read()
+                    # записываем в базу
+                    self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)
+                os.remove(result_file_path)
+                # вызываем событие завершения тикета
+                self.ticket_finished.emit(f"{ticket_id},{result_file_path}")
+                #time.sleep(self.PAUSE_TIME)
+            #time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
+            # сохранить картинку эксперимента
+            ticket_image_name = "temp.png"
+            fig = px.scatter(x=self.parent.data_for_plot_x, y=self.parent.data_for_plot_y)
+            fig.update_layout(xaxis_title=self.parent.xlabel_text,
+                              yaxis_title=self.parent.ylabel_text)
+            fig.write_image(ticket_image_name, width=640, height=480)
+            with open(ticket_image_name, 'rb') as ticket_image_file:
+                img_data = ticket_image_file.read()
+                # записываем в базу
+                self.parent.parent.man.db.update_experiment(experiment_id, 'image', img_data)
+            os.remove(ticket_image_name)
             # сохраняем в БД статус завершения
             if self.need_stop:
                 status = self.parent.parent.man.db.update_experiment_status(experiment_id, 2) # прерван
@@ -555,13 +556,16 @@ class ApplyExp(QThread):
                 status = self.parent.parent.man.db.update_experiment_status(experiment_id, 1) # успешно завершен
                 self.progress_finished.emit(f"{experiment_id},{1},{self.flag_soft_cc},{item[0]},{item[1]}")
             if not status:
-                self.parent.parent.man.ap_logger.critical("Не возможно обновить статус эксперимента")
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить статус эксперимента")
             # прерываем выполнение для всех
             if self.need_stop:
                 break
-            time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
-        if self.need_stop:
-            self.finished_exp.emit(2) # прерван
+            #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
+        if self.need_stop: # прерван
+            if self.adc_warning:
+                self.finished_exp.emit(3) # по причине высокого напряжения на АЦП
+            else:
+                self.finished_exp.emit(2) # пользователь прервал
         else:
             self.finished_exp.emit(1) # успешно завершен
-        time.sleep(self.PAUSE_TIME)
+        #time.sleep(self.PAUSE_TIME)
