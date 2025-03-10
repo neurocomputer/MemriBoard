@@ -125,12 +125,6 @@ class Window(QMainWindow):
         self.timer = QTimer()
         # диалоговое окно подключения
         self.show_connect_dialog()
-        # поиск и удаление бэкапа
-        backup = self.man.get_meta_info()["backup"]+"backup.db"
-        if os.path.exists(backup):
-            os.remove(backup)
-        elif os.path.exists(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db"):
-            os.remove(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db")
 
     # обработка по таймеру
 
@@ -473,11 +467,16 @@ class Window(QMainWindow):
         """
         Безопасное завершение
         """
+        # поиск и удаление бэкапа
+        backup = self.man.get_meta_info()["backup"]
+        if os.path.exists(backup+"backup.db"):
+            os.remove(backup+"backup.db")
+        elif os.path.exists(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db"):
+            os.remove(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db")
         # резервное копирование дб
-        backup_path = self.man.get_meta_info()["backup"]
-        if not os.path.isdir(backup_path):
-            backup_path = os.path.join(os.getcwd(), "base.db")[:-7]
-        _ = self.man.db.db_backup(backup_path)
+        if not os.path.isdir(backup):
+            backup = os.path.join(os.getcwd(), "base.db")[:-7]
+        _ = self.man.db.db_backup(backup)
         # закрытие программы
         self.man.abort()
         self.man.close()
