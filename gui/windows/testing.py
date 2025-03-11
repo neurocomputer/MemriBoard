@@ -10,12 +10,13 @@ import time
 import datetime
 import copy
 import pandas as pd
-import plotly.express as px
+# import plotly.express as px
 import matplotlib.pyplot as plt
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 import numpy as np
+import numpy.typing as npt
 
 from manager.service import a2r, d2v
 from gui.src import open_file_dialog, show_warning_messagebox, show_choose_window
@@ -60,6 +61,7 @@ class Testing(QDialog):
     csv_names: list
     xlabel_text: str = 'Напряжение, В'
     ylabel_text: str = 'Сопротивление, Ом'
+    ticket_image_name: str = "temp.png"
 
     def __init__(self, parent=None) -> None: # +
         super().__init__(parent)
@@ -272,8 +274,16 @@ class Testing(QDialog):
                                   data_for_plot_x[item_index],
                                   data_for_plot_y[item_index]])
         self.csv_names.append(fname+'\n')
-        # сохранение в переменную
-        # self.raw_adc_all[bl][wl] = [item[2] for item in self.raw_data]
+        # рисунок для базы в matplotlib
+        plt.clf()
+        plt.plot(data_for_plot_x, data_for_plot_y)
+        plt.xlabel(self.xlabel_text)
+        plt.ylabel(self.ylabel_text)
+        plt.grid(True, linestyle='--')
+        plt.tight_layout()
+        plt.savefig(self.ticket_image_name, dpi=100)
+        plt.close()
+        self.start_thread.setup_image_saved(True)
         # прогрессбар
         self.counter += 1
         self.ui.progress_all.setValue(self.counter)
@@ -527,6 +537,7 @@ class Testing(QDialog):
             self.image_thread = ImageGenerator(parent=self)
             self.image_thread.count_changed.connect(self.on_count_changed_image) # заполнение прогрессбара
             self.image_thread.progress_finished.connect(self.on_progress_finished_image) # после выполнения
+            self.image_thread.need_image.connect(self.on_need_image) # нужно сохранить картинку
             self.image_thread.start()
 
     def on_count_changed_image(self, value: int) -> None: # +
@@ -543,6 +554,23 @@ class Testing(QDialog):
         self.ui.button_generate_images.setEnabled(True)
         show_warning_messagebox('Картинки сгенерированы!')
 
+    def on_need_image(self, value):
+        """
+        Строим картинку
+        """
+        plt.clf()
+        plt.plot(self.image_thread.x_data, self.image_thread.y_data, marker='o', linewidth=0.5)
+        plt.xlabel(self.image_thread.xlabel_type)
+        plt.ylabel(self.image_thread.ylabel_type)
+        plt.grid(True, linestyle='--')
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.result_path,
+                                    self.image_thread.analyses_path,
+                                    f'{self.crossbar_serial}_{self.image_thread.wl}_{self.image_thread.bl}.png'),
+                                    dpi=100)
+        plt.close()
+        self.image_thread.setup_image_saved(True)
+
 class ImageGenerator(QThread):
     """
     Поток эксперимента
@@ -550,10 +578,28 @@ class ImageGenerator(QThread):
 
     count_changed = pyqtSignal(int) # для каждой task
     progress_finished = pyqtSignal(int) # для каждого мемристора из self.coordinates
+    need_image = pyqtSignal(str)
+    _mutex = QMutex()
+    x_data: npt.NDArray
+    y_data: npt.NDArray
+    xlabel_type: str
+    ylabel_type: str
+    analyses_path: str
+    wl: int
+    bl: int
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.parent = parent
+        self.image_saved = False # рисунок создан и сохранен на диск
+
+    def setup_image_saved(self, status):
+        """
+        Установить значение
+        """
+        self._mutex.lock()
+        self.image_saved = status
+        self._mutex.unlock()
 
     def run(self):
         """
@@ -562,40 +608,49 @@ class ImageGenerator(QThread):
         # создаем папку
         now = datetime.datetime.now()
         formatted_date = now.strftime("%d.%m.%Y_%H.%M.%S")
-        analyses_path = f'images_{formatted_date}'
-        os.mkdir(os.path.join(self.parent.result_path, analyses_path))
+        self.analyses_path = f'images_{formatted_date}'
+        os.mkdir(os.path.join(self.parent.result_path, self.analyses_path))
         # настраиваем оси
-        xlabel_type = self.parent.ui.combo_xlabel.currentText()
-        if xlabel_type == 'напряжение, В':
+        self.xlabel_type = self.parent.ui.combo_xlabel.currentText()
+        if self.xlabel_type == 'напряжение, В':
             x_axes_type = 'vol'
-        elif xlabel_type == 'отсчеты':
+        elif self.xlabel_type == 'отсчеты':
             x_axes_type = 'count'
-        ylabel_type = self.parent.ui.combo_ylabel.currentText()
-        if ylabel_type == 'сопротивление, Ом':
+        else:
+            x_axes_type = 'count'
+        self.ylabel_type = self.parent.ui.combo_ylabel.currentText()
+        if self.ylabel_type == 'сопротивление, Ом':
             y_axes_type = 'res'
-        elif ylabel_type == 'ток, мА':
+        elif self.ylabel_type == 'ток, мА':
             y_axes_type = 'cur'
+        else:
+            y_axes_type = 'res'
         with open(os.path.join(self.parent.result_path, 'csv_list.txt'), 'r', encoding='utf-8') as file:
             csv_paths = file.readlines()
             count = 0
             for path in csv_paths:
                 if os.path.exists(os.path.join(self.parent.result_path, path.rstrip())):
-                    wl = int(path.split('.')[-2].split('_')[-2])
-                    bl = int(path.split('.')[-2].split('_')[-1])
+                    self.wl = int(path.split('.')[-2].split('_')[-2])
+                    self.bl = int(path.split('.')[-2].split('_')[-1])
                     df = pd.read_csv(os.path.join(self.parent.result_path, path.rstrip()), delimiter=';')
-                    x_data = df['vol'].to_numpy()
-                    y_data = df['res'].to_numpy()
+                    self.x_data = df['vol'].to_numpy()
+                    self.y_data = df['res'].to_numpy()
                     if y_axes_type == 'cur':
-                        y_data = x_data/y_data
+                        self.y_data = self.x_data/self.y_data
                     if x_axes_type == 'count':
-                        x_data = [i+1 for i in range(len(x_data))]
-                    fig = px.line(x=x_data, y=y_data, markers=True)
-                    fig.update_layout(xaxis_title=xlabel_type,
-                                      yaxis_title=ylabel_type)
-                    fig.write_image(os.path.join(self.parent.result_path,
-                                                 analyses_path,
-                                                 f'{self.parent.crossbar_serial}_{wl}_{bl}.png'),
-                                                 width=640, height=480)
+                        self.x_data = [i+1 for i in range(len(self.x_data))]
+                    # от plotly отказались из-за большого размера библиотеки
+                    # fig = px.line(x=x_data, y=y_data, markers=True)
+                    # fig.update_layout(xaxis_title=xlabel_type,
+                    #                   yaxis_title=ylabel_type)
+                    # fig.write_image(os.path.join(self.parent.result_path,
+                    #                              analyses_path,
+                    #                              f'{self.parent.crossbar_serial}_{wl}_{bl}.png'),
+                    #                              width=640, height=480)
+                    self.need_image.emit('')
+                    while not self.image_saved:
+                        pass
+                    self.setup_image_saved(False)
                     count += 1
                     self.count_changed.emit(count)
         self.progress_finished.emit(0)

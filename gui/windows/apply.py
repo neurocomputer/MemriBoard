@@ -13,10 +13,11 @@ import os
 import time
 import pickle
 import pyqtgraph as pg
-import plotly.express as px
+# import plotly.express as px
+import matplotlib.pyplot as plt
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QVBoxLayout
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
 from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
@@ -40,6 +41,7 @@ class Apply(QDialog):
     data_for_plot_y: list
     data_for_plot_x: list
     coordinates: list
+    ticket_image_name: str = "temp.png"
 
     def __init__(self, parent=None) -> None:
         """
@@ -189,7 +191,7 @@ class Apply(QDialog):
             self.start_start_thread()
         elif self.application_status == "pause":
             self.application_status = "start"
-            self.start_thread.need_pause = 0
+            self.start_thread.need_pause = False
         self.block_buttons([True, True, False, False]) # пауза остановить
         self.block_comdo(True)
 
@@ -199,7 +201,7 @@ class Apply(QDialog):
         """
         if self.application_status == "start": # работает
             self.application_status = "pause"
-            self.start_thread.need_pause = 1
+            self.start_thread.need_pause = True
             self.block_buttons([False, True, True, False]) # запустить остановить
 
     def stop_exp(self) -> None:
@@ -207,7 +209,7 @@ class Apply(QDialog):
         Остановить эксперимент
         """
         if self.application_status == "start" or "pause": # работает
-            self.start_thread.need_stop = 1
+            self.start_thread.need_stop = True
             self.application_status = "stop"
         self.block_buttons([False, False, True, True])
         self.block_comdo(False)
@@ -275,7 +277,9 @@ class Apply(QDialog):
         # ячейка для эксперимента
         self.coordinates = [(self.parent.current_wl, self.parent.current_bl)]
         # параметры потока
+        # mt = QMutex()
         self.start_thread = ApplyExp(parent=self)
+        # self.start_thread._mutex = mt
         self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
         self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
         self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
@@ -285,9 +289,22 @@ class Apply(QDialog):
 
     def on_finished_exp(self, value: int) -> None:
         """
-        Завершили эксперимент аварийно
+        Завершили эксперимент
         """
-        pass
+        value = value.split(",")
+        exp_status = int(value[0])
+        flag_soft_cc = int(value[1])
+        # блочим запуск
+        if exp_status == 1:
+            show_warning_messagebox("Эксперимент выполнен!")
+        elif exp_status == 2:
+            show_warning_messagebox("Эксперимент прерван!")
+        elif exp_status == 3:
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+        if flag_soft_cc:
+            show_warning_messagebox("Срабатывало программное ограничение!")
+        self.application_status = "stop"
+        self.stop_exp()
 
     def on_ticket_finished(self, value: str) -> None:
         """
@@ -317,17 +334,21 @@ class Apply(QDialog):
         value = value.split(",")
         exp_status = int(value[1])
         flag_soft_cc = int(value[2])
-        # блочим запуск
-        if exp_status == 1:
-            show_warning_messagebox("Эксперимент выполнен!")
-        elif exp_status == 2:
-            show_warning_messagebox("Эксперимент прерван!")
-        elif exp_status == 3:
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
-        if flag_soft_cc:
-            show_warning_messagebox("Срабатывало программное ограничение!")
-        self.application_status = "stop"
-        self.stop_exp()
+        # рисунок для базы в matplotlib
+        plt.clf()
+        plt.plot(self.data_for_plot_x, self.data_for_plot_y, marker='o', linewidth=0.5)
+        plt.xlabel(self.xlabel_text)
+        plt.ylabel(self.ylabel_text)
+        plt.grid(True, linestyle='--')
+        plt.tight_layout()
+        plt.savefig(self.ticket_image_name, dpi=100)
+        plt.close()
+        self.start_thread.setup_image_saved(True)
+        # рисунок для базы в plotly (решили отказаться из-за большого размера библиотеки)
+        # fig = px.scatter(x=self.data_for_plot_x, y=self.data_for_plot_y)
+        # fig.update_layout(xaxis_title=self.xlabel_text,
+        #                     yaxis_title=self.ylabel_text)
+        # fig.write_image(self.ticket_image_name, width=640, height=480)
 
     def on_value_got(self, value: str) -> None:
         """
@@ -348,7 +369,7 @@ class Apply(QDialog):
             # выбор отображения по осям
             y_item = self.y_value_process(value, vol, sign)
             x_item = self.x_value_process(vol, sign, count)
-            size = 3000 # todo: глубина отрисовки, вынести в константы
+            size = 400 # todo: глубина отрисовки, вынести в константы
             data_len = len(self.data_for_plot_y)
             if data_len > size:
                 self.data_for_plot_y = self.data_for_plot_y[1:] + [y_item]
@@ -388,16 +409,26 @@ class ApplyExp(QThread):
     progress_finished = pyqtSignal(str) # для каждого мемристора из self.coordinates
     ticket_finished = pyqtSignal(str) # для каждого ticket
     value_got = pyqtSignal(str) # для каждого результата value_got
-    finished_exp = pyqtSignal(int) # для всего эксперимента
+    finished_exp = pyqtSignal(str) # для всего эксперимента
+    _mutex = QMutex()
     flag_soft_cc = 0
     PAUSE_TIME = 0.2
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.parent = parent
-        self.need_pause = 0 # нужна пауза
-        self.need_stop = 0 # нужна остановка
-        self.adc_warning = 0 # высокое напряжение на АЦП
+        # todo: возможно need_pause и need_stop нужно тоже перезаписать на потокобезопасный
+        self.need_pause = False # нужна пауза
+        self.need_stop = False # нужна остановка
+        self.image_saved = False # рисунок создан и сохранен на диск
+
+    def setup_image_saved(self, status):
+        """
+        Установить значение
+        """
+        self._mutex.lock()
+        self.image_saved = status
+        self._mutex.unlock()
 
     def run(self):
         """
@@ -421,8 +452,8 @@ class ApplyExp(QThread):
                           self.parent.parent.man.vol_ref_adc,
                           current_adc)
             if adc_vol > 3.5: # todo: вынести 3.5 в константы
-                self.need_stop = 1
-                self.adc_warning = 1
+                self.need_stop = True
+                stop_reason = 3 # высокое напряжение на АЦП
                 break
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
@@ -537,35 +568,27 @@ class ApplyExp(QThread):
                 self.ticket_finished.emit(f"{ticket_id},{result_file_path}")
                 #time.sleep(self.PAUSE_TIME)
             #time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
+            # сохраняем в БД статус завершения
+            if self.need_stop:
+                stop_reason = 2 # прерван
+            else:
+                stop_reason = 1 # успешно завершен
+            status = self.parent.parent.man.db.update_experiment_status(experiment_id, stop_reason)
+            self.progress_finished.emit(f"{experiment_id},{stop_reason},{self.flag_soft_cc},{item[0]},{item[1]}")
+            if not status:
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить статус эксперимента")
             # сохранить картинку эксперимента
-            ticket_image_name = "temp.png"
-            fig = px.scatter(x=self.parent.data_for_plot_x, y=self.parent.data_for_plot_y)
-            fig.update_layout(xaxis_title=self.parent.xlabel_text,
-                              yaxis_title=self.parent.ylabel_text)
-            fig.write_image(ticket_image_name, width=640, height=480)
-            with open(ticket_image_name, 'rb') as ticket_image_file:
+            while not self.image_saved:
+                pass
+            with open(self.parent.ticket_image_name, 'rb') as ticket_image_file:
                 img_data = ticket_image_file.read()
                 # записываем в базу
                 self.parent.parent.man.db.update_experiment(experiment_id, 'image', img_data)
-            os.remove(ticket_image_name)
-            # сохраняем в БД статус завершения
-            if self.need_stop:
-                status = self.parent.parent.man.db.update_experiment_status(experiment_id, 2) # прерван
-                self.progress_finished.emit(f"{experiment_id},{2},{self.flag_soft_cc},{item[0]},{item[1]}")
-            else:
-                status = self.parent.parent.man.db.update_experiment_status(experiment_id, 1) # успешно завершен
-                self.progress_finished.emit(f"{experiment_id},{1},{self.flag_soft_cc},{item[0]},{item[1]}")
-            if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить статус эксперимента")
+                os.remove(self.parent.ticket_image_name)
+                self.setup_image_saved(False)
             # прерываем выполнение для всех
             if self.need_stop:
                 break
             #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
-        if self.need_stop: # прерван
-            if self.adc_warning:
-                self.finished_exp.emit(3) # по причине высокого напряжения на АЦП
-            else:
-                self.finished_exp.emit(2) # пользователь прервал
-        else:
-            self.finished_exp.emit(1) # успешно завершен
+        self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
         #time.sleep(self.PAUSE_TIME)
