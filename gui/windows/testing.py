@@ -9,7 +9,7 @@ import csv
 import time
 import datetime
 import copy
-import pandas as pd
+# import pandas as pd
 # import plotly.express as px
 import matplotlib.pyplot as plt
 from PyQt5 import uic
@@ -21,6 +21,26 @@ import numpy.typing as npt
 from manager.service import a2r, d2v
 from gui.src import open_file_dialog, show_warning_messagebox, show_choose_window
 from gui.windows.apply import ApplyExp
+
+def read_csv(file_path, delimiter):
+    """
+    Чтение csv
+    """
+    with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+        reader = csv.reader(csvfile, delimiter=delimiter)
+        header = next(reader)  # Пропускаем заголовок
+        # Проверяем, что в заголовке есть нужные колонки.
+        data = {}
+        for item in header:
+            data[item] = []
+        keys = list(data.keys())
+        for row in reader:
+            for i,item in enumerate(row):
+                if '.' in item:
+                   data[keys[i]].append(float(item))
+                else:
+                    data[keys[i]].append(int(item))
+        return copy.deepcopy(data)
 
 def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     """
@@ -224,10 +244,12 @@ class Testing(QDialog):
         """
         Закончился тест
         """
+        value = value.split(',')
+        stop_reason = int(value[0])
         self.ui.progress_all.setValue(0)
-        if value == 1:
+        if stop_reason == 1:
             show_warning_messagebox(f"Все мемристоры протестированы за {round(time.time() - self.start_time,2)} сек.!")
-        elif value == 2:
+        elif stop_reason == 2:
             show_warning_messagebox("Эксперимент прерван!")
         time.sleep(1) # чтобы всё успело сохраниться на диск
         self.application_status = 'stop'
@@ -276,7 +298,7 @@ class Testing(QDialog):
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
         plt.clf()
-        plt.plot(data_for_plot_x, data_for_plot_y)
+        plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
         plt.xlabel(self.xlabel_text)
         plt.ylabel(self.ylabel_text)
         plt.grid(True, linestyle='--')
@@ -435,12 +457,12 @@ class Testing(QDialog):
             # определяем общее количество ячеек
             all_wl = []
             all_bl = []
-            df = pd.read_csv(os.path.join(self.result_path, 'tested_cells.csv'), delimiter=',')
-            all_wl += df['wl'].to_list()
-            all_bl += df['bl'].to_list()
-            df = pd.read_csv(os.path.join(self.result_path, 'not_tested_cells.csv'), delimiter=',')
-            all_wl += df['wl'].to_list()
-            all_bl += df['bl'].to_list()
+            df = read_csv(os.path.join(self.result_path, 'tested_cells.csv'), delimiter=',')
+            all_wl += df['wl']
+            all_bl += df['bl']
+            df = read_csv(os.path.join(self.result_path, 'not_tested_cells.csv'), delimiter=',')
+            all_wl += df['wl']
+            all_bl += df['bl']
             wl_max = max(all_wl) + 1
             bl_max = max(all_bl) + 1
             all_cells_count = wl_max * bl_max
@@ -453,8 +475,8 @@ class Testing(QDialog):
                 if os.path.exists(os.path.join(self.result_path, path.rstrip())):
                     wl = int(path.split('.')[-2].split('_')[-2])
                     bl = int(path.split('.')[-2].split('_')[-1])
-                    df = pd.read_csv(os.path.join(self.result_path, path.rstrip()), delimiter=';')
-                    resistances = df['res'].to_list()
+                    df = read_csv(os.path.join(self.result_path, path.rstrip()), delimiter=';')
+                    resistances = df['res']
                     min_res = min(resistances)
                     max_res = max(resistances)
                     # условия годности
@@ -527,7 +549,7 @@ class Testing(QDialog):
         # работаем с файлами
         dirlist = os.listdir(self.result_path)
         if 'csv_list.txt' in dirlist:
-            df = pd.read_csv(os.path.join(self.result_path, 'tested_cells.csv'), delimiter=',')
+            df = read_csv(os.path.join(self.result_path, 'tested_cells.csv'), delimiter=',')
             self.ui.button_generate_images.setEnabled(False)
             # параметры прогресс бара
             self.counter = 0
@@ -632,9 +654,9 @@ class ImageGenerator(QThread):
                 if os.path.exists(os.path.join(self.parent.result_path, path.rstrip())):
                     self.wl = int(path.split('.')[-2].split('_')[-2])
                     self.bl = int(path.split('.')[-2].split('_')[-1])
-                    df = pd.read_csv(os.path.join(self.parent.result_path, path.rstrip()), delimiter=';')
-                    self.x_data = df['vol'].to_numpy()
-                    self.y_data = df['res'].to_numpy()
+                    df = read_csv(os.path.join(self.parent.result_path, path.rstrip()), delimiter=';')
+                    self.x_data = np.array(df['vol'])
+                    self.y_data = np.array(df['res'])
                     if y_axes_type == 'cur':
                         self.y_data = self.x_data/self.y_data
                     if x_axes_type == 'count':

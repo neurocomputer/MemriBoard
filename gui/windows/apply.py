@@ -584,8 +584,8 @@ class ApplyExp(QThread):
                 img_data = ticket_image_file.read()
                 # записываем в базу
                 self.parent.parent.man.db.update_experiment(experiment_id, 'image', img_data)
-                os.remove(self.parent.ticket_image_name)
-                self.setup_image_saved(False)
+            os.remove(self.parent.ticket_image_name)
+            self.setup_image_saved(False)
             # прерываем выполнение для всех
             if self.need_stop:
                 break
