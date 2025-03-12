@@ -579,7 +579,7 @@ class ApplyExp(QThread):
                 self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить статус эксперимента")
             # сохранить картинку эксперимента
             while not self.image_saved:
-                pass
+                time.sleep(0.5)
             with open(self.parent.ticket_image_name, 'rb') as ticket_image_file:
                 img_data = ticket_image_file.read()
                 # записываем в базу

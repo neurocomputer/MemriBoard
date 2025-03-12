@@ -36,10 +36,10 @@ def read_csv(file_path, delimiter):
         keys = list(data.keys())
         for row in reader:
             for i,item in enumerate(row):
-                if '.' in item:
-                   data[keys[i]].append(float(item))
+                if item.isdigit():
+                   data[keys[i]].append(int(item))
                 else:
-                    data[keys[i]].append(int(item))
+                    data[keys[i]].append(float(item))
         return copy.deepcopy(data)
 
 def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
@@ -584,6 +584,7 @@ class Testing(QDialog):
         plt.plot(self.image_thread.x_data, self.image_thread.y_data, marker='o', linewidth=0.5)
         plt.xlabel(self.image_thread.xlabel_type)
         plt.ylabel(self.image_thread.ylabel_type)
+        plt.title(f'{self.crossbar_serial}_{self.image_thread.wl}_{self.image_thread.bl}')
         plt.grid(True, linestyle='--')
         plt.tight_layout()
         plt.savefig(os.path.join(self.result_path,
@@ -671,7 +672,7 @@ class ImageGenerator(QThread):
                     #                              width=640, height=480)
                     self.need_image.emit('')
                     while not self.image_saved:
-                        pass
+                        time.sleep(0.5)
                     self.setup_image_saved(False)
                     count += 1
                     self.count_changed.emit(count)
