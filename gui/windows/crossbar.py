@@ -38,6 +38,7 @@ from gui.windows.terminal import Terminal
 from gui.windows.testing import Testing
 from gui.windows.map import Map
 from gui.windows.cb_info import CbInfo
+from gui.windows.new_ann import NewAnn
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -76,6 +77,7 @@ class Window(QMainWindow):
     testing_dialog: Testing
     map_dialog: Map
     cb_info_dialog: CbInfo
+    new_ann_dialog: NewAnn
 
     opener: str = ''
 
@@ -121,6 +123,8 @@ class Window(QMainWindow):
         shortcut.activated.connect(self.show_crossbar_weights_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
         shortcut.activated.connect(self.show_cb_info_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
+        shortcut.activated.connect(self.show_new_ann_dialog)
         # таймер
         self.timer = QTimer()
         # диалоговое окно подключения
@@ -153,6 +157,13 @@ class Window(QMainWindow):
         if status:
             self.show_exp_settings_dialog()
             self.exp_settings_dialog.load_tickets(exp_name, tickets)
+
+    def show_new_ann_dialog(self) -> None:
+        """
+        Показать окно записи
+        """
+        self.new_ann_dialog = NewAnn(parent=self)
+        self.new_ann_dialog.show()
 
     def show_terminal_dialog(self) -> None:
         """

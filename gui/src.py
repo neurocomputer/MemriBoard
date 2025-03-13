@@ -4,6 +4,7 @@
 
 # pylint: disable=E0611
 
+import csv
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog
 
 def show_warning_messagebox(message: str) -> None:
@@ -53,3 +54,33 @@ def open_file_dialog(parent, file_types="All Files (*);;Text Files (*.txt);;CSV 
                                                "",
                                                file_types)
     return file_path
+
+def choose_cells(filepath, wl_max, bl_max):
+    """
+    Выбор ячеек
+    """
+    cells = []
+    message = ''
+    with open(filepath, 'r', newline='', encoding='utf-8') as csvfile:
+        reader = csv.reader(csvfile)
+        header = next(reader)  # Пропускаем заголовок
+        # Проверяем, что в заголовке есть нужные колонки.
+        if header != ['wl', 'bl']:
+            raise ValueError("Файл CSV должен иметь столбцы 'wl' и 'bl' в указанном порядке")
+        for row in reader:
+            try:
+                if len(row) > 2:
+                    raise ArithmeticError("В строке больше 2-х значений")
+                else:
+                    wl = int(row[0]) # Преобразуем в число
+                    bl = int(row[1])
+                    if wl > wl_max or bl > bl_max:
+                        raise ArithmeticError("WL или BL имеют не корректное значение")
+                    if [wl, bl] not in cells: # Без дубликатов
+                        cells.append((wl, bl)) # Заполняем список
+            except (ValueError, IndexError):
+                message = f"Ошибка при преобразовании строки в числа: {row}"
+            except ArithmeticError as e:
+                message = f"Ошибка: {e}"
+            continue # переходим к следующей строке
+    return cells, message

@@ -66,6 +66,7 @@ soft_cc=0.002
 last_crossbar_serial=
 ; тикет для чтения
 measure_ticket=measure.json
+program_ticket=programming.json
 
 ; бэкап датабазы
 [backup]
