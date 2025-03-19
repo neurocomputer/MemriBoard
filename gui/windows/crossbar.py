@@ -18,9 +18,9 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QShortcut
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+import matplotlib
+matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
-#import matplotlib
-#matplotlib.use('TkAgg')
 
 from manager import CrossbarManager
 from manager.service import a2r

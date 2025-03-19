@@ -10,11 +10,11 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from PyQt5 import uic, QtWidgets
-from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView, QFileDialog
 
 from manager.service import r2a, a2v, r2w, w2r, d2v, a2r, v2d
 from manager.service.plots import calculate_counts_for_ticket
-from gui.src import show_warning_messagebox, choose_cells, open_file_dialog
+from gui.src import show_warning_messagebox, choose_cells, open_file_dialog, write_csv_data
 from gui.windows.apply import ApplyExp
 
 class NewAnn(QDialog):
@@ -24,10 +24,12 @@ class NewAnn(QDialog):
 
     GUI_PATH = os.path.join("gui","uies","new_ann.ui")
     # weights_levels_count: int = 0 # количество уровней веса
-    coordinates: list = [] # координаты ячеек
+    coordinates_all: list = [] # координаты ячеек
+    cordinates: list = []
     current_resistances: list = [] # текущие сопротивления ячеек
     target_resistances: list = []
-    MAX_WEIGHT: float = 0.96
+    writen_cells: list = []
+    not_writen_cells: list = []
     map_thread: ApplyExp
     counter: int # счетчик для прогрессбара
     data_for_plot_y: list
@@ -37,10 +39,13 @@ class NewAnn(QDialog):
     application_status: str = 'stop'
     ticket = None
 
+    # todo: сделать выбор по кнопке
     PROG_COUNT = 3
-    RESET_VOL_MAX = 3
+    RESET_VOL_MIN = 0.4
+    RESET_VOL_MAX = 1.2
     RESET_STEP = 0.01
-    SET_VOL_MAX = 3
+    SET_VOL_MIN = 0.4
+    SET_VOL_MAX = 1.2
     SET_STEP = 0.01
 
     def __init__(self, parent=None) -> None:
@@ -54,6 +59,7 @@ class NewAnn(QDialog):
         self.ui.button_load_good_cells.clicked.connect(self.button_load_good_cells_clicked)
         self.ui.button_map_weights.clicked.connect(self.button_map_weights_clicked)
         self.ui.button_cancel_map_weights.clicked.connect(self.button_cancel_map_weights_clicked)
+        self.ui.button_download.clicked.connect(self.button_download_clicked)
         # обработчики событий
         self.ui.spinbox_weights_scale.valueChanged.connect(self.update_target_values)
         self.ui.combo_mapping_type.currentIndexChanged.connect(self.update_target_values)
@@ -64,6 +70,7 @@ class NewAnn(QDialog):
         self.ui.table_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_weights.setColumnCount(7)
         self.ui.table_weights.setHorizontalHeaderLabels(["BL", "WL", "Текущее R", "Текущий W", "Целевой W", "Целевое R", 'Статус'])
+        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.button_start_combination()
 
     def button_load_good_cells_clicked(self): #+
@@ -73,15 +80,15 @@ class NewAnn(QDialog):
         filepath = open_file_dialog(self, file_types="CSV Files (*.csv)")
         if filepath:
             try:
-                self.coordinates = []
+                self.coordinates_all = []
                 # self.weights_levels_count = 0
                 wl_max = self.parent.man.col_num
                 bl_max = self.parent.man.row_num
-                self.coordinates, _ = choose_cells(filepath, wl_max, bl_max)
-                # self.weights_levels_count = math.floor(math.log2(len(self.coordinates)))
+                self.coordinates_all, _ = choose_cells(filepath, wl_max, bl_max)
+                # self.weights_levels_count = math.floor(math.log2(len(self.coordinates_all)))
                 self.button_ready_combination()
             except Exception as er: # pylint: disable=W0718
-                self.coordinates = []
+                self.coordinates_all = []
                 # self.weights_levels_count = 0
                 print('button_load_good_cells_clicked',er)
                 show_warning_messagebox('Не возможно загрузить ячейки или их нет!')
@@ -95,7 +102,7 @@ class NewAnn(QDialog):
         self.current_resistances = []
         while self.ui.table_weights.rowCount() > 0:
             self.ui.table_weights.removeRow(0)
-        for item in self.coordinates:
+        for item in self.coordinates_all:
             # получаем из базы данные
             _, memristor_id = self.parent.man.db.get_memristor_id(item[0], item[1], self.parent.man.crossbar_id)
             _, resistance = self.parent.man.db.get_last_resistance(memristor_id)
@@ -115,7 +122,7 @@ class NewAnn(QDialog):
         """
         # стираем данные
         self.current_resistances = []
-        for i, item in enumerate(self.coordinates):
+        for i, item in enumerate(self.coordinates_all):
             # получаем из базы данные
             _, memristor_id = self.parent.man.db.get_memristor_id(item[0], item[1], self.parent.man.crossbar_id)
             _, resistance = self.parent.man.db.get_last_resistance(memristor_id)
@@ -134,7 +141,7 @@ class NewAnn(QDialog):
             weight = r2w(self.parent.man.res_load, item)*self.ui.spinbox_weights_scale.value()
             self.ui.table_weights.setItem(i, 3, QTableWidgetItem(str(round(weight, 4))))
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        all_levels_weights = len(self.coordinates)
+        all_levels_weights = len(self.coordinates_all)
         min_weight = self.ui.spinbox_min_weight.value()
         max_weight = self.ui.spinbox_max_weight.value()
         weight_type = self.ui.combo_mapping_type.currentText()
@@ -146,6 +153,8 @@ class NewAnn(QDialog):
             weights = np.linspace(min_weight, max_weight, all_levels_weights)
             weights = square(weights)
         self.target_resistances = []
+        self.writen_cells = []
+        self.not_writen_cells = []
         for i, item in enumerate(weights):
             self.ui.table_weights.setItem(i, 4, QTableWidgetItem(str(round(item, 4))))
             target_resistance = w2r(self.parent.man.res_load, item/self.ui.spinbox_weights_scale.value())
@@ -153,9 +162,12 @@ class NewAnn(QDialog):
             self.ui.table_weights.setItem(i, 5, QTableWidgetItem(str(round(target_resistance, 1))))
             if self.target_resistances[i] - self.target_resistances[i]*tolerance/100 <= self.current_resistances[i] <= self.target_resistances[i] + self.target_resistances[i]*tolerance/100:
                 self.ui.table_weights.setItem(i, 6, QTableWidgetItem('Записано'))
+                self.writen_cells.append(self.coordinates_all[i])
             else:
                 self.ui.table_weights.setItem(i, 6, QTableWidgetItem('Не записано'))
+                self.not_writen_cells.append(self.coordinates_all[i])
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # todo: добавить выгрузку записанных весов
 
     def get_tolerance_ranges(self):
         """
@@ -186,7 +198,8 @@ class NewAnn(QDialog):
         """
         Нажата кнопка записи
         """
-        if self.coordinates:
+        if self.not_writen_cells:
+            self.coordinates = copy.deepcopy(self.not_writen_cells)
             self.counter = 0
             self.application_status = 'work'
             self.button_work_combination()
@@ -195,8 +208,10 @@ class NewAnn(QDialog):
             ticket_name = self.parent.man.ap_config['gui']['program_ticket']
             self.ticket = self.parent.read_ticket_from_disk(ticket_name)
             # меняем параметры тикета
+            self.ticket['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MIN)
             self.ticket['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MAX)
             self.ticket['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_STEP)
+            self.ticket['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MIN)
             self.ticket['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MAX)
             self.ticket['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_STEP)
             self.ticket['params']['count'] = self.PROG_COUNT
@@ -209,7 +224,7 @@ class NewAnn(QDialog):
             self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), task_list.copy(), count)]
             # параметры прогресс бара
             self.ui.progress_bar_mapping.setValue(0)
-            self.ui.progress_bar_mapping.setMaximum(len(self.coordinates))
+            self.ui.progress_bar_mapping.setMaximum(len(self.coordinates_all))
             # параметры потока
             self.map_thread = ApplyExp(parent=self)
             self.map_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
@@ -230,14 +245,14 @@ class NewAnn(QDialog):
         """
         Выполнились все тикеты в эксперименте для одной ячейки
         """
-        print(self.counter, self.current_resistances[self.counter], self.ticket['terminate']['value'])
+        # print(self.counter, self.current_resistances[self.counter], self.ticket['terminate']['value'])
         # чтобы успеть пока поток ApplyExp не начнет работать
         data_for_plot_y = copy.deepcopy(self.data_for_plot_y)
         # очищаем для потока ApplyExp
         self.data_for_plot_y = []
         # подменяем значение
         self.counter += 1
-        if self.counter < len(self.coordinates):
+        if self.counter < len(self.coordinates_all):
             self.ticket['terminate']['value'] = self.get_tolerance_ranges()
             self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), self.parent.exp_list[0][2].copy(), self.parent.exp_list[0][3])]
         # рисунок для базы в matplotlib
@@ -305,11 +320,14 @@ class NewAnn(QDialog):
         Закрытие окна
         """
         self.current_resistances = []
-        self.coordinates = []
+        self.coordinates_all = []
         self.application_status = 'stop'
         self.counter = 0
         self.data_for_plot_y = []
         self.target_resistances = []
+        self.writen_cells = []
+        self.not_writen_cells = []
+        self.cordinates = []
         self.ticket = None
 
     def closeEvent(self, event) -> None:
@@ -349,3 +367,14 @@ class NewAnn(QDialog):
         self.ui.button_load_good_cells.setEnabled(False)
         self.ui.button_map_weights.setEnabled(False)
         self.ui.button_cancel_map_weights.setEnabled(True)
+
+    def button_download_clicked(self):
+        """
+        Выгрузить рабочие
+        """
+        folder = QFileDialog.getExistingDirectory(self)
+        fname = os.path.join(folder, 'written_cells.csv')
+        write_csv_data(fname, ['wl', 'bl'], copy.deepcopy(self.writen_cells))
+        fname = os.path.join(folder, 'not_written_cells.csv')
+        write_csv_data(fname, ['wl', 'bl'], copy.deepcopy(self.not_writen_cells))
+        # todo: добавить выгрузку сводную

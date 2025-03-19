@@ -84,3 +84,13 @@ def choose_cells(filepath, wl_max, bl_max):
                 message = f"Ошибка: {e}"
             continue # переходим к следующей строке
     return cells, message
+
+def write_csv_data(fpath, header, coordinates):
+    """
+    Записать координаты ячеек
+    """
+    with open(fpath, 'w',newline='', encoding='utf-8') as file:
+        file_wr = csv.writer(file, delimiter=",")
+        file_wr.writerow(header)
+        for item in coordinates:
+            file_wr.writerow(item)

@@ -12,6 +12,8 @@ from manager.comport import Serial
 from manager.blanks import blanks, fill_blank, gather
 from manager.service import d2v
 from simulator.src import load_crossbar_array, send_task_to_crossbar
+from MemriCORE.rpi_modes import RPI_modes
+import RPi.GPIO as gpio
 
 class Connector():
     """
@@ -35,6 +37,7 @@ class Connector():
         self.config = config
         self.c_type = c_type
         self.cb_type = cb_type
+        self.cb_type = 'raspberry'
         # для симулятора
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
@@ -82,8 +85,10 @@ class Connector():
         open_flag = False
         if self.cb_type == 'simulator':
             # загрузка симулятора
-            if self.cb_type == 'simulator':
-                open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
+            open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
+        elif self.cb_type == 'raspberry':
+            self.rasp_driver = RPI_modes()
+            open_flag = True
         else:
             # кол-во попыток получить данные
             attempts = int(self.config['connector']['attempts_to_kick'])
@@ -107,12 +112,17 @@ class Connector():
             close_flag -- статус закрытия
         """
         close_flag = False
-        self.serial.com_close()
-        if self.serial.com_is_open():
-            self.logger.info('Fail to close')
-        else:
-            self.logger.info('Closed')
+        if self.cb_type == 'simulator':
             close_flag = True
+        elif self.cb_type == 'raspberry':
+            close_flag = True
+        else:
+            self.serial.com_close()
+            if self.serial.com_is_open():
+                self.logger.info('Fail to close')
+            else:
+                self.logger.info('Closed')
+                close_flag = True
         return close_flag
 
     def push(self, send_data: str) -> bool:
@@ -192,6 +202,9 @@ class Connector():
         elif self.cb_type == 'simulator':
             send_flag = True
             rec_data = ['simulator']
+        elif self.cb_type == 'raspberry':
+            send_flag = True
+            rec_data = ['raspberry']
         return send_flag, rec_data
 
     def impact(self, task: dict):
@@ -259,6 +272,15 @@ class Connector():
             if not self.silent:
                 self.logger.info('Recieved data: %s', str(res))
         # можно добавить работу с другими платами
+        elif self.cb_type == 'raspberry':
+            adc = self.rasp_driver.mode_7(task['vol'],
+                                          task['t_ms'],
+                                          task['t_us'],
+                                          task['sign'],
+                                          task['id'],
+                                          task['wl'],
+                                          task['bl']) # vDAC, tms, tus, rev, id, wl, bl
+            res = (int(adc[0]), int(adc[1]))
         return res
 
     def custom_impact(self, command: str, timeout: float, attempts: int):
