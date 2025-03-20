@@ -9,7 +9,7 @@ import copy
 # import math
 import numpy as np
 import matplotlib.pyplot as plt
-from PyQt5 import uic, QtWidgets
+from PyQt5 import uic, QtWidgets, QtGui
 from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView, QFileDialog
 
 from manager.service import r2a, a2v, r2w, w2r, d2v, a2r, v2d
@@ -25,7 +25,11 @@ class NewAnn(QDialog):
     GUI_PATH = os.path.join("gui","uies","new_ann.ui")
     # weights_levels_count: int = 0 # количество уровней веса
     coordinates_all: list = [] # координаты ячеек
+    coordinates_good: list = []
     cordinates: list = []
+    weights_all = [] # все веса
+    weight_max: int
+    weight_min: int
     current_resistances: list = [] # текущие сопротивления ячеек
     target_resistances: list = []
     writen_cells: list = []
@@ -69,9 +73,16 @@ class NewAnn(QDialog):
         # параметры таблицы
         self.ui.table_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_weights.setColumnCount(7)
-        self.ui.table_weights.setHorizontalHeaderLabels(["BL", "WL", "Текущее R", "Текущий W", "Целевой W", "Целевое R", 'Статус'])
+        self.ui.table_weights.setHorizontalHeaderLabels(["BL", "WL", "Текущее R", "Текущий W", "Выбор", "Целевой W", "Целевое R", 'Статус'])
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.button_start_combination()
+        # заполняем таблицу
+        for bl in range(self.parent.man.row_num):
+            for wl in range(self.parent.man.col_num):
+                self.coordinates_all.append((wl, bl))
+        self.fill_table_cells()
+        self.update_current_weights()
+        self.update_good_cels()
 
     def button_load_good_cells_clicked(self): #+
         """
@@ -80,19 +91,19 @@ class NewAnn(QDialog):
         filepath = open_file_dialog(self, file_types="CSV Files (*.csv)")
         if filepath:
             try:
-                self.coordinates_all = []
+                self.coordinates_good = []
                 # self.weights_levels_count = 0
                 wl_max = self.parent.man.col_num
                 bl_max = self.parent.man.row_num
-                self.coordinates_all, _ = choose_cells(filepath, wl_max, bl_max)
+                self.coordinates_good, _ = choose_cells(filepath, wl_max, bl_max)
                 # self.weights_levels_count = math.floor(math.log2(len(self.coordinates_all)))
-                self.button_ready_combination()
+                # self.button_ready_combination()
             except Exception as er: # pylint: disable=W0718
-                self.coordinates_all = []
+                self.coordinates_good = []
                 # self.weights_levels_count = 0
                 print('button_load_good_cells_clicked',er)
                 show_warning_messagebox('Не возможно загрузить ячейки или их нет!')
-            self.fill_table_cells()
+            self.update_good_cels()
 
     def fill_table_cells(self):
         """
@@ -114,7 +125,7 @@ class NewAnn(QDialog):
             self.ui.table_weights.setItem(row_position, 1, QTableWidgetItem(str(item[0])))
             self.ui.table_weights.setItem(row_position, 2, QTableWidgetItem(str(resistance)))
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.update_target_values()
+        #self.update_target_values()
 
     def update_table_resistances(self):
         """
@@ -132,15 +143,41 @@ class NewAnn(QDialog):
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.update_target_values()
 
+    def update_current_weights(self):
+        """
+        Обновить текущие веса
+        """
+        self.weights_all = []
+        for i, item in enumerate(self.current_resistances):
+            weight = r2w(self.parent.man.res_load, item)*self.ui.spinbox_weights_scale.value()
+            self.weights_all.append(weight)
+            self.ui.table_weights.setItem(i, 3, QTableWidgetItem(str(round(weight, 4))))
+        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.weight_max = max(self.weights_all)
+        self.weight_min = min(self.weights_all)
+        print(self.weight_min, self.weight_max)
+
+    def update_good_cels(self):
+        """
+        Обновить статусы годных ячеек
+        """
+        if self.coordinates_good:
+            for i, item in enumerate(self.coordinates_all):
+                if item in self.coordinates_good:
+                    self.ui.table_weights.setItem(i, 4, QTableWidgetItem('выбрана'))
+                    self.ui.table_weights.item(i, 4).setBackground(QtGui.QColor(0,255,0))
+                else:
+                    self.ui.table_weights.setItem(i, 4, QTableWidgetItem('не выбрана'))
+        else:
+            for i, item in enumerate(self.coordinates_all):
+                self.ui.table_weights.setItem(i, 4, QTableWidgetItem('не задано'))
+        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
     def update_target_values(self):
         """
         Обновить целевые показатели
         """
         tolerance = self.ui.spinbox_tolerance.value()
-        for i, item in enumerate(self.current_resistances):
-            weight = r2w(self.parent.man.res_load, item)*self.ui.spinbox_weights_scale.value()
-            self.ui.table_weights.setItem(i, 3, QTableWidgetItem(str(round(weight, 4))))
-        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         all_levels_weights = len(self.coordinates_all)
         min_weight = self.ui.spinbox_min_weight.value()
         max_weight = self.ui.spinbox_max_weight.value()
