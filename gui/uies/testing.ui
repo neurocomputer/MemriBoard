@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>504</width>
-    <height>300</height>
+    <height>286</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -65,7 +65,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
@@ -340,7 +340,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Порог Rmax/Rmin:</string>
+              <string>Rmax/Rmin больше</string>
              </property>
             </widget>
            </item>
