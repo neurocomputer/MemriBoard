@@ -48,10 +48,10 @@ class NewAnn(QDialog):
 
     # todo: сделать выбор по кнопке
     PROG_COUNT = 3
-    RESET_VOL_MIN = 0.4
+    RESET_VOL_MIN = 0.3
     RESET_VOL_MAX = 1.2
     RESET_STEP = 0.01
-    SET_VOL_MIN = 0.4
+    SET_VOL_MIN = 0.3
     SET_VOL_MAX = 1.2
     SET_STEP = 0.01
 
@@ -68,6 +68,9 @@ class NewAnn(QDialog):
         self.ui.button_cancel_map_weights.clicked.connect(self.button_cancel_map_weights_clicked)
         self.ui.button_download.clicked.connect(self.button_download_clicked)
         self.ui.button_choose_weights.clicked.connect(self.button_choose_weights_clicked)
+
+        self.ui.button_drop_cells.clicked.connect(self.button_drop_cells_clicked)
+        self.ui.button_drop_weights.clicked.connect(self.button_drop_weights_clicked)
         # обработчики событий
         # self.ui.spinbox_weights_scale.valueChanged.connect(self.update_target_values)
         # self.ui.combo_mapping_type.currentIndexChanged.connect(self.update_target_values)
@@ -75,6 +78,8 @@ class NewAnn(QDialog):
         # self.ui.spinbox_max_weight.valueChanged.connect(self.update_target_values)
         # self.ui.spinbox_tolerance.valueChanged.connect(self.update_target_values)
         self.ui.spinbox_correction_weight.valueChanged.connect(self.on_spinbox_correction_weight_changed)
+        self.ui.spinbox_r_min.valueChanged.connect(self.on_spinbox_correction_weight_changed)
+        self.ui.spinbox_r_max.valueChanged.connect(self.on_spinbox_correction_weight_changed)
         # параметры таблицы table_weights
         self.ui.table_weights.setSortingEnabled(True) # Включаем сортировку
         self.ui.table_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -84,8 +89,8 @@ class NewAnn(QDialog):
         # параметры таблицы table_match
         self.ui.table_match.setSortingEnabled(True) # Включаем сортировку
         self.ui.table_match.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.ui.table_match.setColumnCount(6)
-        self.ui.table_match.setHorizontalHeaderLabels(["Целевой W", "Целевое R", "Ближайший W", "BL", "WL", "Статус"])
+        self.ui.table_match.setColumnCount(7)
+        self.ui.table_match.setHorizontalHeaderLabels(["id", "Целевой W", "Целевое R", "Ближайший R", "BL", "WL", "Статус"])
         self.ui.table_match.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # комбинация кнопок
         self.button_start_combination()
@@ -93,9 +98,56 @@ class NewAnn(QDialog):
         for bl in range(self.parent.man.row_num):
             for wl in range(self.parent.man.col_num):
                 self.coordinates_all.append((wl, bl))
-        self.fill_table_cells()
-        self.update_current_weights()
+        self.fill_table_weights()
         self.update_good_cels()
+
+    # методы для таблицы с сопротивлениями
+
+    def fill_table_weights(self): # +
+        """
+        Заполнение таблицы весов
+        """
+        # стираем данные
+        self.current_resistances = {}
+        while self.ui.table_weights.rowCount() > 0:
+            self.ui.table_weights.removeRow(0)
+        for item in self.coordinates_all:
+            # получаем из базы данные
+            _, memristor_id = self.parent.man.db.get_memristor_id(item[0], item[1], self.parent.man.crossbar_id)
+            _, resistance = self.parent.man.db.get_last_resistance(memristor_id)
+            self.current_resistances[item] = resistance
+            # вносим в таблицу
+            row_position = self.ui.table_weights.rowCount()
+            self.ui.table_weights.insertRow(row_position)
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, item[1]) # Устанавливаем BL
+            self.ui.table_weights.setItem(row_position, 0, qtable_item)
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, item[0]) # Устанавливаем WL
+            self.ui.table_weights.setItem(row_position, 1, qtable_item)
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, resistance) # Устанавливаем текущее сопротивление
+            self.ui.table_weights.setItem(row_position, 2, qtable_item)
+        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.update_current_weights()
+
+    def update_current_weights(self): # +
+        """
+        Обновить текущие веса
+        """
+        self.weights_all = {}
+        for i, item in enumerate(self.coordinates_all):
+            resistance = self.current_resistances[item]
+            weight = r2w(self.parent.man.res_load, resistance)*self.ui.spinbox_correction_weight.value()
+            self.weights_all[item] = weight
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, round(weight, 4)) # Устанавливаем числовые данные
+            status, row = self.find_row_index_wl_bl(item[0], item[1])
+            self.ui.table_weights.setItem(row, 3, qtable_item)
+        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.weight_max = max(self.weights_all.items())[1]
+        self.weight_min = min(self.weights_all.items())[1]
+        print(self.weight_min, self.weight_max)
 
     def button_load_good_cells_clicked(self): # +
         """
@@ -118,159 +170,6 @@ class NewAnn(QDialog):
                 show_warning_messagebox('Не возможно загрузить ячейки или их нет!')
             self.update_good_cels()
 
-    def find_close_value(self, target_value):
-        """
-        Найти ближайшее
-        """
-        min_diff = float('inf')
-        closest_key = None
-        for key, value in self.weights_all.items():
-            diff = abs(value - abs(target_value))
-            if diff < min_diff:
-                min_diff = diff
-                closest_key = key
-        return closest_key, value
-
-    def button_choose_weights_clicked(self): # +
-        """
-        Выбрать веса
-        """
-        self.weights_target_raw = [0.01, 0.1, 0.5, 0.7]
-
-        # уникальные 
-        # округленные
-
-        # ищем похожие
-        self.weights_target = {}
-        for value in self.weights_target_raw:
-            closest_key, _ = self.find_close_value(value)
-            self.weights_target[closest_key] = value
-        self.fill_table_match()
-
-    def on_spinbox_correction_weight_changed(self):
-        """
-        Изменение спинбокса коррекции весов
-        """
-        weights_correction = self.ui.spinbox_correction_weight.value()
-        for key, value in self.weights_target.items():
-            new_weight = r2w
-            self.ui.table_match.setItem(row_position, 3, qtable_item)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, key[0]) # Устанавливаем WL
-
-        
-            r2w(self.parent.man.res_load, self.res)*self.ui.spinbox_correction_weight.value(),3)}"
-       
-       
-                self.labels_record_weight[i].setText()
-        
-        corr_value = 1/float(self.ui.spinbox_correction_weight.value())
-        # заполняем сопротивления эталонные
-        for i in range(len(self.cluster_centers)):
-            self.labels_res[i].setText(f"{str(w2r(self.parent.man, corr_value*self.cluster_centers[i][0]))}")
-
-    def fill_table_match(self): # +
-        """
-        Функция заполнения таблицы с весами
-        """
-        # стираем данные
-        while self.ui.table_match.rowCount() > 0:
-            self.ui.table_match.removeRow(0)
-        for key, value in self.weights_target.items():
-            # вносим в таблицу
-            row_position = self.ui.table_match.rowCount()
-            self.ui.table_match.insertRow(row_position)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, value) # Устанавливаем целевой вес
-            self.ui.table_match.setItem(row_position, 0, qtable_item)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, self.weights_all[key]) # Устанавливаем ближайший вес
-            self.ui.table_match.setItem(row_position, 2, qtable_item)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, key[1]) # Устанавливаемем BL
-            self.ui.table_match.setItem(row_position, 3, qtable_item)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, key[0]) # Устанавливаем WL
-            self.ui.table_match.setItem(row_position, 4, qtable_item)
-
-    def fill_table_cells(self): # +
-        """
-        Заполнение таблицы весов
-        """
-        # стираем данные
-        self.current_resistances = {}
-        while self.ui.table_weights.rowCount() > 0:
-            self.ui.table_weights.removeRow(0)
-        for item in self.coordinates_all:
-            # получаем из базы данные
-            _, memristor_id = self.parent.man.db.get_memristor_id(item[0], item[1], self.parent.man.crossbar_id)
-            _, resistance = self.parent.man.db.get_last_resistance(memristor_id)
-            self.current_resistances[item] = resistance
-            # вносим в таблицу
-            row_position = self.ui.table_weights.rowCount()
-            self.ui.table_weights.insertRow(row_position)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, item[1]) # Устанавливаем числовые данные
-            self.ui.table_weights.setItem(row_position, 0, qtable_item)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, item[0]) # Устанавливаем числовые данные
-            self.ui.table_weights.setItem(row_position, 1, qtable_item)
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, resistance) # Устанавливаем числовые данные
-            self.ui.table_weights.setItem(row_position, 2, qtable_item)
-        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        #self.update_target_values()
-
-    def update_table_resistances(self):
-        """
-        Обновление сопротивлений после записи
-        """
-        # стираем данные
-        self.current_resistances = {}
-        for i, item in enumerate(self.coordinates_all):
-            # получаем из базы данные
-            _, memristor_id = self.parent.man.db.get_memristor_id(item[0], item[1], self.parent.man.crossbar_id)
-            _, resistance = self.parent.man.db.get_last_resistance(memristor_id)
-            self.current_resistances[item] = resistance
-            # вносим в таблицу
-            self.ui.table_weights.setItem(i, 2, QTableWidgetItem(str(resistance)))
-        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.update_target_values()
-
-    def update_current_weights(self): # +
-        """
-        Обновить текущие веса
-        """
-        self.weights_all = {}
-        for i, item in enumerate(self.coordinates_all):
-            resistance = self.current_resistances[item]
-            weight = r2w(self.parent.man.res_load, resistance)*self.ui.spinbox_weights_scale.value()
-            self.weights_all[item] = weight
-            qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, round(weight, 4)) # Устанавливаем числовые данные
-            status, row = self.find_row_index_wl_bl(item[0], item[1])
-            self.ui.table_weights.setItem(row, 3, qtable_item)
-        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.weight_max = max(self.weights_all.items())[1]
-        self.weight_min = min(self.weights_all.items())[1]
-        print(self.weight_min, self.weight_max)
-
-    def find_row_index_wl_bl(self, wl, bl): # +
-        """
-        Поиск индекса строки
-        """
-        status = False
-        row = 0
-        for row in range(self.ui.table_weights.rowCount()):
-            wl_cur = self.table_weights.item(row, 1)
-            wl_cur = int(wl_cur.data(Qt.DisplayRole))
-            bl_cur = self.table_weights.item(row, 0)
-            bl_cur = int(bl_cur.data(Qt.DisplayRole))
-            if wl_cur == wl and bl_cur == bl:
-                status = True
-                break
-        return status, row
-
     def update_good_cels(self): # +
         """
         Обновить статусы годных ячеек
@@ -288,6 +187,158 @@ class NewAnn(QDialog):
             for i, item in enumerate(self.coordinates_all):
                 self.ui.table_weights.setItem(i, 4, QTableWidgetItem('не задано'))
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+    def find_row_index_wl_bl(self, wl, bl): # +
+        """
+        Поиск индекса строки
+        """
+        status = False
+        row = 0
+        for row in range(self.ui.table_weights.rowCount()):
+            wl_cur = self.table_weights.item(row, 1)
+            wl_cur = int(wl_cur.data(Qt.DisplayRole))
+            bl_cur = self.table_weights.item(row, 0)
+            bl_cur = int(bl_cur.data(Qt.DisplayRole))
+            if wl_cur == wl and bl_cur == bl:
+                status = True
+                break
+        return status, row
+
+    def button_drop_cells_clicked(self):
+        """
+        Убрать сопротивления
+        """
+        if self.coordinates_good:
+            # todo: не удаляет эти веса из weights_target_raw
+            for i, item in enumerate(self.coordinates_all):
+                if item not in self.coordinates_good:
+                    status, row = self.find_row_index_wl_bl(item[0], item[1])
+                    self.ui.table_weights.removeRow(row)
+
+    # методы для таблицы с весами
+
+    def button_choose_weights_clicked(self):
+        """
+        Выбрать веса
+        """
+        self.weights_target_raw = [0.01, 0.1, 0.5, 0.7]
+
+        # уникальные
+        # округленные
+        # проверить общее количество
+
+        self.fill_table_match()
+
+    def fill_table_match(self): # +
+        """
+        Функция заполнения таблицы с весами
+        """
+        # self.weights_target_raw_dict = {}
+        # стираем данные
+        while self.ui.table_match.rowCount() > 0:
+            self.ui.table_match.removeRow(0)
+        # for key, value in self.weights_target.items():
+        for value in self.weights_target_raw:
+            # вносим в таблицу
+            row_position = self.ui.table_match.rowCount()
+            self.ui.table_match.insertRow(row_position)
+            # id веса
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, row_position)
+            self.ui.table_match.setItem(row_position, 0, qtable_item)
+            # Устанавливаем целевой вес
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, value)
+            self.ui.table_match.setItem(row_position, 1, qtable_item)
+            # self.weights_target_raw_dict[row_position] = value
+            # Устанавливаем resistanse
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, w2r(self.parent.man.res_load, value))
+            self.ui.table_match.setItem(row_position, 2, qtable_item)
+        self.on_spinbox_correction_weight_changed()
+
+    def find_row_index_weight_id(self, weight_id): # +
+        """
+        Найти вес по айди
+        """
+        status = False
+        row = 0
+        for row in range(self.ui.table_match.rowCount()):
+            weight_id_cur = self.table_match.item(row, 0)
+            weight_id_cur = int(weight_id_cur.data(Qt.DisplayRole))
+            if weight_id_cur == weight_id:
+                status = True
+                break
+        return status, row
+
+    def on_spinbox_correction_weight_changed(self):
+        """
+        Изменение спинбокса коррекции весов
+        """
+        self.weights_status = {}
+        weights_correction = self.ui.spinbox_correction_weight.value()
+        res_min = self.ui.spinbox_r_min.value()
+        res_max = self.ui.spinbox_r_max.value()
+        for i, value in enumerate(self.weights_target_raw):
+            status, row = self.find_row_index_weight_id(i)
+            new_resistance = w2r(self.parent.man.res_load, value/weights_correction)
+            # Устанавливаем resistanse
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, new_resistance) 
+            self.ui.table_match.setItem(row, 2, qtable_item)
+            # Проверяем статус
+            if res_min <= new_resistance <= res_max:
+                self.weights_status[i] = 'подходит'
+                self.ui.table_match.setItem(row, 6, QTableWidgetItem('подходит'))
+            else:
+                self.weights_status[i] = 'не подходит'
+                self.ui.table_match.setItem(row, 6, QTableWidgetItem('не подходит'))
+
+    def button_drop_weights_clicked(self):
+        """
+        Убрать веса
+        """
+        # todo: не удаляет эти веса из weights_target_raw
+        for i, value in enumerate(self.weights_target_raw):
+            status, row = self.find_row_index_weight_id(i)
+            if self.weights_status[i] == 'не подходит':
+                self.ui.table_match.removeRow(row)
+
+    def find_close_value(self, target_value):
+        """
+        Найти ближайшее
+        """
+        min_diff = float('inf')
+        closest_key = None
+        closest_res = float('inf')
+        for row_position in range(self.ui.table_weights.rowCount()):
+            key = (self.ui.table_weights.item(row_position, 1).data(Qt.DisplayRole),
+                   self.ui.table_weights.item(row_position, 0).data(Qt.DisplayRole))
+            if key not in self.weights_target:
+                # вытаскиваем сопротивление
+                value = self.ui.table_weights.item(row_position, 2).data(Qt.DisplayRole)
+                diff = abs(value - abs(target_value))
+                if diff < min_diff:
+                    min_diff = diff
+                    closest_key = key
+                    closest_res = value
+        return closest_key, closest_res
+
+    def update_table_resistances(self):
+        """
+        Обновление сопротивлений после записи
+        """
+        # стираем данные
+        self.current_resistances = {}
+        for i, item in enumerate(self.coordinates_all):
+            # получаем из базы данные
+            _, memristor_id = self.parent.man.db.get_memristor_id(item[0], item[1], self.parent.man.crossbar_id)
+            _, resistance = self.parent.man.db.get_last_resistance(memristor_id)
+            self.current_resistances[item] = resistance
+            # вносим в таблицу
+            self.ui.table_weights.setItem(i, 2, QTableWidgetItem(str(resistance)))
+        self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.update_target_values()
 
     def update_target_values(self):
         """
@@ -322,7 +373,7 @@ class NewAnn(QDialog):
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # todo: добавить выгрузку записанных весов
 
-    def get_tolerance_ranges(self):
+    def get_tolerance_ranges(self): # +
         """
         Получить значения допуска
         """
@@ -351,41 +402,65 @@ class NewAnn(QDialog):
         """
         Нажата кнопка записи
         """
-        if self.not_writen_cells:
-            self.coordinates = copy.deepcopy(self.not_writen_cells)
-            self.counter = 0
-            self.application_status = 'work'
-            self.button_work_combination()
-            self.data_for_plot_y = []
-            self.parent.exp_name = 'запись весов'
-            ticket_name = self.parent.man.ap_config['gui']['program_ticket']
-            self.ticket = self.parent.read_ticket_from_disk(ticket_name)
-            # меняем параметры тикета
-            self.ticket['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MIN)
-            self.ticket['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MAX)
-            self.ticket['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_STEP)
-            self.ticket['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MIN)
-            self.ticket['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MAX)
-            self.ticket['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_STEP)
-            self.ticket['params']['count'] = self.PROG_COUNT
-            self.ticket['terminate']['type'] = "><"
-            self.ticket['terminate']['value'] = self.get_tolerance_ranges()
-            # заполняем список экспериментов
-            task_list, count = calculate_counts_for_ticket(self.parent.man, self.ticket.copy())
-            self.parent.exp_list_params['total_tickets'] += 1
-            self.parent.exp_list_params['total_tasks'] += count
-            self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), task_list.copy(), count)]
-            # параметры прогресс бара
-            self.ui.progress_bar_mapping.setValue(0)
-            self.ui.progress_bar_mapping.setMaximum(len(self.coordinates_all))
-            # параметры потока
-            self.map_thread = ApplyExp(parent=self)
-            self.map_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-            self.map_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
-            self.map_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
-            self.map_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
-            self.map_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
-            self.map_thread.start()
+        # ищем похожие
+        self.weights_target = {}
+        # цикл по табличке 
+        for row_position in range(self.ui.table_match.rowCount()):
+            # вытаскиваем сопротивление
+            target_resistance = self.ui.table_match.item(row_position, 2).data(Qt.DisplayRole)
+            # ищем wl bl ближайшего сопротивления и записываем в эту таблицу 
+            closest_key, closest_resistance = self.find_close_value(target_resistance)
+            # Устанавливаем wl
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, closest_key[0])
+            self.ui.table_match.setItem(row_position, 5, qtable_item)
+            # Устанавливаем bl
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, closest_key[1])
+            self.ui.table_match.setItem(row_position, 4, qtable_item)
+            # Устанавливаем resistanse
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, closest_resistance)
+            self.ui.table_match.setItem(row_position, 3, qtable_item)
+            self.weights_target[closest_key] = target_resistance
+        print(self.weights_target)
+        self.coordinates = list(self.weights_target.keys()) # apply.py
+        print(self.coordinates)
+        self.target_resistances = list(self.weights_target.values())
+        print(self.target_resistances)
+        self.counter = 0
+        self.application_status = 'work'
+        self.button_work_combination()
+        self.data_for_plot_y = []
+        self.parent.exp_name = 'запись весов'
+        ticket_name = self.parent.man.ap_config['gui']['program_ticket']
+        self.ticket = self.parent.read_ticket_from_disk(ticket_name)
+        # меняем параметры тикета
+        self.ticket['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MIN)
+        self.ticket['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MAX)
+        self.ticket['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_STEP)
+        self.ticket['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MIN)
+        self.ticket['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MAX)
+        self.ticket['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_STEP)
+        self.ticket['params']['count'] = self.PROG_COUNT
+        self.ticket['terminate']['type'] = "><"
+        self.ticket['terminate']['value'] = self.get_tolerance_ranges()
+        # заполняем список экспериментов
+        task_list, count = calculate_counts_for_ticket(self.parent.man, self.ticket.copy())
+        self.parent.exp_list_params['total_tickets'] += 1
+        self.parent.exp_list_params['total_tasks'] += count
+        self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), task_list.copy(), count)]
+        # параметры прогресс бара
+        self.ui.progress_bar_mapping.setValue(0)
+        self.ui.progress_bar_mapping.setMaximum(len(self.target_resistances))
+        # параметры потока
+        self.map_thread = ApplyExp(parent=self)
+        self.map_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+        self.map_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+        self.map_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
+        self.map_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
+        self.map_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
+        self.map_thread.start()
 
     def on_count_changed(self, value):
         '''
@@ -403,9 +478,15 @@ class NewAnn(QDialog):
         data_for_plot_y = copy.deepcopy(self.data_for_plot_y)
         # очищаем для потока ApplyExp
         self.data_for_plot_y = []
+        # в таблицу 
+        # Устанавливаем resistanse
+        qtable_item = QTableWidgetItem()
+        qtable_item.setData(0, data_for_plot_y[-1])
+        self.ui.table_match.setItem(self.counter, 3, qtable_item)
+        # todo: ставить статус запуска
         # подменяем значение
         self.counter += 1
-        if self.counter < len(self.coordinates_all):
+        if self.counter < len(self.target_resistances):
             self.ticket['terminate']['value'] = self.get_tolerance_ranges()
             self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), self.parent.exp_list[0][2].copy(), self.parent.exp_list[0][3])]
         # рисунок для базы в matplotlib
@@ -460,7 +541,7 @@ class NewAnn(QDialog):
             show_warning_messagebox("Срабатывало программное ограничение!")
         self.application_status = 'stop'
         self.button_ready_combination()
-        self.update_table_resistances()
+        # self.update_table_resistances()
 
     def button_cancel_map_weights_clicked(self):
         """
@@ -505,7 +586,7 @@ class NewAnn(QDialog):
         Комбинация клавиш во время открытия окна
         """
         self.ui.button_load_good_cells.setEnabled(True)
-        self.ui.button_map_weights.setEnabled(False)
+        self.ui.button_map_weights.setEnabled(True)
         self.ui.button_cancel_map_weights.setEnabled(False)
 
     def button_ready_combination(self):
@@ -521,7 +602,7 @@ class NewAnn(QDialog):
         Комбинация клавиш готовых для работы
         """
         self.ui.button_load_good_cells.setEnabled(False)
-        self.ui.button_map_weights.setEnabled(False)
+        self.ui.button_map_weights.setEnabled(True)
         self.ui.button_cancel_map_weights.setEnabled(True)
 
     def button_download_clicked(self):
