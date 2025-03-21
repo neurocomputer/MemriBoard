@@ -102,9 +102,31 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QPushButton" name="pushButton_3">
+                   <widget class="QLabel" name="label_3">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
                     <property name="text">
-                     <string>PushButton</string>
+                     <string>Коррекция веса:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QDoubleSpinBox" name="spinbox_correction_weight">
+                    <property name="decimals">
+                     <number>4</number>
+                    </property>
+                    <property name="minimum">
+                     <double>0.000100000000000</double>
+                    </property>
+                    <property name="singleStep">
+                     <double>0.000100000000000</double>
+                    </property>
+                    <property name="value">
+                     <double>0.030000000000000</double>
                     </property>
                    </widget>
                   </item>
@@ -257,35 +279,6 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Wmin</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QDoubleSpinBox" name="spinbox_min_weight">
-       <property name="decimals">
-        <number>4</number>
-       </property>
-       <property name="minimum">
-        <double>0.000100000000000</double>
-       </property>
-       <property name="singleStep">
-        <double>0.000100000000000</double>
-       </property>
-       <property name="value">
-        <double>0.030000000000000</double>
-       </property>
-      </widget>
-     </item>
      <item>
       <widget class="QLabel" name="label_6">
        <property name="sizePolicy">

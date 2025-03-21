@@ -67,14 +67,14 @@ class NewAnn(QDialog):
         self.ui.button_map_weights.clicked.connect(self.button_map_weights_clicked)
         self.ui.button_cancel_map_weights.clicked.connect(self.button_cancel_map_weights_clicked)
         self.ui.button_download.clicked.connect(self.button_download_clicked)
-
         self.ui.button_choose_weights.clicked.connect(self.button_choose_weights_clicked)
         # обработчики событий
-        self.ui.spinbox_weights_scale.valueChanged.connect(self.update_target_values)
-        self.ui.combo_mapping_type.currentIndexChanged.connect(self.update_target_values)
-        self.ui.spinbox_min_weight.valueChanged.connect(self.update_target_values)
-        self.ui.spinbox_max_weight.valueChanged.connect(self.update_target_values)
-        self.ui.spinbox_tolerance.valueChanged.connect(self.update_target_values)
+        # self.ui.spinbox_weights_scale.valueChanged.connect(self.update_target_values)
+        # self.ui.combo_mapping_type.currentIndexChanged.connect(self.update_target_values)
+        # self.ui.spinbox_min_weight.valueChanged.connect(self.update_target_values)
+        # self.ui.spinbox_max_weight.valueChanged.connect(self.update_target_values)
+        # self.ui.spinbox_tolerance.valueChanged.connect(self.update_target_values)
+        self.ui.spinbox_correction_weight.valueChanged.connect(self.on_spinbox_correction_weight_changed)
         # параметры таблицы table_weights
         self.ui.table_weights.setSortingEnabled(True) # Включаем сортировку
         self.ui.table_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -137,14 +137,41 @@ class NewAnn(QDialog):
         """
         self.weights_target_raw = [0.01, 0.1, 0.5, 0.7]
 
+        # уникальные 
+        # округленные
+
+        # ищем похожие
         self.weights_target = {}
         for value in self.weights_target_raw:
             closest_key, _ = self.find_close_value(value)
             self.weights_target[closest_key] = value
         self.fill_table_match()
 
-    def fill_table_match(self):
+    def on_spinbox_correction_weight_changed(self):
         """
+        Изменение спинбокса коррекции весов
+        """
+        weights_correction = self.ui.spinbox_correction_weight.value()
+        for key, value in self.weights_target.items():
+            new_weight = r2w
+            self.ui.table_match.setItem(row_position, 3, qtable_item)
+            qtable_item = QTableWidgetItem()
+            qtable_item.setData(0, key[0]) # Устанавливаем WL
+
+        
+            r2w(self.parent.man.res_load, self.res)*self.ui.spinbox_correction_weight.value(),3)}"
+       
+       
+                self.labels_record_weight[i].setText()
+        
+        corr_value = 1/float(self.ui.spinbox_correction_weight.value())
+        # заполняем сопротивления эталонные
+        for i in range(len(self.cluster_centers)):
+            self.labels_res[i].setText(f"{str(w2r(self.parent.man, corr_value*self.cluster_centers[i][0]))}")
+
+    def fill_table_match(self): # +
+        """
+        Функция заполнения таблицы с весами
         """
         # стираем данные
         while self.ui.table_match.rowCount() > 0:
@@ -154,16 +181,16 @@ class NewAnn(QDialog):
             row_position = self.ui.table_match.rowCount()
             self.ui.table_match.insertRow(row_position)
             qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, value) # Устанавливаем числовые данные
+            qtable_item.setData(0, value) # Устанавливаем целевой вес
             self.ui.table_match.setItem(row_position, 0, qtable_item)
             qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, self.weights_all[key]) # Устанавливаем числовые данные
+            qtable_item.setData(0, self.weights_all[key]) # Устанавливаем ближайший вес
             self.ui.table_match.setItem(row_position, 2, qtable_item)
             qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, key[1]) # Устанавливаем числовые данные
+            qtable_item.setData(0, key[1]) # Устанавливаемем BL
             self.ui.table_match.setItem(row_position, 3, qtable_item)
             qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, key[0]) # Устанавливаем числовые данные
+            qtable_item.setData(0, key[0]) # Устанавливаем WL
             self.ui.table_match.setItem(row_position, 4, qtable_item)
 
     def fill_table_cells(self): # +
