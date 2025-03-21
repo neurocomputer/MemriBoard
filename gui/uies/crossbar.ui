@@ -91,6 +91,13 @@
       </item>
      </layout>
     </item>
+    <item>
+     <widget class="QProgressBar" name="crossbar_progress">
+      <property name="value">
+       <number>0</number>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">

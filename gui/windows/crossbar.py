@@ -39,6 +39,7 @@ from gui.windows.testing import Testing
 from gui.windows.map import Map
 from gui.windows.cb_info import CbInfo
 from gui.windows.new_ann import NewAnn
+from gui.windows.wait import Wait
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -78,6 +79,7 @@ class Window(QMainWindow):
     map_dialog: Map
     cb_info_dialog: CbInfo
     new_ann_dialog: NewAnn
+    wait_dialog: Wait
 
     opener: str = ''
 
@@ -105,6 +107,8 @@ class Window(QMainWindow):
         self.man = CrossbarManager()
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        # параметры кроссбара 
+        self.ui.crossbar_progress.setVisible(False)
         # параметры таблицы
         self.ui.table_crossbar.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_crossbar.itemDoubleClicked.connect(self.show_cell_info_dialog)
@@ -125,6 +129,8 @@ class Window(QMainWindow):
         shortcut.activated.connect(self.show_cb_info_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
         shortcut.activated.connect(self.show_new_ann_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
+        shortcut.activated.connect(self.read_cell_all)
         # таймер
         self.timer = QTimer()
         # диалоговое окно подключения
@@ -265,6 +271,13 @@ class Window(QMainWindow):
         self.cb_info_dialog = CbInfo(parent=self)
         self.cb_info_dialog.show()
 
+    def show_wait_dialog(self, opener) -> None:
+        """
+        Диалоговое окно прогрессбара
+        """
+        self.wait_dialog = Wait(opener=opener, parent=self)
+        self.wait_dialog.show()
+
     # обработчики кнопок
 
     def reconnect(self) -> None:
@@ -404,19 +417,35 @@ class Window(QMainWindow):
         # _ = self.man.db.update_experiment_status(experiment_id, 1)
         return last_resistance
 
-    def _read_all(self) -> None:
+    def button_all_set_enabled(self, status):
+        """
+        Блок кнопок
+        """
+        self.ui.button_rram.setEnabled(status)
+        self.ui.button_tests.setEnabled(status)
+        self.ui.button_math.setEnabled(status)
+        self.ui.button_snapshot.setEnabled(status)
+        self.ui.button_net.setEnabled(status)
+        self.ui.button_settings.setEnabled(status)
+        self.ui.button_reconnect.setEnabled(status)
+
+    def read_cell_all(self) -> None:
         """
         Прочитать все
         """
         answer = show_choose_window(self, 'Прочитать все?')
         if answer:
-            self.ui.button_read.setEnabled(False)
+            self.button_all_set_enabled(False)
+            # окно
+            self.show_wait_dialog(opener='crossbar')
+            # поток чтения
+            self.wait_dialog.ui.progress_wait.setValue(0)
+            self.wait_dialog.ui.progress_wait.setMaximum(self.man.col_num*self.man.row_num)
+            self.wait_dialog.ui.progress_wait.setVisible(True)
+            # тикет
             ticket_name = self.man.ap_config['gui']['measure_ticket']
             ticket = self.read_ticket_from_disk(ticket_name)
-            # поток загруки тикета
-            self.ui.pbar.setValue(0)
-            self.ui.pbar.setMaximum(self.number_cells)
-            self.ui.pbar.setVisible(True)
+            # поток
             send_ticket_all_thread = SendTicketAll(ticket, parent=self)
             send_ticket_all_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             send_ticket_all_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
@@ -447,17 +476,17 @@ class Window(QMainWindow):
         """
         Изменение счетчика вызывает обновление прогрессбара
         """
-        self.ui.pbar.setValue(value)
+        self.wait_dialog.ui.progress_wait.setValue(value)
 
     def on_progress_finished(self, value: int) -> None:
         """
         Завершение выполнения скрываем прогресс бар
         """
-        self.ui.pbar.setValue(value)
-        self.ui.pbar.setVisible(False)
         self.fill_table()
         self.color_table()
-        self.ui.button_read.setEnabled(True)
+        self.button_all_set_enabled(True)
+        self.wait_dialog.ui.progress_wait.setValue(0)
+        self.wait_dialog.close()
 
     def closeEvent(self, event) -> None:
         """
@@ -512,7 +541,25 @@ class SendTicketAll(QThread):
         counter = 0
         for i in range(self.parent.man.col_num):
             for j in range(self.parent.man.row_num):
-                self.parent.read_cell(i, j)
+                self.ticket["params"]["wl"] = i
+                self.ticket["params"]["bl"] = j
+                # временное решение, лучше переписать на потоки
+                _, memristor_id = self.parent.man.db.get_memristor_id(i, j, self.parent.man.crossbar_id)
+                for task in self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
+                                                 self.ticket['terminate'],
+                                                 self.parent.man.blank_type):
+                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                try:
+                    last_resistance = int(a2r(self.parent.man.gain,
+                                            self.parent.man.res_load,
+                                            self.parent.man.vol_read,
+                                            self.parent.man.adc_bit,
+                                            self.parent.man.vol_ref_adc,
+                                            self.parent.man.res_switches,
+                                            result[0]))
+                except IndexError:
+                    last_resistance = 0
+                _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                 counter += 1
                 self.count_changed.emit(counter)
         self.progress_finished.emit(counter)
