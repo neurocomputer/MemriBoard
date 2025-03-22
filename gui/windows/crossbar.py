@@ -38,6 +38,7 @@ from gui.windows.terminal import Terminal
 from gui.windows.testing import Testing
 from gui.windows.map import Map
 from gui.windows.cb_info import CbInfo
+from gui.windows.rram import Rram
 from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
 from gui.src import show_choose_window, show_warning_messagebox
@@ -78,6 +79,7 @@ class Window(QMainWindow):
     testing_dialog: Testing
     map_dialog: Map
     cb_info_dialog: CbInfo
+    rram_dialog: Rram
     new_ann_dialog: NewAnn
     wait_dialog: Wait
 
@@ -113,7 +115,7 @@ class Window(QMainWindow):
         self.ui.table_crossbar.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_crossbar.itemDoubleClicked.connect(self.show_cell_info_dialog)
         # обработчики кнопок
-        self.ui.button_rram.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
+        self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_snapshot.clicked.connect(self._snapshot)
@@ -270,6 +272,13 @@ class Window(QMainWindow):
         """
         self.cb_info_dialog = CbInfo(parent=self)
         self.cb_info_dialog.show()
+
+    def show_rram_dialog(self) -> None:
+        """
+        Открытие окна инормации о кроссбаре
+        """
+        self.rram_dialog = Rram(parent=self)
+        self.rram_dialog.show()
 
     def show_wait_dialog(self, opener) -> None:
         """
