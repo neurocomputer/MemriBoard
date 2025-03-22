@@ -651,3 +651,18 @@ class DBOperate():
                 self.parent.db_logger.critical(f'Ошибка в get_experiment_id_from_ticket_id:{er}')
         self.db_disconnect('get_experiment_id_from_ticket_id')
         return status, experiment_id
+    
+    def db_backup(self, backup_path) -> None:
+        """
+        Резервное копирование базы
+        """
+        status = False
+        try:
+            base = sqlite3.connect(DB_PATH)
+            backup = sqlite3.connect(backup_path + 'backup.db')
+            base.backup(backup)
+            backup.close()
+            base.close()
+        except sqlite3.Error as er:
+            print("bd_backup",er)
+        return status

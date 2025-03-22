@@ -170,3 +170,7 @@ ticket.png
 *.cb
 base.db-shm
 base.db-wal
+MemriCORE/
+backup.db
+test.py
+models/

@@ -37,7 +37,7 @@ def gather(blank: dict) -> str:
     return ','.join(map(str, list(blank.values()))) + '\n'
 
 blanks = {
-    'memardboard': { # бланк задачи для платы MemArdBoard
+    'memardboard_single': { # бланк задачи для платы MemArdBoard
     'mode_flag': 2,
     'vol': 0,
     't_ms': 0,

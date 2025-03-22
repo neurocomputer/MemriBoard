@@ -37,6 +37,7 @@ class Application():
     col_num: int # кол-во столбцов
     db: DBOperate
     status_db_connect: bool
+    backup: str
 
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
@@ -84,6 +85,7 @@ class Application():
         self.res_switches = float(self.ap_config['board']['res_switches'])
         self.gain = float(self.ap_config['board']['gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
+        self.backup = self.ap_config['backup']['backup_path']
 
     def save_settings(self, **kwargs):
         """
@@ -101,6 +103,8 @@ class Application():
             self.ap_config['connector']['com_port'] = kwargs["com_port"]
         if "c_type" in kwargs:
             self.ap_config['connector']['c_type'] = kwargs["c_type"]
+        if "backup" in kwargs:
+            self.ap_config['backup']['backup_path'] = kwargs["backup"]
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
@@ -122,4 +126,5 @@ class Application():
         meta_info['res_switches'] = self.res_switches
         meta_info['blank_type'] = self.blank_type
         meta_info['connected_port'] = self.connected_port
+        meta_info['backup'] = self.backup
         return deepcopy(meta_info)
