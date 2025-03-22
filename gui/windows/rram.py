@@ -28,3 +28,5 @@ class Rram(QDialog):
         Установка значений по умолчанию
         """
         self.ui.button_interrupt.setEnabled(False)
+        self.ui.text_write.clear()
+        self.ui.text_read.clear()
