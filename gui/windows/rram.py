@@ -1,5 +1,5 @@
 """
-Окно информации о кроссбаре
+Окно работы с rram
 """
 
 import os
@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QDialog
 
 class Rram(QDialog):
     """
-    Информация о кроссбаре
+    Работа с rram
     """
 
     GUI_PATH = os.path.join("gui","uies","rram.ui")
