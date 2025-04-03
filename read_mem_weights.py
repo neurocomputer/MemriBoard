@@ -21,7 +21,8 @@ import pickle
 from MemriCORE.rpi_modes import RPI_modes
 import RPi.GPIO as gpio
 
-model_path = 'models/model_pid_3'
+model_path = 'models/model_pid_8'
+weight_correction = 1
 
 def convert_res_to_weight(res: int) -> float:
     """
@@ -65,8 +66,8 @@ for wl in range(wl_all):
                     print(f'wl {wl} bl {bl} = {int(res)}')
                     all_mem_weights[bl][wl] = convert_res_to_weight(int(res))
         else:
-            print(f'wl {wl} bl {bl} = {int(res)}')
-            all_mem_weights[bl][wl] = convert_res_to_weight(int(res))
+            print(f'wl {wl} bl {bl} = {int(res)}, {convert_res_to_weight(int(res))*weight_correction}')
+            all_mem_weights[bl][wl] = convert_res_to_weight(int(res))*weight_correction
 
 with open(os.path.join(model_path, 'all_mem_weights.pkl'), 'wb') as fp:
     pickle.dump(all_mem_weights, fp)

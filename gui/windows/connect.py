@@ -116,6 +116,7 @@ class ConnectDialog(QDialog):
             elif platform == "win32":
                 com_port = port.portName()
             port_list.append(com_port)
+        port_list.append("raspberrypi")
         port_list.append("simulator")
         port_list.append("offline")
         port_list.insert(0, self.parent.man.ap_config["connector"]["com_port"]) # default

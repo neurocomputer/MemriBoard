@@ -9,7 +9,7 @@ from sklearn.metrics import classification_report
 from MemriCORE.rpi_modes import RPI_modes
 import RPi.GPIO as gpio
 
-model_path = 'models/model_pid_3'
+model_path = 'models/model_pid_8'
 
 # создаем папку для сохранения результата
 now = datetime.datetime.now()
@@ -38,12 +38,11 @@ with open(os.path.join(model_path, 'all_mem_weights_coordinates.pkl'), 'rb') as 
 X_test = test_data[0]
 y_test = test_data[1]
 
-activations = [lambda x: x if x>0 else 0,
+#activations = [lambda x: x if x>0 else 0,
+#               lambda x: x]
+
+activations = [lambda x: np.tanh(x),
                lambda x: x]
-
-scale_x = np.max(np.abs(X_test))
-
-print('scale_x:', scale_x)
 
 gpio.setwarnings(False)
 conn = RPI_modes()
@@ -69,6 +68,7 @@ with open(fname_io_result,'w', newline='', encoding='utf-8') as file:
     file_wr.writerow(['inputs0', 'inputs1', 'outputs', 'outputs_mem'])
 
 for inputs in X_test:
+    
 
     # создаем файл для сохранения результата умножения
     now = datetime.datetime.now()
@@ -76,7 +76,7 @@ for inputs in X_test:
     fname_mac_result = os.path.join(result_dir, f'mac_{formatted_date}.csv')
     with open(fname_mac_result,'w', newline='', encoding='utf-8') as file:
         file_wr = csv.writer(file, delimiter=",")
-        file_wr.writerow(['wl', 'bl', 'dac', 'adc', 'res', 'truth'])
+        file_wr.writerow(['lay', 'neur', 'syn', 'wl', 'bl', 'dac', 'adc', 'res', 'truth'])
 
     start_time = time.time()
     counter_params = 0
@@ -85,17 +85,20 @@ for inputs in X_test:
     result_log = []
     result_log.append(inputs[0])
     result_log.append(inputs[1])
+    scale_x = np.max(np.abs(inputs))
     for i in range(num_layers):
-        inputs_mem = list(map(lambda x: round(x/scale_x*0.3*4096/5), inputs_mem))
+        #print(inputs_mem)
+        inputs_mem = list(map(lambda x: round(abs(x)/scale_x*0.3*4096/5), inputs_mem))
         layer_weights = weights[counter_params]
         HARD_WEIGHTS = mem_weights_coordinates[counter_params]
+        SCALE_W = mem_weights_scales[counter_params]
         counter_params += 1
         layer_biases = weights[counter_params]
         HARD_BIASES = mem_weights_coordinates[counter_params]
+        SCALE_B = mem_weights_scales[counter_params]
         counter_params += 1
         neurons_model = []
         neurons_mem = []
-        SCALE = mem_weights_scales[i]
         for neuron in range(layer_weights.shape[1]):
             mac_model = 0
             mac_mem = 0
@@ -107,14 +110,14 @@ for inputs in X_test:
                 bl = HARD_WEIGHTS[neuron][synapse]['bl']
                 res = conn.mode_9(inputs_mem[synapse], 0, wl, bl)[0]
                 mul = a2v(res)
-                sign = np.sign(layer_weights[synapse][neuron])
-                mul_res = mul * sign * SCALE / 0.3 * scale_x
+                sign_w = np.sign(layer_weights[synapse][neuron])
+                sign_i = np.sign(inputs[synapse])
+                mul_res = mul * sign_i * sign_w / SCALE_W / 0.3 * scale_x
                 mac_mem += mul_res
                 # пишем результат mac
                 with open(fname_mac_result,'a', newline='', encoding='utf-8') as file:
                     file_wr = csv.writer(file, delimiter=",")
-                    file_wr.writerow([wl, bl, inputs_mem[synapse], res, mul_res, mul_model])
-                #print(mul_model, mul_res)
+                    file_wr.writerow([i, neuron, synapse, wl, bl, inputs_mem[synapse], res, mul_res, mul_model])
             mac_model += layer_biases[neuron]
             mac_model = activations[i](mac_model)
             # мэмристоры
@@ -123,17 +126,19 @@ for inputs in X_test:
             res = conn.mode_9(246, 0, wl, bl)[0]
             mul = a2v(res)
             sign = np.sign(layer_biases[neuron])
-            mul_res = mul * sign * SCALE
+            mul_res = mul * sign / SCALE_B / 0.3
             mac_mem += mul_res
             # пишем результат mac
             with open(fname_mac_result,'a', newline='', encoding='utf-8') as file:
                 file_wr = csv.writer(file, delimiter=",")
-                file_wr.writerow([wl, bl, 246, res, mul_res, layer_biases[neuron]])
+                file_wr.writerow([i, neuron, 'b', wl, bl, 246, res, mul_res, layer_biases[neuron]])
             mac_mem = activations[i](mac_mem)
             neurons_model.append(mac_model)
             neurons_mem.append(mac_mem)
         inputs = np.array(neurons_model)
         inputs_mem = np.array(neurons_mem)
+        # scale_x = np.max(np.abs(inputs_mem))
+        scale_x = 1
     outputs.append(np.argmax(softmax(neurons_model)))
     outputs_mem.append(np.argmax(softmax(neurons_mem)))
     # пишем в файл общий результат

@@ -42,6 +42,8 @@ class NewAnn(QDialog):
     coordinates: list = [] # координаты для окна ApplyExp
     writen_cells: list = []
     not_writen_cells: list = []
+    written_weights: list = []
+    not_written_weights: list = []
     map_thread: ApplyExp
 
     # todo: сделать выбор по кнопке
@@ -226,9 +228,11 @@ class NewAnn(QDialog):
                     show_warning_messagebox(f'{ex}')
             if status_open:
                 try:
-                    self.weights_target_all = list(map(lambda x: float(x), self.weights_target_all))
+                    self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
                     # уникальные абсолютные округленные
-                    self.weights_target_all = list(map(lambda x: float(x), np.round(np.unique(np.abs(self.weights_target_all)), 4)))
+                    self.weights_target_all = list(map(lambda x: float(x), np.unique(np.round(np.abs(self.weights_target_all), 4))))
+                    if 0. in self.weights_target_all:
+                        self.weights_target_all.remove(0.)
                     self.fill_table_match()
                 except Exception as ex:
                     show_warning_messagebox(f'{ex}')
@@ -399,7 +403,9 @@ class NewAnn(QDialog):
                         self.ui.table_match.setItem(row_position, 3, qtable_item)
                         self.target_cells_resistances[closest_key] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
+                    self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))
                     self.writen_cells = []
+                    self.writen_weights = []
                     self.coordinates = list(self.target_cells_resistances.keys()) # apply.py
                     self.target_resistances = list(self.target_cells_resistances.values())
                     self.counter = 0
@@ -474,7 +480,9 @@ class NewAnn(QDialog):
         if shutdown_min <= data_for_plot_y[-1] <= shutdown_max:
             self.ui.table_match.setItem(row, 6, QTableWidgetItem('записано'))
             self.writen_cells.append(self.coordinates[self.counter])
+            self.writen_weights.append(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
             self.not_writen_cells.remove(self.coordinates[self.counter])
+            self.not_written_weights.remove(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
         else:
             self.ui.table_match.setItem(row, 6, QTableWidgetItem('не записано'))
         # подменяем значение
@@ -533,7 +541,7 @@ class NewAnn(QDialog):
         if flag_soft_cc:
             show_warning_messagebox("Срабатывало программное ограничение!")
         self.application_status = 'stop'
-        self.button_ready_combination()
+        self.button_after_combination()
         self.ui.progress_bar_mapping.setValue(0)
 
     def button_cancel_map_weights_clicked(self):
@@ -560,6 +568,8 @@ class NewAnn(QDialog):
         self.coordinates = []
         self.writen_cells = []
         self.not_writen_cells = []
+        self.written_weights = []
+        self.not_written_weights = []
 
     def closeEvent(self, event) -> None:
         """
@@ -610,6 +620,18 @@ class NewAnn(QDialog):
         self.ui.button_choose_weights.setEnabled(False)
         self.ui.button_drop_cells.setEnabled(False)
         self.ui.button_drop_weights.setEnabled(False)
+
+    def button_after_combination(self):
+        """
+        Комбинация клавиш готовых для работы
+        """
+        self.ui.button_load_good_cells.setEnabled(True)
+        self.ui.button_map_weights.setEnabled(True)
+        self.ui.button_cancel_map_weights.setEnabled(False)
+        self.ui.button_download.setEnabled(True)
+        self.ui.button_choose_weights.setEnabled(True)
+        self.ui.button_drop_cells.setEnabled(True)
+        self.ui.button_drop_weights.setEnabled(True)
 
     def button_download_clicked(self):
         """
