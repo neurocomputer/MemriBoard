@@ -15,15 +15,16 @@ import pickle
 import pyqtgraph as pg
 # import plotly.express as px
 import matplotlib.pyplot as plt
+from PyQt5.QtCore import Qt
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
 from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
 from gui.src import show_choose_window, show_warning_messagebox
 
-class Apply(QDialog):
+class Apply(QWidget):
     """
     Окно выполнения эксперимента
     """
@@ -52,7 +53,7 @@ class Apply(QDialog):
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
-        self.setModal(True)
+        self.ui.setWindowFlags(Qt.Window)
         # область графика
         self.graph_result = pg.PlotWidget()
         self.graph_result.setBackground('w')
