@@ -4,6 +4,7 @@
 
 import os
 from PyQt5 import uic
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QDialog
 
 class Rram(QDialog):
@@ -22,6 +23,9 @@ class Rram(QDialog):
         self.setModal(True)
         # значения по умолчанию
         self.set_up_init_values()
+        # обработчики кнопок
+        self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
+        self.ui.button_read.clicked.connect(self.parent.read_cell_all)
 
     def set_up_init_values(self) -> None:
         """
@@ -30,3 +34,12 @@ class Rram(QDialog):
         self.ui.button_interrupt.setEnabled(False)
         self.ui.text_write.clear()
         self.ui.text_read.clear()
+        self.parent._snapshot("rram_before_reading")
+        self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
+
+    def apply_tresh(self) -> None:
+        """
+        Применение порога
+        """
+        self.parent._snapshot("rram_after_reading")
+        self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
