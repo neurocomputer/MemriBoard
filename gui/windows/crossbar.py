@@ -320,7 +320,7 @@ class Window(QMainWindow):
         else:
             plt.show()
 
-    def _snapshot(self, mode) -> None:
+    def _snapshot(self, mode, tresh=0) -> None:
         """
         Картинка с кнопки снимок
         """
@@ -329,10 +329,11 @@ class Window(QMainWindow):
             if mode == "crossbar":
                 plt.imshow(self.snapshot)
                 plt.show()
-            elif mode == "rram_before_reading":
+            elif mode == "rram":
                 plt.imshow(self.all_resistances)
                 plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)
-            elif mode == "rram_after_reading":
+            elif mode == "rram_update":
+                self.color_table(tresh)
                 plt.imshow(self.snapshot)
                 plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)
 
@@ -364,7 +365,7 @@ class Window(QMainWindow):
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
 
-    def color_table(self) -> None:
+    def color_table(self, tresh=0) -> None:
         """
         Раскраска таблицы сопротивлений
         """
@@ -376,21 +377,33 @@ class Window(QMainWindow):
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
-                max_resistance = np.max(log_resistances)
-                min_resistance = np.min(log_resistances)
-                if min_resistance == -inf:
-                    min_resistance = 0
-                for i in range(self.man.row_num):
-                    for j in range(self.man.col_num):
-                        item = self.ui.table_crossbar.item(i, j)
-                        resistance = np.log10(int(self.ui.table_crossbar.item(i, j).text()))
-                        if resistance == -inf:
-                            color_value = 0
-                        else:
-                            color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
-                            color_value = int(color_value*255)
-                        colors[i][j] = QColor(color_value, color_value, color_value)
-                        self.snapshot[i][j] = color_value
+                if tresh != 0:
+                    for i in range(self.man.row_num):
+                        for j in range(self.man.col_num):
+                            item = self.ui.table_crossbar.item(i, j)
+                            resistance = int(self.ui.table_crossbar.item(i, j).text())
+                            if resistance > tresh:
+                                color_value = 255
+                            else:
+                                color_value = 0
+                            colors[i][j] = QColor(color_value, color_value, color_value)
+                            self.snapshot[i][j] = color_value
+                else:
+                    max_resistance = np.max(log_resistances)
+                    min_resistance = np.min(log_resistances)
+                    if min_resistance == -inf:
+                        min_resistance = 0
+                    for i in range(self.man.row_num):
+                        for j in range(self.man.col_num):
+                            item = self.ui.table_crossbar.item(i, j)
+                            resistance = np.log10(int(self.ui.table_crossbar.item(i, j).text()))
+                            if resistance == -inf:
+                                color_value = 0
+                            else:
+                                color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
+                                color_value = int(color_value*255)
+                            colors[i][j] = QColor(color_value, color_value, color_value)
+                            self.snapshot[i][j] = color_value
         except ValueError:
             #show_warning_messagebox("Не возможно корректно задать цвета!")
             pass

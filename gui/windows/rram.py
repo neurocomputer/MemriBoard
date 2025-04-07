@@ -34,12 +34,13 @@ class Rram(QDialog):
         self.ui.button_interrupt.setEnabled(False)
         self.ui.text_write.clear()
         self.ui.text_read.clear()
-        self.parent._snapshot("rram_before_reading")
+        self.parent._snapshot("rram")
         self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
 
     def apply_tresh(self) -> None:
         """
         Применение порога
         """
-        self.parent._snapshot("rram_after_reading")
+        tresh = self.ui.spin_tresh_read.value()
+        self.parent._snapshot("rram_update", tresh)
         self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
