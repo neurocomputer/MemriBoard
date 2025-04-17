@@ -118,7 +118,7 @@ class Window(QMainWindow):
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
-        self.ui.button_snapshot.clicked.connect(lambda: self._snapshot("crossbar"))
+        self.ui.button_snapshot.clicked.connect(lambda: self._snapshot(mode="crossbar"))
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         self.ui.button_reconnect.clicked.connect(self.reconnect)
@@ -320,22 +320,22 @@ class Window(QMainWindow):
         else:
             plt.show()
 
-    def _snapshot(self, mode, tresh=0) -> None:
+    def _snapshot(self, **kwargs) -> None:
         """
         Картинка с кнопки снимок
         """
-        if self.snapshot is not None:
-            plt.clf()
-            if mode == "crossbar":
+        plt.clf()
+        if kwargs['mode'] == 'crossbar':
+            if self.snapshot is not None:
                 plt.imshow(self.snapshot)
                 plt.show()
-            elif mode == "rram":
+        elif kwargs['mode'] == 'rram':
+            if kwargs.get("data") is not None:
+                plt.imshow(kwargs.get("data"))
+                plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)  
+            else:
                 plt.imshow(self.all_resistances)
-                plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)
-            elif mode == "rram_update":
-                self.color_table(tresh)
-                plt.imshow(self.snapshot)
-                plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)
+                plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)      
 
     def update_current_cell_info(self):
         """
