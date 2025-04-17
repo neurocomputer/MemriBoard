@@ -47,8 +47,8 @@ class Rram(QDialog):
         for i in range(len(rram_data)):
             for j in range(len(rram_data[i])):
                 if rram_data[i][j] >= tresh:
-                    rram_data[i][j] = 0
-                else:
                     rram_data[i][j] = 1
+                else:
+                    rram_data[i][j] = 0
         self.parent._snapshot(mode="rram", data=rram_data)
         self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
