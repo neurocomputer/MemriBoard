@@ -4,9 +4,11 @@
 
 import os
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QFileDialog
 from PyQt5.QtGui import QPixmap
 from copy import deepcopy
+
+from gui.src import show_warning_messagebox
 
 class Rram(QDialog):
     """
@@ -27,6 +29,8 @@ class Rram(QDialog):
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(self.parent.read_cell_all)
+        self.ui.button_save.clicked.connect(self.save_text)
+        self.ui.button_load.clicked.connect(self.load_text)
 
     def set_up_init_values(self) -> None:
         """
@@ -52,3 +56,33 @@ class Rram(QDialog):
                     rram_data[i][j] = 0
         self.parent._snapshot(mode="rram", data=rram_data)
         self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
+
+    def save_text(self) -> None:
+        """
+        Сохранение текста из поля ввода в файл
+        """
+        text = self.ui.text_read.toPlainText()
+        if text:
+            save_file = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
+            save_file = os.path.join(save_file, "rram.txt")
+            if save_file:
+                with open(save_file, "w") as f:
+                    f.write(text)
+                    f.close()
+                show_warning_messagebox("Сохранено в " + save_file)
+        else:
+            show_warning_messagebox("Нечего сохранять!")
+
+    def load_text(self) -> None:
+        """
+        Загрузка текста из файла в поле ввода
+        """
+        load_file, _ = QFileDialog.getOpenFileName(self, 'Открыть файл', ".", "Текстовые файлы (*.txt)")
+        if load_file:
+            with open(load_file, "r+") as f:
+                text = f.read()
+                f.close()
+            if text:
+                self.ui.text_write.insertPlainText(text)
+            else:
+                show_warning_messagebox("Файл " + load_file + " пуст!")
