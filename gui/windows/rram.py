@@ -75,8 +75,8 @@ class Rram(QDialog):
         text = self.ui.text_read.toPlainText()
         if text:
             save_file = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
-            save_file = os.path.join(save_file, "rram.txt")
             if save_file:
+                save_file = os.path.join(save_file, "rram.txt")
                 with open(save_file, "w") as f:
                     f.write(text)
                     f.close()
