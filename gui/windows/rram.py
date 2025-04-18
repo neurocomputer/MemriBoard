@@ -30,6 +30,8 @@ class Rram(QDialog):
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(self.parent.read_cell_all)
         self.ui.button_save_img.clicked.connect(self.save_heatmap)
+        self.ui.button_save.clicked.connect(self.save_text)
+        self.ui.button_load.clicked.connect(self.load_text)
 
     def set_up_init_values(self) -> None:
         """
@@ -65,3 +67,33 @@ class Rram(QDialog):
         picture_path = os.path.join("gui","uies","rram.png")
         shutil.copy(picture_path, save_path)
         show_warning_messagebox('Снимок сохранен в ' + save_path)
+
+    def save_text(self) -> None:
+        """
+        Сохранение текста из поля ввода в файл
+        """
+        text = self.ui.text_read.toPlainText()
+        if text:
+            save_file = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
+            if save_file:
+                save_file = os.path.join(save_file, "rram.txt")
+                with open(save_file, "w") as f:
+                    f.write(text)
+                    f.close()
+                show_warning_messagebox("Сохранено в " + save_file)
+        else:
+            show_warning_messagebox("Нечего сохранять!")
+
+    def load_text(self) -> None:
+        """
+        Загрузка текста из файла в поле ввода
+        """
+        load_file, _ = QFileDialog.getOpenFileName(self, 'Открыть файл', ".", "Текстовые файлы (*.txt)")
+        if load_file:
+            with open(load_file, "r+") as f:
+                text = f.read()
+                f.close()
+            if text:
+                self.ui.text_write.insertPlainText(text)
+            else:
+                show_warning_messagebox("Файл " + load_file + " пуст!")
