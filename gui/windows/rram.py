@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QDialog, QFileDialog
 from PyQt5.QtGui import QPixmap, QStandardItemModel, QStandardItem
 from copy import deepcopy
 from gui.src import show_warning_messagebox
+from gui.windows.history import History
 
 class Rram(QDialog):
     """
@@ -32,6 +33,8 @@ class Rram(QDialog):
         self.ui.button_save_img.clicked.connect(self.save_heatmap)
         self.ui.button_save.clicked.connect(self.save_text)
         self.ui.button_load.clicked.connect(self.load_text)
+        self.ui.button_set_0.clicked.connect(lambda: self.set_experiment(False))
+        self.ui.button_set_1.clicked.connect(lambda: self.set_experiment(True))
         self.ui.text_write.textChanged.connect(self.text_to_binary)
         self.ui.combo_write_type.currentIndexChanged.connect(self.text_to_binary)
 
@@ -115,3 +118,14 @@ class Rram(QDialog):
         self.ui.list_write_bytes.setModel(model)
         for item in list:
             model.appendRow(QStandardItem(item))
+
+    def set_experiment(self, settable: bool) -> None:
+        """
+        Запись эксперимента как 0 или 1
+        """
+        if settable:
+            # запись 1
+            print(1)
+        else:
+            # запись 0
+            print(0)
