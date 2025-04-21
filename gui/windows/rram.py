@@ -6,7 +6,7 @@ import os
 import shutil
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QStandardItemModel, QStandardItem
 from copy import deepcopy
 from gui.src import show_warning_messagebox
 
@@ -32,6 +32,8 @@ class Rram(QDialog):
         self.ui.button_save_img.clicked.connect(self.save_heatmap)
         self.ui.button_save.clicked.connect(self.save_text)
         self.ui.button_load.clicked.connect(self.load_text)
+        self.ui.text_write.textChanged.connect(self.text_to_binary)
+        self.ui.combo_write_type.currentIndexChanged.connect(self.text_to_binary)
 
     def set_up_init_values(self) -> None:
         """
@@ -97,3 +99,19 @@ class Rram(QDialog):
                 self.ui.text_write.insertPlainText(text)
             else:
                 show_warning_messagebox("Файл " + load_file + " пуст!")
+
+    def text_to_binary(self) -> None:
+        """
+        перевод текста в бинарный формат
+        """
+        text = self.ui.text_write.toPlainText()
+        translation = ""
+        if self.ui.combo_write_type.currentText() == "ascii":
+            translation = ' '.join(format(ord(x), 'b') for x in text)
+        elif self.ui.combo_write_type.currentText() == "utf-8":
+            translation = ' '.join(format(x, 'b') for x in bytearray(text, 'utf-8'))
+        list = translation.split(" ")
+        model = QStandardItemModel()
+        self.ui.list_write_bytes.setModel(model)
+        for item in list:
+            model.appendRow(QStandardItem(item))
