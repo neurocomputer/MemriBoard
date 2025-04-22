@@ -17,8 +17,8 @@ class Rram(QDialog):
     """
 
     GUI_PATH = os.path.join("gui","uies","rram.ui")
-    experiment_0_id = None
-    experiment_1_id = None
+    experiment_0 = None
+    experiment_1 = None
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -130,7 +130,9 @@ class Rram(QDialog):
         history.ui.table_history_experiments.itemDoubleClicked.connect(lambda: double_click(history.ui.table_history_experiments.currentRow()))
         def double_click(current_row):
             if settable:
-                self.experiment_1_id = history.experiments[current_row][0]
+                self.experiment_1 = history.experiments[current_row]
+                show_warning_messagebox("Эксперимент для 1 записан!")
             else:
-                self.experiment_0_id = history.experiments[current_row][0]
+                self.experiment_0 = history.experiments[current_row]
+                show_warning_messagebox("Эксперимент для 0 записан!")
             history.close()
