@@ -134,7 +134,3 @@ class Rram(QDialog):
             else:
                 self.experiment_0_id = history.experiments[current_row][0]
             history.close()
-
-    def get_experiment(self, ) -> None:
-        """
-        """
