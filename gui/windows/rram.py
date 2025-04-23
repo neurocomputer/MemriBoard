@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QDialog, QFileDialog
 from PyQt5.QtGui import QPixmap, QStandardItemModel, QStandardItem
 from copy import deepcopy
 from gui.src import show_warning_messagebox
+from gui.windows.history import History
 
 class Rram(QDialog):
     """
@@ -16,6 +17,8 @@ class Rram(QDialog):
     """
 
     GUI_PATH = os.path.join("gui","uies","rram.ui")
+    experiment_0 = None
+    experiment_1 = None
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -32,6 +35,8 @@ class Rram(QDialog):
         self.ui.button_save_img.clicked.connect(self.save_heatmap)
         self.ui.button_save.clicked.connect(self.save_text)
         self.ui.button_load.clicked.connect(self.load_text)
+        self.ui.button_set_0.clicked.connect(lambda: self.set_experiment(False))
+        self.ui.button_set_1.clicked.connect(lambda: self.set_experiment(True))
         self.ui.text_write.textChanged.connect(self.text_to_binary)
         self.ui.combo_write_type.currentIndexChanged.connect(self.text_to_binary)
 
@@ -115,3 +120,19 @@ class Rram(QDialog):
         self.ui.list_write_bytes.setModel(model)
         for item in list:
             model.appendRow(QStandardItem(item))
+
+    def set_experiment(self, settable: bool) -> None:
+        """
+        Запись id эксперимента как 0 или 1
+        """
+        history = History(self.parent)
+        history.show()
+        history.ui.table_history_experiments.itemDoubleClicked.connect(lambda: double_click(history.ui.table_history_experiments.currentRow()))
+        def double_click(current_row):
+            if settable:
+                self.experiment_1 = history.experiments[current_row]
+                show_warning_messagebox("Эксперимент для 1 записан!")
+            else:
+                self.experiment_0 = history.experiments[current_row]
+                show_warning_messagebox("Эксперимент для 0 записан!")
+            history.close()

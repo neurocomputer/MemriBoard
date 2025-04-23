@@ -133,11 +133,22 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="button_signal_write">
-            <property name="text">
-             <string>Настройка сигнала записи</string>
-            </property>
-           </widget>
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <widget class="QPushButton" name="button_set_0">
+              <property name="text">
+               <string>Запись 0</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_set_1">
+              <property name="text">
+               <string>Запись  1</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>
