@@ -17,6 +17,7 @@ class Rram(QDialog):
     """
 
     GUI_PATH = os.path.join("gui","uies","rram.ui")
+    heatmap = os.path.join("gui","uies","rram.png")
     experiment_0 = None
     experiment_1 = None
 
@@ -29,6 +30,8 @@ class Rram(QDialog):
         self.setModal(True)
         # значения по умолчанию
         self.set_up_init_values()
+        self.ui.button_set_0.setEnabled(False)
+        self.ui.button_set_1.setEnabled(False)
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(self.parent.read_cell_all)
@@ -48,7 +51,7 @@ class Rram(QDialog):
         self.ui.text_write.clear()
         self.ui.text_read.clear()
         self.parent._snapshot(mode="rram", data=self.parent.snapshot)
-        self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
+        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
 
     def apply_tresh(self) -> None:
         """
@@ -63,17 +66,17 @@ class Rram(QDialog):
                 else:
                     rram_data[i][j] = 0
         self.parent._snapshot(mode="rram", data=rram_data)
-        self.ui.label_rram_img.setPixmap(QPixmap(os.path.join("gui","uies","rram.png")))
+        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
 
     def save_heatmap(self) -> None:
         """
         Сохранение снимка
         """
         save_path = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
-        save_path = os.path.join(save_path, "heatmap.png")
-        picture_path = os.path.join("gui","uies","rram.png")
-        shutil.copy(picture_path, save_path)
-        show_warning_messagebox('Снимок сохранен в ' + save_path)
+        if save_path:
+            save_path = os.path.join(save_path, "heatmap.png")
+            shutil.copy(self.heatmap, save_path)
+            show_warning_messagebox('Снимок сохранен в ' + save_path)
 
     def save_text(self) -> None:
         """
@@ -107,7 +110,7 @@ class Rram(QDialog):
 
     def text_to_binary(self) -> None:
         """
-        перевод текста в бинарный формат
+        Перевод текста в бинарный формат
         """
         text = self.ui.text_write.toPlainText()
         translation = ""
@@ -116,10 +119,19 @@ class Rram(QDialog):
         elif self.ui.combo_write_type.currentText() == "utf-8":
             translation = ' '.join(format(x, 'b') for x in bytearray(text, 'utf-8'))
         list = translation.split(" ")
+        cols = self.parent.man.col_num
+        string = ''
         model = QStandardItemModel()
         self.ui.list_write_bytes.setModel(model)
+        counter = 0
         for item in list:
-            model.appendRow(QStandardItem(item))
+            if counter == cols:
+                model.appendRow(QStandardItem(string))
+                string = ''
+                counter = 0
+            string += item + " "
+            counter += 1
+        self.buttons_activation()
 
     def set_experiment(self, settable: bool) -> None:
         """
@@ -136,3 +148,24 @@ class Rram(QDialog):
                 self.experiment_0 = history.experiments[current_row]
                 show_warning_messagebox("Эксперимент для 0 записан!")
             history.close()
+
+    def buttons_activation(self) -> None:
+        """
+        Активация/деактивация кнопок записи 0 и 1
+        """
+        model = self.ui.list_write_bytes.model()
+        if model.data(model.index(0,0)):
+            self.ui.button_set_0.setEnabled(True)
+            self.ui.button_set_1.setEnabled(True)
+        else:
+            self.ui.button_set_0.setEnabled(False)
+            self.ui.button_set_1.setEnabled(False)
+
+    def closeEvent(self, event):
+        """
+        Закрытие окна
+        """
+        # удаление rram.png при закрытии окна
+        if os.path.isfile(self.heatmap):
+            os.remove(self.heatmap)
+        event.accept()
