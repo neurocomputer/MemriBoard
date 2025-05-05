@@ -5,7 +5,7 @@
 import os
 import shutil
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QFileDialog
+from PyQt5.QtWidgets import QDialog, QFileDialog, QAbstractItemView
 from PyQt5.QtGui import QPixmap, QStandardItemModel, QStandardItem
 from copy import deepcopy
 from gui.src import show_warning_messagebox
@@ -32,6 +32,9 @@ class Rram(QDialog):
         self.set_up_init_values()
         self.ui.button_set_0.setEnabled(False)
         self.ui.button_set_1.setEnabled(False)
+        self.ui.list_write_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.ui.list_read_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(self.parent.read_cell_all)
@@ -118,19 +121,13 @@ class Rram(QDialog):
             translation = ' '.join(format(ord(x), 'b') for x in text)
         elif self.ui.combo_write_type.currentText() == "utf-8":
             translation = ' '.join(format(x, 'b') for x in bytearray(text, 'utf-8'))
-        list = translation.split(" ")
+        translation = translation.replace(" ", "")
         cols = self.parent.man.col_num
-        string = ''
         model = QStandardItemModel()
         self.ui.list_write_bytes.setModel(model)
-        counter = 0
-        for item in list:
-            if counter == cols:
-                model.appendRow(QStandardItem(string))
-                string = ''
-                counter = 0
-            string += item + " "
-            counter += 1
+        for i in range(32):
+            model.appendRow(QStandardItem(translation[:cols]))
+            translation = translation[cols:]
         self.buttons_activation()
 
     def set_experiment(self, settable: bool) -> None:
