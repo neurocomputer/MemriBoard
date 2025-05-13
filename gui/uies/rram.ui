@@ -118,10 +118,10 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item>
-             <widget class="QListView" name="list_write_bytes"/>
+             <widget class="QPlainTextEdit" name="text_write"/>
             </item>
             <item>
-             <widget class="QPlainTextEdit" name="text_write"/>
+             <widget class="QListView" name="list_write_bytes"/>
             </item>
            </layout>
           </item>
@@ -209,10 +209,10 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_10">
             <item>
-             <widget class="QListView" name="list_read_bytes"/>
+             <widget class="QPlainTextEdit" name="text_read"/>
             </item>
             <item>
-             <widget class="QPlainTextEdit" name="text_read"/>
+             <widget class="QListView" name="list_read_bytes"/>
             </item>
            </layout>
           </item>
