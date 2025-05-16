@@ -124,9 +124,10 @@ class Rram(QDialog):
             translation = ' '.join(format(x, 'b') for x in bytearray(text, 'utf-8'))
         translation = translation.replace(" ", "")
         cols = self.parent.man.col_num
+        rows = self.parent.man.row_num
         model = QStandardItemModel()
         self.ui.list_write_bytes.setModel(model)
-        for i in range(32):
+        for i in range(rows):
             model.appendRow(QStandardItem(translation[:cols]))
             translation = translation[cols:]
         self.buttons_activation()
@@ -139,17 +140,31 @@ class Rram(QDialog):
         rows = self.parent.man.row_num
         tresh = self.ui.spin_tresh_read.value()
         rram_data = deepcopy(self.parent.all_resistances)
-        bytes = ''.join('1' if x >= tresh else '0' for row in rram_data for x in row)
-        bytes_copy = deepcopy(bytes)
+        binary = ''.join('1' if x >= tresh else '0' for row in rram_data for x in row)
+        # перевод в текст
+        if len(binary) % 8 == 0:
+            byte_list = [binary[i:i+8] for i in range(0, len(binary), 8)]
+            int_list = [int(byte, 2) for byte in byte_list]
+            try:
+                ascii_text = ''.join([chr(i) for i in int_list])
+            except ValueError as e:
+                print("Ошибка при декодировании ASCII: ", e)
+            if self.ui.combo_read_encoding.currentText() == "ascii":
+                print("ASCII")
+                print(ascii_text)
+            elif self.ui.combo_read_encoding.currentText() == "utf-8":
+                print("UTF-8")
+                utf8_text = ascii_text.encode('utf-8').decode('utf-8')
+                print(utf8_text)
+        else:
+            show_warning_messagebox("Длина строки не кратна 8, перевод невоможен!")
+        # вывод байтов
         model = QStandardItemModel()
         self.ui.list_read_bytes.setModel(model)
         for row in range(rows):
-            model.appendRow(QStandardItem(bytes[:cols]))
-            bytes = bytes[cols:]
-        if self.ui.combo_read_encoding.currentText() == "ascii":
-            print()
-        elif self.ui.combo_read_encoding.currentText() == "utf-8":
-            print()
+            model.appendRow(QStandardItem(binary[:cols]))
+            binary = binary[cols:]
+        # обновление heatmap, активация кнопки порога
         self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
         self.ui.button_apply_tresh.setEnabled(True)
 
