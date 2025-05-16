@@ -626,4 +626,4 @@ class NewAnn(QDialog):
         """
         Прочитать все ячейки
         """
-        self.parent.read_cell_all()
+        self.parent.read_cell_all('new_ann')

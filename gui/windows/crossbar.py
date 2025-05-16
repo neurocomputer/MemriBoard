@@ -132,7 +132,7 @@ class Window(QMainWindow):
         shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
         shortcut.activated.connect(self.show_new_ann_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
-        shortcut.activated.connect(self.read_cell_all)
+        shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # таймер
         self.timer = QTimer()
         # диалоговое окно подключения
@@ -446,7 +446,7 @@ class Window(QMainWindow):
         self.ui.button_settings.setEnabled(status)
         self.ui.button_reconnect.setEnabled(status)
 
-    def read_cell_all(self) -> None:
+    def read_cell_all(self, opener) -> None:
         """
         Прочитать все
         """
@@ -454,7 +454,7 @@ class Window(QMainWindow):
         if answer:
             self.button_all_set_enabled(False)
             # окно
-            self.show_wait_dialog(opener='crossbar')
+            self.show_wait_dialog(opener)
             # поток чтения
             self.wait_dialog.ui.progress_wait.setValue(0)
             self.wait_dialog.ui.progress_wait.setMaximum(self.man.col_num*self.man.row_num)

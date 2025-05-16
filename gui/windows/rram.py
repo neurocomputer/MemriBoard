@@ -30,14 +30,12 @@ class Rram(QDialog):
         self.setModal(True)
         # значения по умолчанию
         self.set_up_init_values()
-        self.ui.button_set_0.setEnabled(False)
-        self.ui.button_set_1.setEnabled(False)
         self.ui.list_write_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.ui.list_read_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
-        self.ui.button_read.clicked.connect(self.parent.read_cell_all)
+        self.ui.button_read.clicked.connect(lambda: self.parent.read_cell_all('rram'))
         self.ui.button_save_img.clicked.connect(self.save_heatmap)
         self.ui.button_save.clicked.connect(self.save_text)
         self.ui.button_load.clicked.connect(self.load_text)
@@ -51,6 +49,9 @@ class Rram(QDialog):
         Установка значений по умолчанию
         """
         self.ui.button_interrupt.setEnabled(False)
+        self.ui.button_set_0.setEnabled(False)
+        self.ui.button_set_1.setEnabled(False)
+        self.ui.button_apply_tresh.setEnabled(False)
         self.ui.text_write.clear()
         self.ui.text_read.clear()
         self.parent._snapshot(mode="rram", data=self.parent.snapshot)
@@ -129,6 +130,28 @@ class Rram(QDialog):
             model.appendRow(QStandardItem(translation[:cols]))
             translation = translation[cols:]
         self.buttons_activation()
+
+    def binary_to_text(self) -> None:
+        """
+        Перевод бинарного формата в текст
+        """
+        cols = self.parent.man.col_num
+        rows = self.parent.man.row_num
+        tresh = self.ui.spin_tresh_read.value()
+        rram_data = deepcopy(self.parent.all_resistances)
+        bytes = ''.join('1' if x >= tresh else '0' for row in rram_data for x in row)
+        bytes_copy = deepcopy(bytes)
+        model = QStandardItemModel()
+        self.ui.list_read_bytes.setModel(model)
+        for row in range(rows):
+            model.appendRow(QStandardItem(bytes[:cols]))
+            bytes = bytes[cols:]
+        if self.ui.combo_read_encoding.currentText() == "ascii":
+            print()
+        elif self.ui.combo_read_encoding.currentText() == "utf-8":
+            print()
+        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        self.ui.button_apply_tresh.setEnabled(True)
 
     def set_experiment(self, settable: bool) -> None:
         """
