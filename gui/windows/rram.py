@@ -70,7 +70,7 @@ class Rram(QDialog):
                 else:
                     rram_data[i][j] = 0
         self.parent._snapshot(mode="rram", data=rram_data)
-        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        self.binary_to_text()
 
     def save_heatmap(self) -> None:
         """
@@ -140,30 +140,39 @@ class Rram(QDialog):
         rows = self.parent.man.row_num
         tresh = self.ui.spin_tresh_read.value()
         rram_data = deepcopy(self.parent.all_resistances)
-        binary = ''.join('1' if x >= tresh else '0' for row in rram_data for x in row)
+        binary_string1 = ''.join('1' if x >= tresh else '0' for row in rram_data for x in row)
+        binary_string2 = "".join(binary_string1)
         # перевод в текст
-        if len(binary) % 8 == 0:
-            byte_list = [binary[i:i+8] for i in range(0, len(binary), 8)]
-            int_list = [int(byte, 2) for byte in byte_list]
+        if self.ui.combo_read_encoding.currentText() == "ascii":
+            if len(binary_string1) % 8 != 0:
+                extra = 8 - (len(binary_string1) % 8)
+                binary_string1 = binary_string1.zfill(len(binary_string1) + extra)
+            ascii_text = ""
+            for i in range(0, len(binary_string1), 8):
+                byte = binary_string1[i:i+8]
+                decimal_value = int(byte, 2)
+                ascii_text += chr(decimal_value)
+            self.ui.text_read.setPlainText(ascii_text)
+        elif self.ui.combo_read_encoding.currentText() == "utf-8":
+            if len(binary_string1) % 8 != 0:
+                extra = 8 - (len(binary_string1) % 8)
+                binary_string1 = binary_string1.zfill(len(binary_string1) + extra)
+            hex_string = ""
+            for i in range(0, len(binary_string1), 8):
+                byte = binary_string1[i:i+8]
+                hex_string += hex(int(byte, 2))[2:].zfill(2) # Преобразование в шестнадцатеричную строку
             try:
-                ascii_text = ''.join([chr(i) for i in int_list])
-            except ValueError as e:
-                print("Ошибка при декодировании ASCII: ", e)
-            if self.ui.combo_read_encoding.currentText() == "ascii":
-                print("ASCII")
-                print(ascii_text)
-            elif self.ui.combo_read_encoding.currentText() == "utf-8":
-                print("UTF-8")
-                utf8_text = ascii_text.encode('utf-8').decode('utf-8')
-                print(utf8_text)
-        else:
-            show_warning_messagebox("Длина строки не кратна 8, перевод невоможен!")
+                bytes_object = bytes.fromhex(hex_string)
+                utf8_text = bytes_object.decode('utf-8')
+                self.ui.text_read.setPlainText(utf8_text)
+            except UnicodeError:
+                show_warning_messagebox("Ошибка декодирования!")
         # вывод байтов
         model = QStandardItemModel()
         self.ui.list_read_bytes.setModel(model)
         for row in range(rows):
-            model.appendRow(QStandardItem(binary[:cols]))
-            binary = binary[cols:]
+            model.appendRow(QStandardItem(binary_string2[:cols]))
+            binary_string2 = binary_string2[cols:]
         # обновление heatmap, активация кнопки порога
         self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
         self.ui.button_apply_tresh.setEnabled(True)

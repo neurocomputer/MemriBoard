@@ -33,6 +33,5 @@ class Wait(QDialog):
         elif self.opener == 'crossbar':
             event.accept()
         elif self.opener == 'rram':
-            rram = Rram(parent=self.parent)
-            rram.binary_to_text()
+            self.parent.rram_dialog.binary_to_text()
             event.accept()
