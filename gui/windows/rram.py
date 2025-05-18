@@ -44,6 +44,7 @@ class Rram(QDialog):
         self.ui.text_write.textChanged.connect(self.text_to_binary)
         self.ui.combo_write_type.currentIndexChanged.connect(self.text_to_binary)
         self.ui.combo_read_encoding.currentIndexChanged.connect(lambda : self.ui.combo_read_encoding.setCurrentIndex(0))
+        self.ui.combo_write_type.currentIndexChanged.connect(lambda : self.ui.combo_write_type.setCurrentIndex(0))
 
     def set_up_init_values(self) -> None:
         """
