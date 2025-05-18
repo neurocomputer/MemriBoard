@@ -30,14 +30,12 @@ class Rram(QDialog):
         self.setModal(True)
         # значения по умолчанию
         self.set_up_init_values()
-        self.ui.button_set_0.setEnabled(False)
-        self.ui.button_set_1.setEnabled(False)
         self.ui.list_write_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.ui.list_read_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
-        self.ui.button_read.clicked.connect(self.parent.read_cell_all)
+        self.ui.button_read.clicked.connect(lambda: self.parent.read_cell_all('rram'))
         self.ui.button_save_img.clicked.connect(self.save_heatmap)
         self.ui.button_save.clicked.connect(self.save_text)
         self.ui.button_load.clicked.connect(self.load_text)
@@ -45,12 +43,17 @@ class Rram(QDialog):
         self.ui.button_set_1.clicked.connect(lambda: self.set_experiment(True))
         self.ui.text_write.textChanged.connect(self.text_to_binary)
         self.ui.combo_write_type.currentIndexChanged.connect(self.text_to_binary)
+        self.ui.combo_read_encoding.currentIndexChanged.connect(lambda : self.ui.combo_read_encoding.setCurrentIndex(0))
+        self.ui.combo_write_type.currentIndexChanged.connect(lambda : self.ui.combo_write_type.setCurrentIndex(0))
 
     def set_up_init_values(self) -> None:
         """
         Установка значений по умолчанию
         """
         self.ui.button_interrupt.setEnabled(False)
+        self.ui.button_set_0.setEnabled(False)
+        self.ui.button_set_1.setEnabled(False)
+        self.ui.button_apply_tresh.setEnabled(False)
         self.ui.text_write.clear()
         self.ui.text_read.clear()
         self.parent._snapshot(mode="rram", data=self.parent.snapshot)
@@ -69,7 +72,7 @@ class Rram(QDialog):
                 else:
                     rram_data[i][j] = 0
         self.parent._snapshot(mode="rram", data=rram_data)
-        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        self.binary_to_text()
 
     def save_heatmap(self) -> None:
         """
@@ -123,12 +126,58 @@ class Rram(QDialog):
             translation = ' '.join(format(x, 'b') for x in bytearray(text, 'utf-8'))
         translation = translation.replace(" ", "")
         cols = self.parent.man.col_num
+        rows = self.parent.man.row_num
         model = QStandardItemModel()
         self.ui.list_write_bytes.setModel(model)
-        for i in range(32):
+        for i in range(rows):
             model.appendRow(QStandardItem(translation[:cols]))
             translation = translation[cols:]
         self.buttons_activation()
+
+    def binary_to_text(self) -> None:
+        """
+        Перевод бинарного формата в текст
+        """
+        cols = self.parent.man.col_num
+        rows = self.parent.man.row_num
+        tresh = self.ui.spin_tresh_read.value()
+        rram_data = deepcopy(self.parent.all_resistances)
+        binary_string1 = ''.join('1' if x >= tresh else '0' for row in rram_data for x in row)
+        binary_string2 = "".join(binary_string1)
+        # перевод в текст
+        if self.ui.combo_read_encoding.currentText() == "ascii":
+            if len(binary_string1) % 8 != 0:
+                extra = 8 - (len(binary_string1) % 8)
+                binary_string1 = binary_string1.zfill(len(binary_string1) + extra)
+            ascii_text = ""
+            for i in range(0, len(binary_string1), 8):
+                byte = binary_string1[i:i+8]
+                decimal_value = int(byte, 2)
+                ascii_text += chr(decimal_value)
+            self.ui.text_read.setPlainText(ascii_text)
+        elif self.ui.combo_read_encoding.currentText() == "utf-8":
+            if len(binary_string1) % 8 != 0:
+                extra = 8 - (len(binary_string1) % 8)
+                binary_string1 = binary_string1.zfill(len(binary_string1) + extra)
+            hex_string = ""
+            for i in range(0, len(binary_string1), 8):
+                byte = binary_string1[i:i+8]
+                hex_string += hex(int(byte, 2))[2:].zfill(2) # Преобразование в шестнадцатеричную строку
+            try:
+                bytes_object = bytes.fromhex(hex_string)
+                utf8_text = bytes_object.decode('utf-8')
+                self.ui.text_read.setPlainText(utf8_text)
+            except UnicodeError:
+                show_warning_messagebox("Ошибка декодирования!")
+        # вывод байтов
+        model = QStandardItemModel()
+        self.ui.list_read_bytes.setModel(model)
+        for row in range(rows):
+            model.appendRow(QStandardItem(binary_string2[:cols]))
+            binary_string2 = binary_string2[cols:]
+        # обновление heatmap, активация кнопки порога
+        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        self.ui.button_apply_tresh.setEnabled(True)
 
     def set_experiment(self, settable: bool) -> None:
         """
