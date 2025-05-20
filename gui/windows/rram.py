@@ -2,14 +2,16 @@
 Окно работы с rram
 """
 
+import csv
 import os
 import shutil
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog, QAbstractItemView
 from PyQt5.QtGui import QPixmap, QStandardItemModel, QStandardItem
 from copy import deepcopy
-from gui.src import show_warning_messagebox
+from gui.src import show_warning_messagebox, show_choose_window
 from gui.windows.history import History
+from gui.windows.apply import ApplyExp
 
 class Rram(QDialog):
     """
@@ -20,6 +22,9 @@ class Rram(QDialog):
     heatmap = os.path.join("gui","uies","rram.png")
     experiment_0 = None
     experiment_1 = None
+    binary = None
+    coordinates = []
+    counter = 0
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -32,7 +37,6 @@ class Rram(QDialog):
         self.set_up_init_values()
         self.ui.list_write_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.ui.list_read_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
-
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(lambda: self.parent.read_cell_all('rram'))
@@ -45,6 +49,7 @@ class Rram(QDialog):
         self.ui.combo_write_type.currentIndexChanged.connect(self.text_to_binary)
         self.ui.combo_read_encoding.currentIndexChanged.connect(lambda : self.ui.combo_read_encoding.setCurrentIndex(0))
         self.ui.combo_write_type.currentIndexChanged.connect(lambda : self.ui.combo_write_type.setCurrentIndex(0))
+        self.ui.button_write.clicked.connect(self.write_ones_and_zeros)
 
     def set_up_init_values(self) -> None:
         """
@@ -54,6 +59,7 @@ class Rram(QDialog):
         self.ui.button_set_0.setEnabled(False)
         self.ui.button_set_1.setEnabled(False)
         self.ui.button_apply_tresh.setEnabled(False)
+        self.ui.button_write.setEnabled(False)
         self.ui.text_write.clear()
         self.ui.text_read.clear()
         self.parent._snapshot(mode="rram", data=self.parent.snapshot)
@@ -125,6 +131,7 @@ class Rram(QDialog):
         elif self.ui.combo_write_type.currentText() == "utf-8":
             translation = ' '.join(format(x, 'b') for x in bytearray(text, 'utf-8'))
         translation = translation.replace(" ", "")
+        self.binary = deepcopy(translation)
         cols = self.parent.man.col_num
         rows = self.parent.man.row_num
         model = QStandardItemModel()
@@ -185,6 +192,7 @@ class Rram(QDialog):
         """
         history = History(self.parent)
         history.show()
+        history.ui.table_history_experiments.itemClicked.connect(lambda: history.ui.button_load.setEnabled(False))
         history.ui.table_history_experiments.itemDoubleClicked.connect(lambda: double_click(history.ui.table_history_experiments.currentRow()))
         def double_click(current_row):
             if settable:
@@ -193,6 +201,8 @@ class Rram(QDialog):
             else:
                 self.experiment_0 = history.experiments[current_row]
                 show_warning_messagebox("Эксперимент для 0 записан!")
+            if self.experiment_1 is not None and self.experiment_0 is not None:
+                self.ui.button_write.setEnabled(True)
             history.close()
 
     def buttons_activation(self) -> None:
@@ -206,6 +216,54 @@ class Rram(QDialog):
         else:
             self.ui.button_set_0.setEnabled(False)
             self.ui.button_set_1.setEnabled(False)
+
+    def write_ones_and_zeros(self) -> None:
+        message = "Будет перезаписано " + str(len(self.binary)) + " ячеек. Продолжить?"
+        answer = show_choose_window(self, message)
+        if answer:
+            wl = self.parent.man.col_num
+            bl = self.parent.man.row_num
+            result_path = os.getcwd()
+            # записываем координаты
+            for index in range (len(self.binary)):
+                if self.binary[index] == '0':
+                    self.coordinates.append((index//8, index - 8*(index//8)))
+            fname = 'tested_cells.csv'
+            fpath = os.path.join(result_path, fname)
+            with open(fpath, 'w', newline='', encoding='utf-8') as file:
+                file_wr = csv.writer(file, delimiter=",")
+                file_wr.writerow(['wl','bl'])
+                for item in self.coordinates:
+                    file_wr.writerow(item)
+            fname = 'not_tested_cells.csv'
+            fpath = os.path.join(result_path, fname)
+            with open(fpath, 'w', newline='', encoding='utf-8') as file:
+                file_wr = csv.writer(file, delimiter=",")
+                file_wr.writerow(['wl','bl'])
+                for i in range(bl):
+                    for j in range(wl):
+                        if (j, i) not in self.coordinates:
+                            file_wr.writerow((j, i))
+            self.counter = 0
+            self.ui.bar_progress.setValue(self.counter)
+            self.ui.bar_progress.setMaximum(len(self.coordinates))
+            # установка выбранного эксперимента
+
+            # параметры потока
+            # start_thread = ApplyExp(parent=self)
+            # start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+            # start_thread.progress_finished.connect(self.progress_finished) # после выполнения
+            # start_thread.start()
+
+    def on_count_changed(self):
+        self.counter = self.counter + 1
+        self.ui.bar_progress.setValue(self.counter)
+        pass
+
+    def progress_finished(self):
+        self.counter = self.counter + 1
+        self.ui.bar_progress.setValue(self.counter)
+        pass
 
     def closeEvent(self, event):
         """
