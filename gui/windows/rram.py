@@ -4,6 +4,7 @@
 
 import csv
 import os
+import pickle
 import shutil
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog, QAbstractItemView
@@ -248,12 +249,38 @@ class Rram(QDialog):
             self.ui.bar_progress.setValue(self.counter)
             self.ui.bar_progress.setMaximum(len(self.coordinates))
             # установка выбранного эксперимента
+            self.parent.exp_name = self.experiment_0[2]
+            experiment_id = self.experiment_0[0]
+            status, tickets = self.parent.man.db.get_tickets(experiment_id)
+            if status and tickets != []:
+                for ticket in tickets:
+                    ticket = pickle.loads(ticket[0])
+                    task_list, count = self.calculate_counts_for_ticket(self.parent.man, ticket.copy())
+                    self.parent.exp_list_params['total_tickets'] += 1
+                    self.parent.exp_list_params['total_tasks'] += count
+                    self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+                    # параметры потока
+                    start_thread = ApplyExp(parent=self)
+                    start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+                    start_thread.progress_finished.connect(self.progress_finished) # после выполнения
+                    start_thread.start()
+            else:
+                show_warning_messagebox("Тикеты невозможно получить!")
 
-            # параметры потока
-            # start_thread = ApplyExp(parent=self)
-            # start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-            # start_thread.progress_finished.connect(self.progress_finished) # после выполнения
-            # start_thread.start()
+    def calculate_counts_for_ticket(self, parent, ticket):
+        """
+        Посчитать количество задач для тикета
+        """
+        # получаем генератор задач
+        task = parent.menu[ticket['mode']], (ticket['params'],
+                                            ticket['terminate'],
+                                            parent.blank_type)
+        count = 0
+        task_list = []
+        for tsk in task[0](*task[1]):
+            count += 1
+            task_list.append(tsk)
+        return task_list, count
 
     def on_count_changed(self):
         self.counter = self.counter + 1
