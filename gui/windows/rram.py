@@ -9,10 +9,12 @@ import shutil
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog, QAbstractItemView
 from PyQt5.QtGui import QPixmap, QStandardItemModel, QStandardItem
+import matplotlib.pyplot as plt
 from copy import deepcopy
 from gui.src import show_warning_messagebox, show_choose_window
 from gui.windows.history import History
 from gui.windows.apply import ApplyExp
+from manager.service import a2r, d2v
 
 class Rram(QDialog):
     """
@@ -26,6 +28,13 @@ class Rram(QDialog):
     binary = None
     coordinates = []
     counter = 0
+    ticket_image_name: str = "temp.png"
+    raw_data: list
+    data_for_plot_x: list
+    data_for_plot_y: list
+    start_thread: ApplyExp
+    xlabel_text: str = 'Напряжение, В'
+    ylabel_text: str = 'Сопротивление, Ом'
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -51,6 +60,7 @@ class Rram(QDialog):
         self.ui.combo_read_encoding.currentIndexChanged.connect(lambda : self.ui.combo_read_encoding.setCurrentIndex(0))
         self.ui.combo_write_type.currentIndexChanged.connect(lambda : self.ui.combo_write_type.setCurrentIndex(0))
         self.ui.button_write.clicked.connect(self.write_ones_and_zeros)
+        self.ui.button_clear.clicked.connect(self.write_zeros)
 
     def set_up_init_values(self) -> None:
         """
@@ -61,10 +71,19 @@ class Rram(QDialog):
         self.ui.button_set_1.setEnabled(False)
         self.ui.button_apply_tresh.setEnabled(False)
         self.ui.button_write.setEnabled(False)
+        self.ui.button_clear.setEnabled(False)
         self.ui.text_write.clear()
         self.ui.text_read.clear()
         self.parent._snapshot(mode="rram", data=self.parent.snapshot)
         self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        self.parent.exp_list = []
+        self.parent.exp_name = ''
+        self.parent.exp_list_params = {}
+        self.parent.exp_list_params['total_tickets'] = 0
+        self.parent.exp_list_params['total_tasks'] = 0
+        self.raw_data = []
+        self.data_for_plot_x = []
+        self.data_for_plot_y = []
 
     def apply_tresh(self) -> None:
         """
@@ -202,6 +221,7 @@ class Rram(QDialog):
             else:
                 self.experiment_0 = history.experiments[current_row]
                 show_warning_messagebox("Эксперимент для 0 записан!")
+                self.ui.button_clear.setEnabled(True)
             if self.experiment_1 is not None and self.experiment_0 is not None:
                 self.ui.button_write.setEnabled(True)
             history.close()
@@ -241,10 +261,10 @@ class Rram(QDialog):
             with open(fpath, 'w', newline='', encoding='utf-8') as file:
                 file_wr = csv.writer(file, delimiter=",")
                 file_wr.writerow(['wl','bl'])
-                for i in range(bl):
-                    for j in range(wl):
-                        if (j, i) not in self.coordinates:
-                            file_wr.writerow((j, i))
+                for i in range(wl):
+                    for j in range(bl):
+                        if (i, j) not in self.coordinates:
+                            file_wr.writerow((i, j))
             self.counter = 0
             self.ui.bar_progress.setValue(self.counter)
             self.ui.bar_progress.setMaximum(len(self.coordinates))
@@ -259,13 +279,60 @@ class Rram(QDialog):
                     self.parent.exp_list_params['total_tickets'] += 1
                     self.parent.exp_list_params['total_tasks'] += count
                     self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
-                    # параметры потока
-                    start_thread = ApplyExp(parent=self)
-                    start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-                    start_thread.progress_finished.connect(self.progress_finished) # после выполнения
-                    start_thread.start()
+                # параметры потока
+                start_thread = ApplyExp(parent=self)
+                start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+                start_thread.progress_finished.connect(self.progress_finished) # после выполнения
+                start_thread.value_got.connect(self.passing) # при получении каждого измеренного
+                start_thread.ticket_finished.connect(self.passing) # при получении каждого измеренного
+                start_thread.finished_exp.connect(self.passing) # закончился прогон
+                start_thread.start()
             else:
                 show_warning_messagebox("Тикеты невозможно получить!")
+
+    def write_zeros(self) -> None:
+        """
+        Очистка ячеек (запись нулей)
+        """
+        wl = self.parent.man.col_num
+        bl = self.parent.man.row_num
+        result_path = os.getcwd()
+        # записываем координаты
+        for i in range (wl):
+            for j in range (bl):
+                self.coordinates.append((i, j))
+        fname = 'tested_cells.csv'
+        fpath = os.path.join(result_path, fname)
+        with open(fpath, 'w', newline='', encoding='utf-8') as file:
+            file_wr = csv.writer(file, delimiter=",")
+            file_wr.writerow(['wl','bl'])
+            for item in self.coordinates:
+                file_wr.writerow(item)
+        # установка выбранного эксперимента
+        self.parent.exp_name = self.experiment_0[2]
+        experiment_id = self.experiment_0[0]
+        status, tickets = self.parent.man.db.get_tickets(experiment_id)
+        if status and tickets != []:
+            for ticket in tickets:
+                    ticket = pickle.loads(ticket[0])
+                    task_list, count = self.calculate_counts_for_ticket(self.parent.man, ticket.copy())
+                    self.parent.exp_list_params['total_tickets'] += 1
+                    self.parent.exp_list_params['total_tasks'] += count
+                    self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+            # подготовка к потоку
+            with open (self.ticket_image_name, 'w') as file:
+                file.close()
+            # параметры потока
+            self.start_thread = ApplyExp(parent=self)
+            self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+            self.start_thread.progress_finished.connect(self.progress_finished) # после выполнения
+            self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
+            self.start_thread.ticket_finished.connect(self.passing) # при получении каждого измеренного
+            self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
+            self.start_thread.start()
+
+    def passing(self):
+        pass
 
     def calculate_counts_for_ticket(self, parent, ticket):
         """
@@ -283,14 +350,72 @@ class Rram(QDialog):
         return task_list, count
 
     def on_count_changed(self):
-        self.counter = self.counter + 1
+        # self.counter += 1
+        # self.ui.bar_progress.setValue(self.counter)
+        pass
+
+    def on_value_got(self, value: str) -> None: # +
+        """
+        Получили значение
+        """
+        value = value.split(",")
+        adc_value = int(value[1])
+        dac_value = int(value[2])
+        sign = int(value[3])
+        self.raw_data.append((sign, dac_value, adc_value))
+        self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
+                                        self.parent.man.vol_ref_dac,
+                                        dac_value,
+                                        sign=sign))
+        self.data_for_plot_y.append(a2r(self.parent.man.gain,
+                                        self.parent.man.res_load,
+                                        self.parent.man.vol_read,
+                                        self.parent.man.adc_bit,
+                                        self.parent.man.vol_ref_adc,
+                                        self.parent.man.res_switches,
+                                        adc_value))
+
+    def progress_finished(self, value: str):
+        """
+        Закончился поток
+        """
+        # чтобы успеть пока поток ApplyExp не начнет работать
+        data_for_plot_x = deepcopy(self.data_for_plot_x)
+        data_for_plot_y = deepcopy(self.data_for_plot_y)
+        # очищаем для потока ApplyExp
+        self.raw_data = []
+        self.data_for_plot_x = []
+        self.data_for_plot_y = []
+        # рисунок для базы в matplotlib
+        plt.clf()
+        plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
+        plt.xlabel(self.xlabel_text)
+        plt.ylabel(self.ylabel_text)
+        plt.grid(True, linestyle='--')
+        plt.tight_layout()
+        plt.savefig(self.ticket_image_name, dpi=100)
+        plt.close()
+        self.start_thread.setup_image_saved(True)
+        # прогрессбар
+        self.counter += 1
         self.ui.bar_progress.setValue(self.counter)
         pass
 
-    def progress_finished(self):
-        self.counter = self.counter + 1
-        self.ui.bar_progress.setValue(self.counter)
-        pass
+    def on_finished_exp(self, value: int) -> None: # +
+        """
+        Закончилась запись
+        """
+        print(value)
+        print(value[0])
+        value = value.split(',')
+        stop_reason = int(value[0])
+        self.ui.progress_all.setValue(0)
+        if stop_reason == 1:
+            show_warning_messagebox("Переписано " + len(self.coordinates) + " ячеек!")
+        elif stop_reason == 2:
+            show_warning_messagebox("Запись прервана!")
+        # обновление heatmap
+        self.parent._snapshot(mode="rram", data=deepcopy(self.parent.all_resistances))
 
     def closeEvent(self, event):
         """
