@@ -2,6 +2,7 @@
 Окно работы с rram
 """
 
+import copy
 import csv
 import os
 import pickle
@@ -29,7 +30,6 @@ class Rram(QDialog):
     coordinates = []
     counter = 0
     ticket_image_name: str = "temp.png"
-    raw_data: list
     data_for_plot_x: list
     data_for_plot_y: list
     start_thread: ApplyExp
@@ -81,9 +81,9 @@ class Rram(QDialog):
         self.parent.exp_list_params = {}
         self.parent.exp_list_params['total_tickets'] = 0
         self.parent.exp_list_params['total_tasks'] = 0
-        self.raw_data = []
         self.data_for_plot_x = []
         self.data_for_plot_y = []
+        self.counter = 0
 
     def apply_tresh(self) -> None:
         """
@@ -296,18 +296,10 @@ class Rram(QDialog):
         """
         wl = self.parent.man.col_num
         bl = self.parent.man.row_num
-        result_path = os.getcwd()
         # записываем координаты
         for i in range (wl):
             for j in range (bl):
                 self.coordinates.append((i, j))
-        fname = 'tested_cells.csv'
-        fpath = os.path.join(result_path, fname)
-        with open(fpath, 'w', newline='', encoding='utf-8') as file:
-            file_wr = csv.writer(file, delimiter=",")
-            file_wr.writerow(['wl','bl'])
-            for item in self.coordinates:
-                file_wr.writerow(item)
         # установка выбранного эксперимента
         self.parent.exp_name = self.experiment_0[2]
         experiment_id = self.experiment_0[0]
@@ -319,20 +311,18 @@ class Rram(QDialog):
                     self.parent.exp_list_params['total_tickets'] += 1
                     self.parent.exp_list_params['total_tasks'] += count
                     self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
-            # подготовка к потоку
-            with open (self.ticket_image_name, 'w') as file:
-                file.close()
+            # параметры прогресс бара
+            self.counter = 0
+            self.ui.bar_progress.setValue(0)
+            self.ui.bar_progress.setMaximum(len(self.coordinates))
             # параметры потока
             self.start_thread = ApplyExp(parent=self)
             self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-            self.start_thread.progress_finished.connect(self.progress_finished) # после выполнения
+            self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
             self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
-            self.start_thread.ticket_finished.connect(self.passing) # при получении каждого измеренного
+            self.start_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
             self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
             self.start_thread.start()
-
-    def passing(self):
-        pass
 
     def calculate_counts_for_ticket(self, parent, ticket):
         """
@@ -349,9 +339,10 @@ class Rram(QDialog):
             task_list.append(tsk)
         return task_list, count
 
-    def on_count_changed(self):
-        # self.counter += 1
-        # self.ui.bar_progress.setValue(self.counter)
+    def on_ticket_finished(self, value):
+        pass
+
+    def on_count_changed(self, value):
         pass
 
     def on_value_got(self, value: str) -> None: # +
@@ -362,7 +353,6 @@ class Rram(QDialog):
         adc_value = int(value[1])
         dac_value = int(value[2])
         sign = int(value[3])
-        self.raw_data.append((sign, dac_value, adc_value))
         self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
                                         self.parent.man.vol_ref_dac,
                                         dac_value,
@@ -375,13 +365,14 @@ class Rram(QDialog):
                                         self.parent.man.res_switches,
                                         adc_value))
 
-    def progress_finished(self, value: str):
+    def on_progress_finished(self, value: str):
         """
         Закончился поток
         """
+        print('progress_finished', value)
         # чтобы успеть пока поток ApplyExp не начнет работать
-        data_for_plot_x = deepcopy(self.data_for_plot_x)
-        data_for_plot_y = deepcopy(self.data_for_plot_y)
+        data_for_plot_x = copy.deepcopy(self.data_for_plot_x)
+        data_for_plot_y = copy.deepcopy(self.data_for_plot_y)
         # очищаем для потока ApplyExp
         self.raw_data = []
         self.data_for_plot_x = []
@@ -399,22 +390,23 @@ class Rram(QDialog):
         # прогрессбар
         self.counter += 1
         self.ui.bar_progress.setValue(self.counter)
-        pass
 
     def on_finished_exp(self, value: int) -> None: # +
         """
         Закончилась запись
         """
-        print(value)
-        print(value[0])
+        print('on_finished_exp', value)
+        
         value = value.split(',')
         stop_reason = int(value[0])
-        self.ui.progress_all.setValue(0)
+        self.ui.bar_progress.setValue(0)
         if stop_reason == 1:
-            show_warning_messagebox("Переписано " + len(self.coordinates) + " ячеек!")
+            show_warning_messagebox("Переписано " + str(len(self.coordinates)) + " ячеек!")
         elif stop_reason == 2:
             show_warning_messagebox("Запись прервана!")
         # обновление heatmap
+        self.parent.fill_table()
+        self.parent.color_table()
         self.parent._snapshot(mode="rram", data=deepcopy(self.parent.all_resistances))
 
     def closeEvent(self, event):
