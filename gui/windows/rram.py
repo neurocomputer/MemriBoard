@@ -2,8 +2,6 @@
 Окно работы с rram
 """
 
-import copy
-import csv
 import os
 import pickle
 import shutil
@@ -35,6 +33,7 @@ class Rram(QDialog):
     start_thread: ApplyExp
     xlabel_text: str = 'Напряжение, В'
     ylabel_text: str = 'Сопротивление, Ом'
+    ones_writable: bool = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -45,6 +44,16 @@ class Rram(QDialog):
         self.setModal(True)
         # значения по умолчанию
         self.set_up_init_values()
+        self.ui.button_set_0.setEnabled(False)
+        self.ui.button_set_1.setEnabled(False)
+        self.ui.button_interrupt.setEnabled(False)
+        self.ui.button_apply_tresh.setEnabled(False)
+        self.ui.button_write.setEnabled(False)
+        self.ui.button_clear.setEnabled(False)
+        self.ui.text_write.clear()
+        self.ui.text_read.clear()
+        self.parent._snapshot(mode="rram", data=self.parent.snapshot)
+        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
         self.ui.list_write_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.ui.list_read_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
         # обработчики кнопок
@@ -60,22 +69,13 @@ class Rram(QDialog):
         self.ui.combo_read_encoding.currentIndexChanged.connect(lambda : self.ui.combo_read_encoding.setCurrentIndex(0))
         self.ui.combo_write_type.currentIndexChanged.connect(lambda : self.ui.combo_write_type.setCurrentIndex(0))
         self.ui.button_write.clicked.connect(self.write_ones_and_zeros)
-        self.ui.button_clear.clicked.connect(self.write_zeros)
+        self.ui.button_clear.clicked.connect(self.erase_all_cells)
 
     def set_up_init_values(self) -> None:
         """
         Установка значений по умолчанию
         """
-        self.ui.button_interrupt.setEnabled(False)
-        self.ui.button_set_0.setEnabled(False)
-        self.ui.button_set_1.setEnabled(False)
-        self.ui.button_apply_tresh.setEnabled(False)
-        self.ui.button_write.setEnabled(False)
-        self.ui.button_clear.setEnabled(False)
-        self.ui.text_write.clear()
-        self.ui.text_read.clear()
-        self.parent._snapshot(mode="rram", data=self.parent.snapshot)
-        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        self.coordinates = []
         self.parent.exp_list = []
         self.parent.exp_name = ''
         self.parent.exp_list_params = {}
@@ -228,7 +228,7 @@ class Rram(QDialog):
 
     def buttons_activation(self) -> None:
         """
-        Активация/деактивация кнопок записи 0 и 1
+        Активация/деактивация кнопок
         """
         model = self.ui.list_write_bytes.model()
         if model.data(model.index(0,0)):
@@ -237,37 +237,28 @@ class Rram(QDialog):
         else:
             self.ui.button_set_0.setEnabled(False)
             self.ui.button_set_1.setEnabled(False)
+        if self.experiment_1 is not None and self.experiment_0 is not None:
+            self.ui.button_write.setEnabled(True)
+        else:
+            self.ui.button_write.setEnabled(False)
 
     def write_ones_and_zeros(self) -> None:
+        self.set_up_init_values()
         message = "Будет перезаписано " + str(len(self.binary)) + " ячеек. Продолжить?"
         answer = show_choose_window(self, message)
         if answer:
             wl = self.parent.man.col_num
             bl = self.parent.man.row_num
-            result_path = os.getcwd()
             # записываем координаты
-            for index in range (len(self.binary)):
-                if self.binary[index] == '0':
-                    self.coordinates.append((index//8, index - 8*(index//8)))
-            fname = 'tested_cells.csv'
-            fpath = os.path.join(result_path, fname)
-            with open(fpath, 'w', newline='', encoding='utf-8') as file:
-                file_wr = csv.writer(file, delimiter=",")
-                file_wr.writerow(['wl','bl'])
-                for item in self.coordinates:
-                    file_wr.writerow(item)
-            fname = 'not_tested_cells.csv'
-            fpath = os.path.join(result_path, fname)
-            with open(fpath, 'w', newline='', encoding='utf-8') as file:
-                file_wr = csv.writer(file, delimiter=",")
-                file_wr.writerow(['wl','bl'])
-                for i in range(wl):
-                    for j in range(bl):
-                        if (i, j) not in self.coordinates:
-                            file_wr.writerow((i, j))
-            self.counter = 0
-            self.ui.bar_progress.setValue(self.counter)
-            self.ui.bar_progress.setMaximum(len(self.coordinates))
+            index = 0
+            for i in range (wl):
+                for j in range (bl):
+                    if self.binary[index] == '0':
+                        self.coordinates.append((i, j))
+                    index = index + 1
+                    if len(self.binary) == index:
+                        break
+                break
             # установка выбранного эксперимента
             self.parent.exp_name = self.experiment_0[2]
             experiment_id = self.experiment_0[0]
@@ -279,21 +270,71 @@ class Rram(QDialog):
                     self.parent.exp_list_params['total_tickets'] += 1
                     self.parent.exp_list_params['total_tasks'] += count
                     self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+                # параметры прогресс бара
+                self.counter = 0
+                self.ui.bar_progress.setValue(0)
+                self.ui.bar_progress.setMaximum(len(self.coordinates))
                 # параметры потока
-                start_thread = ApplyExp(parent=self)
-                start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-                start_thread.progress_finished.connect(self.progress_finished) # после выполнения
-                start_thread.value_got.connect(self.passing) # при получении каждого измеренного
-                start_thread.ticket_finished.connect(self.passing) # при получении каждого измеренного
-                start_thread.finished_exp.connect(self.passing) # закончился прогон
-                start_thread.start()
+                self.lock_buttons(False)
+                self.start_thread = ApplyExp(parent=self)
+                self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+                self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+                self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
+                self.start_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
+                self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
+                self.start_thread.start()
             else:
                 show_warning_messagebox("Тикеты невозможно получить!")
+                self.lock_buttons(True)
+    
+    def write_ones(self) -> None:
+        """
+        Запись единиц
+        """
+        self.set_up_init_values()
+        wl = self.parent.man.col_num
+        bl = self.parent.man.row_num
+        # записываем координаты
+        index = 0
+        for i in range (wl):
+            for j in range (bl):
+                if self.binary[index] == '0':
+                    self.coordinates.append((i, j))
+                index = index + 1
+                if len(self.binary) == index:
+                    break
+            break
+        # установка выбранного эксперимента
+        self.parent.exp_name = self.experiment_1[2]
+        experiment_id = self.experiment_1[0]
+        status, tickets = self.parent.man.db.get_tickets(experiment_id)
+        if status and tickets != []:
+            for ticket in tickets:
+                ticket = pickle.loads(ticket[0])
+                task_list, count = self.calculate_counts_for_ticket(self.parent.man, ticket.copy())
+                self.parent.exp_list_params['total_tickets'] += 1
+                self.parent.exp_list_params['total_tasks'] += count
+                self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+            # будут записаны единицы
+            self.ones_writable = True
+            # параметры потока
+            self.lock_buttons(False)
+            self.start_thread = ApplyExp(parent=self)
+            self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+            self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+            self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
+            self.start_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
+            self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
+            self.start_thread.start()
+        else:
+            show_warning_messagebox("Тикеты невозможно получить!")
+            self.lock_buttons(True)
 
-    def write_zeros(self) -> None:
+    def erase_all_cells(self) -> None:
         """
         Очистка ячеек (запись нулей)
         """
+        self.set_up_init_values()
         wl = self.parent.man.col_num
         bl = self.parent.man.row_num
         # записываем координаты
@@ -316,6 +357,7 @@ class Rram(QDialog):
             self.ui.bar_progress.setValue(0)
             self.ui.bar_progress.setMaximum(len(self.coordinates))
             # параметры потока
+            self.lock_buttons(False)
             self.start_thread = ApplyExp(parent=self)
             self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
@@ -369,10 +411,9 @@ class Rram(QDialog):
         """
         Закончился поток
         """
-        print('progress_finished', value)
         # чтобы успеть пока поток ApplyExp не начнет работать
-        data_for_plot_x = copy.deepcopy(self.data_for_plot_x)
-        data_for_plot_y = copy.deepcopy(self.data_for_plot_y)
+        data_for_plot_x = deepcopy(self.data_for_plot_x)
+        data_for_plot_y = deepcopy(self.data_for_plot_y)
         # очищаем для потока ApplyExp
         self.raw_data = []
         self.data_for_plot_x = []
@@ -395,8 +436,6 @@ class Rram(QDialog):
         """
         Закончилась запись
         """
-        print('on_finished_exp', value)
-        
         value = value.split(',')
         stop_reason = int(value[0])
         self.ui.bar_progress.setValue(0)
@@ -408,6 +447,29 @@ class Rram(QDialog):
         self.parent.fill_table()
         self.parent.color_table()
         self.parent._snapshot(mode="rram", data=deepcopy(self.parent.all_resistances))
+        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        self.lock_buttons(True)
+        self.buttons_activation()
+        # запись единиц
+        if self.ones_writable:
+            self.write_ones()
+            self.ones_writable = False
+
+    def lock_buttons(self, state: bool) -> None:
+        """
+        Блокировка кнопок на время записи экспериментов
+        """
+        self.ui.button_write.setEnabled(state)
+        self.ui.button_clear.setEnabled(state)
+        self.ui.button_load.setEnabled(state)
+        self.ui.button_set_1.setEnabled(state)
+        self.ui.button_set_0.setEnabled(state)
+        self.ui.button_save_img.setEnabled(state)
+        self.ui.button_apply_tresh.setEnabled(state)
+        self.ui.button_save_img.setEnabled(state)
+        self.ui.button_save.setEnabled(state)
+        self.ui.button_read.setEnabled(state)
+        self.ui.button_interrupt.setEnabled(not state)
 
     def closeEvent(self, event):
         """
