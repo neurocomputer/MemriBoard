@@ -154,6 +154,7 @@ class Rram(QDialog):
         self.binary = deepcopy(translation)
         cols = self.parent.man.col_num
         rows = self.parent.man.row_num
+        self.binary = self.binary[:rows*cols]
         model = QStandardItemModel()
         self.ui.list_write_bytes.setModel(model)
         for i in range(rows):
@@ -253,12 +254,11 @@ class Rram(QDialog):
             index = 0
             for i in range (wl):
                 for j in range (bl):
+                    if len(self.binary) <= index:
+                        break
                     if self.binary[index] == '0':
                         self.coordinates.append((i, j))
                     index = index + 1
-                    if len(self.binary) == index:
-                        break
-                break
             # установка выбранного эксперимента
             self.parent.exp_name = self.experiment_0[2]
             experiment_id = self.experiment_0[0]
@@ -275,6 +275,7 @@ class Rram(QDialog):
                 self.ui.bar_progress.setValue(0)
                 self.ui.bar_progress.setMaximum(len(self.coordinates))
                 # параметры потока
+                self.ones_writable = True
                 self.lock_buttons(False)
                 self.start_thread = ApplyExp(parent=self)
                 self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
@@ -298,12 +299,11 @@ class Rram(QDialog):
         index = 0
         for i in range (wl):
             for j in range (bl):
-                if self.binary[index] == '0':
+                if len(self.binary) <= index:
+                    break
+                if self.binary[index] == '1':
                     self.coordinates.append((i, j))
                 index = index + 1
-                if len(self.binary) == index:
-                    break
-            break
         # установка выбранного эксперимента
         self.parent.exp_name = self.experiment_1[2]
         experiment_id = self.experiment_1[0]
@@ -316,15 +316,8 @@ class Rram(QDialog):
                 self.parent.exp_list_params['total_tasks'] += count
                 self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
             # будут записаны единицы
-            self.ones_writable = True
             # параметры потока
             self.lock_buttons(False)
-            self.start_thread = ApplyExp(parent=self)
-            self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-            self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
-            self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
-            self.start_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
-            self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
             self.start_thread.start()
         else:
             show_warning_messagebox("Тикеты невозможно получить!")
