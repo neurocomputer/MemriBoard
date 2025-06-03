@@ -34,6 +34,8 @@ class Rram(QDialog):
     xlabel_text: str = 'Напряжение, В'
     ylabel_text: str = 'Сопротивление, Ом'
     ones_writable: bool = False
+    all_done: bool = False
+    ones_done:bool = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -70,6 +72,7 @@ class Rram(QDialog):
         self.ui.combo_write_type.currentIndexChanged.connect(lambda : self.ui.combo_write_type.setCurrentIndex(0))
         self.ui.button_write.clicked.connect(self.write_ones_and_zeros)
         self.ui.button_clear.clicked.connect(self.erase_all_cells)
+        self.ui.button_interrupt.clicked.connect(self.interrupt)
 
     def set_up_init_values(self) -> None:
         """
@@ -84,6 +87,8 @@ class Rram(QDialog):
         self.data_for_plot_x = []
         self.data_for_plot_y = []
         self.counter = 0
+        self.all_done = False
+        self.ones_done = False
 
     def apply_tresh(self) -> None:
         """
@@ -319,6 +324,7 @@ class Rram(QDialog):
             self.counter = int(len(self.binary) / 2)
             self.ui.bar_progress.setValue(self.counter)
             # параметры потока
+            self.ones_done = True
             self.lock_buttons(False)
             self.start_thread.start()
         else:
@@ -352,6 +358,7 @@ class Rram(QDialog):
             self.ui.bar_progress.setValue(0)
             self.ui.bar_progress.setMaximum(len(self.coordinates))
             # параметры потока
+            self.all_done = True
             self.lock_buttons(False)
             self.start_thread = ApplyExp(parent=self)
             self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
@@ -433,10 +440,13 @@ class Rram(QDialog):
         """
         value = value.split(',')
         stop_reason = int(value[0])
-        if stop_reason == 1:
+        if stop_reason == 1 and self.all_done:
             show_warning_messagebox("Переписано " + str(len(self.coordinates)) + " ячеек!")
+        elif stop_reason == 1 and self.ones_done:
+            show_warning_messagebox("Переписано " + str(len(self.binary)) + " ячеек!")
         elif stop_reason == 2:
             show_warning_messagebox("Запись прервана!")
+            self.ones_writable = False
         # обновление heatmap
         self.parent.fill_table()
         self.parent.color_table()
@@ -451,6 +461,11 @@ class Rram(QDialog):
             self.write_ones()
             self.ones_writable = False
 
+    def interrupt(self) -> None:
+        """
+        Прервать поток
+        """
+        self.start_thread.need_stop = True
 
     def lock_buttons(self, state: bool) -> None:
         """
