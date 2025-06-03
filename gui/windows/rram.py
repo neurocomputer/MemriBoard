@@ -259,7 +259,6 @@ class Rram(QDialog):
                     if self.binary[index] == '0':
                         self.coordinates.append((j, i))
                     index = index + 1
-            print("Нули: ", self.coordinates)
             # установка выбранного эксперимента
             self.parent.exp_name = self.experiment_0[2]
             experiment_id = self.experiment_0[0]
@@ -274,7 +273,7 @@ class Rram(QDialog):
                 # параметры прогресс бара
                 self.counter = 0
                 self.ui.bar_progress.setValue(0)
-                self.ui.bar_progress.setMaximum(len(self.coordinates))
+                self.ui.bar_progress.setMaximum(len(self.binary))
                 # параметры потока
                 self.ones_writable = True
                 self.lock_buttons(False)
@@ -305,7 +304,6 @@ class Rram(QDialog):
                 if self.binary[index] == '1':
                     self.coordinates.append((j, i))
                 index = index + 1
-        print("Единицы: ", self.coordinates)
         # установка выбранного эксперимента
         self.parent.exp_name = self.experiment_1[2]
         experiment_id = self.experiment_1[0]
@@ -318,9 +316,8 @@ class Rram(QDialog):
                 self.parent.exp_list_params['total_tasks'] += count
                 self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
             # параметры прогресс бара
-            self.counter = 0
-            self.ui.bar_progress.setValue(0)
-            self.ui.bar_progress.setMaximum(len(self.coordinates))
+            self.counter = int(len(self.binary) / 2)
+            self.ui.bar_progress.setValue(self.counter)
             # параметры потока
             self.lock_buttons(False)
             self.start_thread.start()
@@ -436,7 +433,6 @@ class Rram(QDialog):
         """
         value = value.split(',')
         stop_reason = int(value[0])
-        self.ui.bar_progress.setValue(0)
         if stop_reason == 1:
             show_warning_messagebox("Переписано " + str(len(self.coordinates)) + " ячеек!")
         elif stop_reason == 2:
@@ -446,12 +442,15 @@ class Rram(QDialog):
         self.parent.color_table()
         self.parent._snapshot(mode="rram", data=deepcopy(self.parent.all_resistances))
         self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+        # восстановление
+        self.ui.bar_progress.setValue(0)
         self.lock_buttons(True)
         self.buttons_activation()
         # запись единиц
         if self.ones_writable:
             self.write_ones()
             self.ones_writable = False
+
 
     def lock_buttons(self, state: bool) -> None:
         """
