@@ -321,7 +321,7 @@ class Rram(QDialog):
                 self.parent.exp_list_params['total_tasks'] += count
                 self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
             # параметры прогресс бара
-            self.counter = int(len(self.binary) / 2)
+            self.counter = self.binary.count("0")
             self.ui.bar_progress.setValue(self.counter)
             # параметры потока
             self.ones_done = True
@@ -447,19 +447,20 @@ class Rram(QDialog):
         elif stop_reason == 2:
             show_warning_messagebox("Запись прервана!")
             self.ones_writable = False
-        # обновление heatmap
-        self.parent.fill_table()
-        self.parent.color_table()
-        self.parent._snapshot(mode="rram", data=deepcopy(self.parent.all_resistances))
-        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
-        # восстановление
-        self.ui.bar_progress.setValue(0)
-        self.lock_buttons(True)
-        self.buttons_activation()
         # запись единиц
         if self.ones_writable:
             self.write_ones()
             self.ones_writable = False
+        else:
+            # обновление heatmap
+            self.parent.fill_table()
+            self.parent.color_table()
+            self.parent._snapshot(mode="rram", data=deepcopy(self.parent.all_resistances))
+            self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
+            # восстановление
+            self.ui.bar_progress.setValue(0)
+            self.lock_buttons(True)
+            self.buttons_activation()
 
     def interrupt(self) -> None:
         """
