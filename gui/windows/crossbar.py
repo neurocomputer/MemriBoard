@@ -41,7 +41,7 @@ from gui.windows.cb_info import CbInfo
 from gui.windows.rram import Rram
 from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
-from gui.src import show_choose_window, show_warning_messagebox
+from gui.src import show_choose_window, show_warning_messagebox, snapshot
 
 class Window(QMainWindow):
     """
@@ -118,7 +118,7 @@ class Window(QMainWindow):
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
-        self.ui.button_snapshot.clicked.connect(lambda: self._snapshot(mode="crossbar"))
+        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         self.ui.button_reconnect.clicked.connect(self.reconnect)
@@ -200,7 +200,7 @@ class Window(QMainWindow):
         """
         self.history_dialog = History(parent=self, mode=mode)
         self.history_dialog.show()
-        if mode == 'all' and self.opener != 'testing':
+        if mode == 'all' and self.opener != 'testing' and self.opener != 'rram':
             self.exp_settings_dialog.close()
 
     def show_cell_info_dialog(self) -> None:
@@ -277,6 +277,7 @@ class Window(QMainWindow):
         """
         Открытие окна инормации о кроссбаре
         """
+        self.opener = 'rram'
         self.rram_dialog = Rram(parent=self)
         self.rram_dialog.show()
 
@@ -319,23 +320,6 @@ class Window(QMainWindow):
             plt.close()
         else:
             plt.show()
-
-    def _snapshot(self, **kwargs) -> None:
-        """
-        Картинка с кнопки снимок
-        """
-        plt.clf()
-        if kwargs['mode'] == 'crossbar':
-            if self.snapshot is not None:
-                plt.imshow(self.snapshot)
-                plt.show()
-        elif kwargs['mode'] == 'rram':
-            if kwargs.get("data") is not None:
-                plt.imshow(kwargs.get("data"))
-                plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)  
-            else:
-                plt.imshow(self.all_resistances)
-                plt.savefig(os.path.join("gui","uies","rram.png"), bbox_inches='tight', pad_inches=0)      
 
     def update_current_cell_info(self):
         """

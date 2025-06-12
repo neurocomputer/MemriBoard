@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1264</width>
+    <width>1223</width>
     <height>682</height>
    </rect>
   </property>
@@ -40,6 +40,13 @@
              <widget class="QPushButton" name="button_load">
               <property name="text">
                <string>Загрузить</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_choose_exp">
+              <property name="text">
+               <string>Выбрать</string>
               </property>
              </widget>
             </item>

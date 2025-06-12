@@ -58,6 +58,12 @@ class History(QDialog):
         self.ui.button_load.setDisabled(True)
         self.ui.button_load_from_db.setDisabled(True)
         self.ui.button_export_to_json.setDisabled(True)
+        self.ui.button_choose_exp.setDisabled(True)
+        # варианты отображения
+        if self.parent.opener == 'rram':
+            self.ui.button_load.hide()
+        else:
+            self.ui.button_choose_exp.hide()
 
     def export_ticket_from_db(self) -> None:
         """
@@ -183,6 +189,7 @@ class History(QDialog):
         self.ui.table_history_tickets.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         if self.parent.man.connected_port != 'offline':
             self.ui.button_load.setDisabled(False)
+            self.ui.button_choose_exp.setDisabled(False)
         self.ui.button_load_from_db.setDisabled(False)
         self.ui.button_export_to_json.setDisabled(False)
         # поучаем рисунок

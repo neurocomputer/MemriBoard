@@ -287,7 +287,7 @@ class Connector():
             task = gather(task) # собираем из словаря строку
             if not self.silent:
                 self.logger.info('Send %s', task.rstrip())
-            time.sleep(2/1000)
+            time.sleep(1/1000)
             if not self.silent:
                 self.logger.info('Recieved data: %s', str(res))
         return res

@@ -2,142 +2,195 @@
 Окно работы с rram
 """
 
+# pylint: disable=E0611
+
 import os
 import pickle
-import shutil
-from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QFileDialog, QAbstractItemView
-from PyQt5.QtGui import QPixmap, QStandardItemModel, QStandardItem
-import matplotlib.pyplot as plt
 from copy import deepcopy
-from gui.src import show_warning_messagebox, show_choose_window
-from gui.windows.history import History
+from PyQt5 import uic
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QFileDialog, QAbstractItemView, QWidget
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
+import matplotlib.pyplot as plt
+from gui.src import show_warning_messagebox, show_choose_window, snapshot
 from gui.windows.apply import ApplyExp
-from manager.service import a2r, d2v
+from manager.service import a2r
 
-class Rram(QDialog):
+def save_binary_string_to_file(binary_str: str, filename: str) -> None:
+    """
+    Сохранение бинарного файла с данными из RRAM
+    """
+    # Преобразуем строку из '0' и '1' в байты
+    byte_array = bytearray()
+    for i in range(0, len(binary_str), 8):
+        byte_chunk = binary_str[i:i+8]
+        # Дополняем последний байт нулями справа, если необходимо
+        byte_chunk = byte_chunk.ljust(8, '0')
+        byte_value = int(byte_chunk, 2)
+        byte_array.append(byte_value)
+    # Записываем байты в файл
+    with open(filename, 'wb') as file:
+        file.write(byte_array)
+
+def ascii_to_binary(text: str) -> str:
+    """
+    ASCII в бинарный
+    """
+    binary_str = ""
+    for char in text:
+        # Получаем ASCII-код символа (0-255)
+        ascii_code = ord(char)
+        # Переводим в 8-битный двоичный формат (дополняем нулями слева)
+        binary_char = bin(ascii_code)[2:].zfill(8)
+        binary_str += binary_char
+    return binary_str
+
+class Rram(QWidget):
     """
     Работа с rram
     """
 
     GUI_PATH = os.path.join("gui","uies","rram.ui")
-    heatmap = os.path.join("gui","uies","rram.png")
-    experiment_0 = None
-    experiment_1 = None
-    binary = None
-    coordinates = []
-    counter = 0
-    ticket_image_name: str = "temp.png"
-    data_for_plot_x: list
-    data_for_plot_y: list
+    experiment_0: tuple # параметры эксперимена для записи 0
+    experiment_1: tuple # параметры эксперимена для записи 0
+    binary: str # бинарная последовательность для записи в rram
+    coordinates: list # список пар координат для записи
+    counter: int # счетчик выполнения операций записи
+    ticket_image_name: str # название временного файла с картинкой записи
+    data_for_plot_y: list # список значений для отрисовки картинки для БД
+    xlabel_text: str # подпись оси Х
+    ylabel_text: str # подпись оси Y
+    ones_writable: bool # готовы писать единицы
+    all_done: bool # все данные записаны
+    ones_done: bool # единицы записаны
+    snapshot_binary: list # данные для записи
+    raw_data: list # переменная для записи результатов
     start_thread: ApplyExp
-    xlabel_text: str = 'Напряжение, В'
-    ylabel_text: str = 'Сопротивление, Ом'
-    ones_writable: bool = False
-    all_done: bool = False
-    ones_done:bool = False
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None) -> None: #+
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
-        self.setModal(True)
+        self.ui.setWindowFlags(Qt.Window)
         # значения по умолчанию
         self.set_up_init_values()
-        self.ui.button_set_0.setEnabled(False)
-        self.ui.button_set_1.setEnabled(False)
         self.ui.button_interrupt.setEnabled(False)
         self.ui.button_apply_tresh.setEnabled(False)
+        self.ui.button_snapshot.setEnabled(False)
         self.ui.button_write.setEnabled(False)
         self.ui.button_clear.setEnabled(False)
+        self.ui.button_save_bin.setEnabled(False)
         self.ui.text_write.clear()
         self.ui.text_read.clear()
-        self.parent._snapshot(mode="rram", data=self.parent.snapshot)
-        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
         self.ui.list_write_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.ui.list_read_bytes.setEditTriggers(QAbstractItemView.NoEditTriggers)
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(lambda: self.parent.read_cell_all('rram'))
-        self.ui.button_save_img.clicked.connect(self.save_heatmap)
-        self.ui.button_save.clicked.connect(self.save_text)
+        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot_binary))
+        self.ui.button_save_bin.clicked.connect(self.save_bin)
         self.ui.button_load.clicked.connect(self.load_text)
         self.ui.button_set_0.clicked.connect(lambda: self.set_experiment(False))
         self.ui.button_set_1.clicked.connect(lambda: self.set_experiment(True))
         self.ui.text_write.textChanged.connect(self.text_to_binary)
         self.ui.combo_write_type.currentIndexChanged.connect(self.text_to_binary)
-        self.ui.combo_read_encoding.currentIndexChanged.connect(lambda : self.ui.combo_read_encoding.setCurrentIndex(0))
-        self.ui.combo_write_type.currentIndexChanged.connect(lambda : self.ui.combo_write_type.setCurrentIndex(0))
         self.ui.button_write.clicked.connect(self.write_ones_and_zeros)
         self.ui.button_clear.clicked.connect(self.erase_all_cells)
         self.ui.button_interrupt.clicked.connect(self.interrupt)
+        self.ui.combo_read_encoding.currentTextChanged.connect(self.binary_to_text)
 
-    def set_up_init_values(self) -> None:
+    def set_up_init_values(self) -> None: #+
         """
         Установка значений по умолчанию
         """
+        self.experiment_0 = None
+        self.experiment_1 = None
+        self.binary = None
         self.coordinates = []
+        self.counter = 0
+        self.ticket_image_name = "temp.png"
+        self.data_for_plot_y = []
+        self.xlabel_text = 'Отсчеты'
+        self.ylabel_text = 'Сопротивление, Ом'
+        self.ones_writable = False
+        self.all_done = False
+        self.ones_done = False
+        self.snapshot_binary = None
+        # параметры приложения
         self.parent.exp_list = []
         self.parent.exp_name = ''
         self.parent.exp_list_params = {}
         self.parent.exp_list_params['total_tickets'] = 0
         self.parent.exp_list_params['total_tasks'] = 0
-        self.data_for_plot_x = []
+
+    def set_up_init_values_exp(self): #+
+        """
+        Установка значений по умолчанию перед экспериментами
+        """
+        self.parent.exp_list = []
+        self.parent.exp_name = ''
+        self.parent.exp_list_params = {}
+        self.parent.exp_list_params['total_tickets'] = 0
+        self.parent.exp_list_params['total_tasks'] = 0
+        self.coordinates = []
         self.data_for_plot_y = []
         self.counter = 0
         self.all_done = False
         self.ones_done = False
 
-    def apply_tresh(self) -> None:
+    def apply_tresh(self) -> None: #+
         """
-        Применение порога
+        Применение порога после чтения данных
         """
+        cols = self.parent.man.col_num
+        rows = self.parent.man.row_num
         tresh = self.ui.spin_tresh_read.value()
         rram_data = deepcopy(self.parent.all_resistances)
+        # подготовка для бинарного снапшота
+        self.snapshot_binary = deepcopy(self.parent.all_resistances)
         for i in range(len(rram_data)):
             for j in range(len(rram_data[i])):
                 if rram_data[i][j] >= tresh:
-                    rram_data[i][j] = 1
+                    self.snapshot_binary[i][j] = 0
                 else:
-                    rram_data[i][j] = 0
-        self.parent._snapshot(mode="rram", data=rram_data)
+                    self.snapshot_binary[i][j] = 1
+        # вывод байтов
+        binary_string = "".join(str(x) for row in self.snapshot_binary for x in row)
+        model = QStandardItemModel() # todo: вынести в init
+        self.ui.list_read_bytes.setModel(model)
+        for _ in range(rows):
+            model.appendRow(QStandardItem(binary_string[:cols]))
+            binary_string = binary_string[cols:]
+        # активация кнопок
+        self.ui.button_apply_tresh.setEnabled(True)
+        self.ui.button_save_bin.setEnabled(True)
+        self.ui.button_snapshot.setEnabled(True)
+        # перевод в текст (по умолчанию)
         self.binary_to_text()
 
-    def save_heatmap(self) -> None:
+    def save_bin(self) -> None: #+
         """
-        Сохранение снимка
+        Дамп памяти в бинарном виде
         """
-        save_path = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
-        if save_path:
-            save_path = os.path.join(save_path, "heatmap.png")
-            shutil.copy(self.heatmap, save_path)
-            show_warning_messagebox('Снимок сохранен в ' + save_path)
+        binary_string = "".join(str(x) for row in self.snapshot_binary for x in row)
+        save_file = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
+        if save_file:
+            save_file = os.path.join(save_file, "rram.bin")
+            save_binary_string_to_file(binary_string, save_file)
+        show_warning_messagebox(f'{save_file} сохранен!')
 
-    def save_text(self) -> None:
-        """
-        Сохранение текста из поля ввода в файл
-        """
-        text = self.ui.text_read.toPlainText()
-        if text:
-            save_file = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
-            if save_file:
-                save_file = os.path.join(save_file, "rram.txt")
-                with open(save_file, "w") as f:
-                    f.write(text)
-                    f.close()
-                show_warning_messagebox("Сохранено в " + save_file)
-        else:
-            show_warning_messagebox("Нечего сохранять!")
-
-    def load_text(self) -> None:
+    def load_text(self) -> None: #+
         """
         Загрузка текста из файла в поле ввода
         """
-        load_file, _ = QFileDialog.getOpenFileName(self, 'Открыть файл', ".", "Текстовые файлы (*.txt)")
+        load_file, _ = QFileDialog.getOpenFileName(self,
+                                                   'Открыть файл',
+                                                   ".",
+                                                   "Текстовые файлы (*.txt)")
         if load_file:
-            with open(load_file, "r+") as f:
+            with open(load_file, "r+", encoding='utf-8') as f:
                 text = f.read()
                 f.close()
             if text:
@@ -152,104 +205,76 @@ class Rram(QDialog):
         text = self.ui.text_write.toPlainText()
         translation = ""
         if self.ui.combo_write_type.currentText() == "ascii":
-            translation = ' '.join(format(ord(x), 'b') for x in text)
-        elif self.ui.combo_write_type.currentText() == "utf-8":
-            translation = ' '.join(format(x, 'b') for x in bytearray(text, 'utf-8'))
-        translation = translation.replace(" ", "")
+            translation = ascii_to_binary(text)
+        elif self.ui.combo_write_type.currentText() == "bits":
+            translation = text
+        self.ui.label_write_info.setText(f'Задано {len(translation)} бит')
         self.binary = deepcopy(translation)
         cols = self.parent.man.col_num
         rows = self.parent.man.row_num
         self.binary = self.binary[:rows*cols]
         model = QStandardItemModel()
         self.ui.list_write_bytes.setModel(model)
-        for i in range(rows):
+        for _ in range(rows):
             model.appendRow(QStandardItem(translation[:cols]))
             translation = translation[cols:]
         self.buttons_activation()
 
-    def binary_to_text(self) -> None:
+    def binary_to_text(self) -> None: #+
         """
         Перевод бинарного формата в текст
         """
-        cols = self.parent.man.col_num
-        rows = self.parent.man.row_num
-        tresh = self.ui.spin_tresh_read.value()
-        rram_data = deepcopy(self.parent.all_resistances)
-        binary_string1 = ''.join('1' if x >= tresh else '0' for row in rram_data for x in row)
-        binary_string2 = "".join(binary_string1)
+        binary_string = "".join(str(x) for row in self.snapshot_binary for x in row)
         # перевод в текст
         if self.ui.combo_read_encoding.currentText() == "ascii":
-            if len(binary_string1) % 8 != 0:
-                extra = 8 - (len(binary_string1) % 8)
-                binary_string1 = binary_string1.zfill(len(binary_string1) + extra)
+            # Разбиваем на байты
+            bytes_list = [binary_string[i:i+8] for i in range(0, len(binary_string), 8)]
+            # Переводим в ASCII
             ascii_text = ""
-            for i in range(0, len(binary_string1), 8):
-                byte = binary_string1[i:i+8]
-                decimal_value = int(byte, 2)
-                ascii_text += chr(decimal_value)
+            for byte in bytes_list:
+                decimal = int(byte, 2)
+                # Заменяем непечатаемые символы
+                ascii_char = chr(decimal) if 32 <= decimal <= 126 else "�"
+                ascii_text += ascii_char
             self.ui.text_read.setPlainText(ascii_text)
-        elif self.ui.combo_read_encoding.currentText() == "utf-8":
-            if len(binary_string1) % 8 != 0:
-                extra = 8 - (len(binary_string1) % 8)
-                binary_string1 = binary_string1.zfill(len(binary_string1) + extra)
-            hex_string = ""
-            for i in range(0, len(binary_string1), 8):
-                byte = binary_string1[i:i+8]
-                hex_string += hex(int(byte, 2))[2:].zfill(2) # Преобразование в шестнадцатеричную строку
-            try:
-                bytes_object = bytes.fromhex(hex_string)
-                utf8_text = bytes_object.decode('utf-8')
-                self.ui.text_read.setPlainText(utf8_text)
-            except UnicodeError:
-                show_warning_messagebox("Ошибка декодирования!")
-        # вывод байтов
-        model = QStandardItemModel()
-        self.ui.list_read_bytes.setModel(model)
-        for row in range(rows):
-            model.appendRow(QStandardItem(binary_string2[:cols]))
-            binary_string2 = binary_string2[cols:]
-        # обновление heatmap, активация кнопки порога
-        self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
-        self.ui.button_apply_tresh.setEnabled(True)
+        elif self.ui.combo_read_encoding.currentText() == "bits":
+            self.ui.text_read.setPlainText(binary_string)
 
-    def set_experiment(self, settable: bool) -> None:
+    def set_experiment(self, settable: bool) -> None: #+
         """
         Запись id эксперимента как 0 или 1
         """
-        history = History(self.parent)
-        history.show()
-        history.ui.table_history_experiments.itemClicked.connect(lambda: history.ui.button_load.setEnabled(False))
-        history.ui.table_history_experiments.itemDoubleClicked.connect(lambda: double_click(history.ui.table_history_experiments.currentRow()))
+        self.parent.show_history_dialog(mode='all')
+        self.parent.history_dialog.button_choose_exp.clicked.connect( \
+        lambda: double_click(self.parent.history_dialog.ui.table_history_experiments.currentRow()))
         def double_click(current_row):
             if settable:
-                self.experiment_1 = history.experiments[current_row]
-                show_warning_messagebox("Эксперимент для 1 записан!")
+                self.experiment_1 = self.parent.history_dialog.experiments[current_row]
+                show_warning_messagebox("Эксперимент для записи 1 выбран!")
+                self.ui.label_exp1_name.setText(f'{self.experiment_1[2]}')
             else:
-                self.experiment_0 = history.experiments[current_row]
-                show_warning_messagebox("Эксперимент для 0 записан!")
+                self.experiment_0 = self.parent.history_dialog.experiments[current_row]
+                show_warning_messagebox("Эксперимент для записи 0 выбран!")
+                self.ui.label_exp0_name.setText(f'{self.experiment_0[2]}')
                 self.ui.button_clear.setEnabled(True)
             if self.experiment_1 is not None and self.experiment_0 is not None:
                 self.ui.button_write.setEnabled(True)
-            history.close()
+            self.parent.history_dialog.close()
 
-    def buttons_activation(self) -> None:
+    def buttons_activation(self) -> None: #+
         """
         Активация/деактивация кнопок
         """
-        model = self.ui.list_write_bytes.model()
-        if model.data(model.index(0,0)):
-            self.ui.button_set_0.setEnabled(True)
-            self.ui.button_set_1.setEnabled(True)
-        else:
-            self.ui.button_set_0.setEnabled(False)
-            self.ui.button_set_1.setEnabled(False)
         if self.experiment_1 is not None and self.experiment_0 is not None:
             self.ui.button_write.setEnabled(True)
         else:
             self.ui.button_write.setEnabled(False)
 
     def write_ones_and_zeros(self) -> None:
-        self.set_up_init_values()
+        """
+        Запись нулей и единиц по кнопке Записать
+        """
+        self.set_up_init_values_exp()
         message = "Будет перезаписано " + str(len(self.binary)) + " ячеек. Продолжить?"
         answer = show_choose_window(self, message)
         if answer:
@@ -271,10 +296,14 @@ class Rram(QDialog):
             if status and tickets != []:
                 for ticket in tickets:
                     ticket = pickle.loads(ticket[0])
-                    task_list, count = self.calculate_counts_for_ticket(self.parent.man, ticket.copy())
+                    task_list, count = self.calculate_counts_for_ticket(self.parent.man,
+                                                                        ticket.copy())
                     self.parent.exp_list_params['total_tickets'] += 1
                     self.parent.exp_list_params['total_tasks'] += count
-                    self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+                    self.parent.exp_list.append((ticket["name"],
+                                                 ticket.copy(),
+                                                 task_list.copy(),
+                                                 count))
                 # параметры прогресс бара
                 self.counter = 0
                 self.ui.bar_progress.setValue(0)
@@ -283,21 +312,21 @@ class Rram(QDialog):
                 self.ones_writable = True
                 self.lock_buttons(False)
                 self.start_thread = ApplyExp(parent=self)
-                self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-                self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
-                self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
-                self.start_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
-                self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
+                self.start_thread.count_changed.connect(self.on_count_changed)
+                self.start_thread.progress_finished.connect(self.on_progress_finished)
+                self.start_thread.value_got.connect(self.on_value_got)
+                self.start_thread.ticket_finished.connect(self.on_ticket_finished)
+                self.start_thread.finished_exp.connect(self.on_finished_exp)
                 self.start_thread.start()
             else:
                 show_warning_messagebox("Тикеты невозможно получить!")
                 self.lock_buttons(True)
-    
-    def write_ones(self) -> None:
+
+    def write_ones(self) -> None: #+
         """
         Запись единиц
         """
-        self.set_up_init_values()
+        self.set_up_init_values_exp()
         wl = self.parent.man.col_num
         bl = self.parent.man.row_num
         # записываем координаты
@@ -316,10 +345,14 @@ class Rram(QDialog):
         if status and tickets != []:
             for ticket in tickets:
                 ticket = pickle.loads(ticket[0])
-                task_list, count = self.calculate_counts_for_ticket(self.parent.man, ticket.copy())
+                task_list, count = self.calculate_counts_for_ticket(self.parent.man,
+                                                                    ticket.copy())
                 self.parent.exp_list_params['total_tickets'] += 1
                 self.parent.exp_list_params['total_tasks'] += count
-                self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+                self.parent.exp_list.append((ticket["name"],
+                                             ticket.copy(),
+                                             task_list.copy(),
+                                             count))
             # параметры прогресс бара
             self.counter = self.binary.count("0")
             self.ui.bar_progress.setValue(self.counter)
@@ -331,11 +364,11 @@ class Rram(QDialog):
             show_warning_messagebox("Тикеты невозможно получить!")
             self.lock_buttons(True)
 
-    def erase_all_cells(self) -> None:
+    def erase_all_cells(self) -> None: #+
         """
         Очистка ячеек (запись нулей)
         """
-        self.set_up_init_values()
+        self.set_up_init_values_exp()
         wl = self.parent.man.col_num
         bl = self.parent.man.row_num
         # записываем координаты
@@ -348,11 +381,15 @@ class Rram(QDialog):
         status, tickets = self.parent.man.db.get_tickets(experiment_id)
         if status and tickets != []:
             for ticket in tickets:
-                    ticket = pickle.loads(ticket[0])
-                    task_list, count = self.calculate_counts_for_ticket(self.parent.man, ticket.copy())
-                    self.parent.exp_list_params['total_tickets'] += 1
-                    self.parent.exp_list_params['total_tasks'] += count
-                    self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+                ticket = pickle.loads(ticket[0])
+                task_list, count = self.calculate_counts_for_ticket(self.parent.man,
+                                                                    ticket.copy())
+                self.parent.exp_list_params['total_tickets'] += 1
+                self.parent.exp_list_params['total_tasks'] += count
+                self.parent.exp_list.append((ticket["name"],
+                                                ticket.copy(),
+                                                task_list.copy(),
+                                                count))
             # параметры прогресс бара
             self.counter = 0
             self.ui.bar_progress.setValue(0)
@@ -361,11 +398,11 @@ class Rram(QDialog):
             self.all_done = True
             self.lock_buttons(False)
             self.start_thread = ApplyExp(parent=self)
-            self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-            self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
-            self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
-            self.start_thread.ticket_finished.connect(self.on_ticket_finished) # при получении каждого измеренного
-            self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
+            self.start_thread.count_changed.connect(self.on_count_changed)
+            self.start_thread.progress_finished.connect(self.on_progress_finished)
+            self.start_thread.value_got.connect(self.on_value_got)
+            self.start_thread.ticket_finished.connect(self.on_ticket_finished)
+            self.start_thread.finished_exp.connect(self.on_finished_exp)
             self.start_thread.start()
 
     def calculate_counts_for_ticket(self, parent, ticket):
@@ -395,12 +432,6 @@ class Rram(QDialog):
         """
         value = value.split(",")
         adc_value = int(value[1])
-        dac_value = int(value[2])
-        sign = int(value[3])
-        self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
-                                        self.parent.man.vol_ref_dac,
-                                        dac_value,
-                                        sign=sign))
         self.data_for_plot_y.append(a2r(self.parent.man.gain,
                                         self.parent.man.res_load,
                                         self.parent.man.vol_read,
@@ -414,15 +445,13 @@ class Rram(QDialog):
         Закончился поток
         """
         # чтобы успеть пока поток ApplyExp не начнет работать
-        data_for_plot_x = deepcopy(self.data_for_plot_x)
         data_for_plot_y = deepcopy(self.data_for_plot_y)
         # очищаем для потока ApplyExp
         self.raw_data = []
-        self.data_for_plot_x = []
         self.data_for_plot_y = []
         # рисунок для базы в matplotlib
         plt.clf()
-        plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
+        plt.plot(data_for_plot_y, marker='o', linewidth=0.5)
         plt.xlabel(self.xlabel_text)
         plt.ylabel(self.ylabel_text)
         plt.grid(True, linestyle='--')
@@ -455,14 +484,12 @@ class Rram(QDialog):
             # обновление heatmap
             self.parent.fill_table()
             self.parent.color_table()
-            self.parent._snapshot(mode="rram", data=deepcopy(self.parent.all_resistances))
-            self.ui.label_rram_img.setPixmap(QPixmap(self.heatmap))
             # восстановление
             self.ui.bar_progress.setValue(0)
             self.lock_buttons(True)
             self.buttons_activation()
 
-    def interrupt(self) -> None:
+    def interrupt(self) -> None: #+
         """
         Прервать поток
         """
@@ -477,10 +504,9 @@ class Rram(QDialog):
         self.ui.button_load.setEnabled(state)
         self.ui.button_set_1.setEnabled(state)
         self.ui.button_set_0.setEnabled(state)
-        self.ui.button_save_img.setEnabled(state)
         self.ui.button_apply_tresh.setEnabled(state)
-        self.ui.button_save_img.setEnabled(state)
-        self.ui.button_save.setEnabled(state)
+        self.ui.button_snapshot.setEnabled(state)
+        self.ui.button_save_bin.setEnabled(state)
         self.ui.button_read.setEnabled(state)
         self.ui.button_interrupt.setEnabled(not state)
 
@@ -488,7 +514,6 @@ class Rram(QDialog):
         """
         Закрытие окна
         """
-        # удаление rram.png при закрытии окна
-        if os.path.isfile(self.heatmap):
-            os.remove(self.heatmap)
+        self.parent.opener = None
+        self.set_up_init_values()
         event.accept()
