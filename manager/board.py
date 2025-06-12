@@ -35,6 +35,7 @@ class Connector():
         self.config = config
         self.c_type = c_type
         self.cb_type = cb_type
+        # self.cb_type = 'raspberry'
         # для симулятора
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
@@ -82,21 +83,27 @@ class Connector():
         open_flag = False
         if self.cb_type == 'simulator':
             # загрузка симулятора
-            if self.cb_type == 'simulator':
-                open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
-        else:
-            # кол-во попыток получить данные
-            attempts = int(self.config['connector']['attempts_to_kick'])
-            self.serial.com_open(portnum, timeout=float(self.config["connector"]["timeout"]))
-            if self.serial.com_is_open():
-                not_rec_flag = self._kick_board(attempts)
-                if not_rec_flag:
-                    self.logger.info('Fail to receive %s', portnum)
+            open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
+        elif self.cb_type == 'real':
+            # для плат на базе Arduino
+            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':
+                # кол-во попыток получить данные
+                attempts = int(self.config['connector']['attempts_to_kick'])
+                self.serial.com_open(portnum, timeout=float(self.config["connector"]["timeout"]))
+                if self.serial.com_is_open():
+                    not_rec_flag = self._kick_board(attempts)
+                    if not_rec_flag:
+                        self.logger.info('Fail to receive %s', portnum)
+                    else:
+                        self.logger.info('Opened %s', portnum)
+                        open_flag = True
                 else:
-                    self.logger.info('Opened %s', portnum)
-                    open_flag = True
-            else:
-                self.logger.info('Fail to open %s', portnum)
+                    self.logger.info('Fail to open %s', portnum)
+            # для плат на базе Raspberry Pi
+            elif self.c_type == 'memricore':
+                from MemriCORE.rpi_modes import RPI_modes
+                self.rasp_driver = RPI_modes()
+                open_flag = True
         return open_flag
 
     def close_serial(self) -> bool:
@@ -107,12 +114,21 @@ class Connector():
             close_flag -- статус закрытия
         """
         close_flag = False
-        self.serial.com_close()
-        if self.serial.com_is_open():
-            self.logger.info('Fail to close')
-        else:
-            self.logger.info('Closed')
+        if self.cb_type == 'simulator':
             close_flag = True
+        elif self.cb_type == 'real':
+            # для плат на базе Arduino
+            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':
+                self.serial.com_close()
+                if self.serial.com_is_open():
+                    self.logger.info('Fail to close')
+                else:
+                    self.logger.info('Closed')
+                    close_flag = True
+            # для плат на базе Raspberry Pi
+            elif self.c_type == 'memricore':
+                #todo: может нужно что-то еще
+                close_flag = True
         return close_flag
 
     def push(self, send_data: str) -> bool:
@@ -180,18 +196,23 @@ class Connector():
         rec_data = []
         send_flag = False
         if self.cb_type == 'real':
-            send_flag = self.push('100\n')
-            self.serial.com_whait_ready(float(self.config['connector']['timeout']))
-            if self.serial.com_can_read_line():
-                rx = self.serial.com_read_line()
-                try:
-                    rec_data = str(rx, 'utf-8').strip().split(',')
-                except ValueError:
-                    pass
+            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':
+                send_flag = self.push('100\n')
+                self.serial.com_whait_ready(float(self.config['connector']['timeout']))
+                if self.serial.com_can_read_line():
+                    rx = self.serial.com_read_line()
+                    try:
+                        rec_data = str(rx, 'utf-8').strip().split(',')
+                    except ValueError:
+                        pass
+            elif self.c_type == 'memricore':
+                send_flag = True
+                rec_data = ['raspberry']
+                # todo: добавить служебную инфу в драйвер
         # режим симулятор
         elif self.cb_type == 'simulator':
             send_flag = True
-            rec_data = ['simulator']
+            rec_data = ['simulator']            
         return send_flag, rec_data
 
     def impact(self, task: dict):
@@ -206,21 +227,32 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
-            self.inc_req_id() # увеличиваем счечик id
-            task["id"] = self.request_id # записываем id в тикет
-            _ = self.push(gather(task))
-            try:
-                res = self.pull()
-                if not res: # если нет результата
-                    time.sleep(task["t_ms"]/1000) # ждем
-                    res = self.pull() # снова пытаемся получить
-                if res[1] != self.request_id:
-                    print(f'Не совпадение id: req:{res[1]}, ans:{self.request_id} (adc:{res[0]})')
-                    raise ValueError
-                # else: print(f'{task["id"]}, {self.request_id}, {res[1]}, adc:{res[0]}')
-            except (ValueError, IndexError):
-                self.logger.critical('ValueError, IndexError in board.py:pull!')
-                # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
+            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':    
+                self.inc_req_id() # увеличиваем счечик id
+                task["id"] = self.request_id # записываем id в тикет
+                _ = self.push(gather(task))
+                try:
+                    res = self.pull()
+                    if not res: # если нет результата
+                        time.sleep(task["t_ms"]/1000) # ждем
+                        res = self.pull() # снова пытаемся получить
+                    if res[1] != self.request_id:
+                        print(f'Не совпадение id: req:{res[1]}, ans:{self.request_id} (adc:{res[0]})')
+                        raise ValueError
+                    # else: print(f'{task["id"]}, {self.request_id}, {res[1]}, adc:{res[0]}')
+                except (ValueError, IndexError):
+                    self.logger.critical('ValueError, IndexError in board.py:pull!')
+                    # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
+            elif self.c_type == 'memricore':
+                adc = self.rasp_driver.mode_7(task['vol'],
+                                          task['t_ms'],
+                                          task['t_us'],
+                                          task['sign'],
+                                          task['id'],
+                                          task['wl'],
+                                          task['bl']) # vDAC, tms, tus, rev, id, wl, bl
+                res = (int(adc[0]), int(adc[1]))
+            # можно добавить работу с другими платами
         # режим симулятор
         elif self.cb_type == 'simulator':
             task_id = task["id"]
@@ -255,10 +287,9 @@ class Connector():
             task = gather(task) # собираем из словаря строку
             if not self.silent:
                 self.logger.info('Send %s', task.rstrip())
-            #time.sleep(0.06)
+            time.sleep(1/1000)
             if not self.silent:
                 self.logger.info('Recieved data: %s', str(res))
-        # можно добавить работу с другими платами
         return res
 
     def custom_impact(self, command: str, timeout: float, attempts: int):

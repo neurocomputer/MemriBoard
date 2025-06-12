@@ -68,7 +68,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
@@ -343,7 +343,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Порог Rmax/Rmin:</string>
+              <string>Rmax/Rmin больше</string>
              </property>
             </widget>
            </item>
