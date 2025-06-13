@@ -41,6 +41,7 @@ from gui.windows.cb_info import CbInfo
 from gui.windows.rram import Rram
 from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
+from gui.windows.math import Math
 from gui.src import show_choose_window, show_warning_messagebox, snapshot
 
 class Window(QMainWindow):
@@ -117,7 +118,7 @@ class Window(QMainWindow):
         # обработчики кнопок
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
-        self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
+        self.ui.button_math.clicked.connect(self.show_math_dialog)
         self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
@@ -165,7 +166,21 @@ class Window(QMainWindow):
         if status:
             self.show_exp_settings_dialog()
             self.exp_settings_dialog.load_tickets(exp_name, tickets)
-
+    
+    def show_math_dialog(self) -> None:
+            """
+            Показать окно математики
+            """
+            self.opener = 'math'
+            self.current_bl = self.ui.table_crossbar.currentRow()
+            self.current_wl = self.ui.table_crossbar.currentColumn()
+            if self.current_bl == -1:
+                self.current_bl = 0
+                self.current_wl = 0
+            self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
+            self.math_dialog = Math(parent=self)
+            self.math_dialog.show()
+   
     def show_new_ann_dialog(self) -> None:
         """
         Показать окно записи
