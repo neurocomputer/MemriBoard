@@ -47,9 +47,9 @@ def save_crossbar_array(serial: str, crossbar: list) -> None:
     with open(serial+'.cb', 'wb') as file:
         pickle.dump(crossbar, file)
 
-def send_task_to_crossbar(serial: str, crossbar: list, **kwargs) -> int:
+def send_mode_7_to_crossbar(serial: str, crossbar: list, **kwargs) -> int:
     """
-    Послать задачу в модель кроссбара в симуляторе
+    Послать задачу в режиме 7 в модель кроссбара в симуляторе
     """
     # запись
     if kwargs['vol'] != 0:
@@ -63,4 +63,20 @@ def send_task_to_crossbar(serial: str, crossbar: list, **kwargs) -> int:
     v_out = kwargs['vol_read'] * kwargs['res_load'] / (model_resistance + kwargs['res_switches'] + kwargs['res_load'])
     v_out = v_out * kwargs['gain']
     res = int(2**kwargs['adc_bit'] * v_out / kwargs['vol_ref_adc'])
+    return res
+
+def send_mode_9_to_crossbar(crossbar: list, **kwargs) -> int:
+    """
+    Послать задачу в режиме 9 в модель кроссбара в симуляторе
+    """
+    # запись
+    if kwargs['vol'] != 0:
+        current = crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(kwargs['vol'])
+        # переводим ток так, как если бы работала плата
+        model_resistance = kwargs['vol'] / current
+        v_out = kwargs['vol'] * kwargs['res_load'] / (model_resistance + kwargs['res_switches'] + kwargs['res_load'])
+        v_out = v_out * kwargs['gain']
+        res = int(2**kwargs['adc_bit'] * v_out / kwargs['vol_ref_adc'])
+    else:
+        res = 0
     return res

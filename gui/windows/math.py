@@ -9,8 +9,8 @@ import time
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
 from PyQt5.QtCore import QThread, pyqtSignal
-from manager.service import w2r, r2w, v2d, a2r, d2v, a2v
-from gui.src import show_choose_window, show_warning_messagebox
+from manager.service import w2r, r2w, v2d, a2v
+from gui.src import show_warning_messagebox
 import csv
 
 
@@ -190,7 +190,9 @@ class Math(QDialog):
         v_dac = []
         # генерация ЦАП
         for vol in self.voltages:
-            v_dac.append(v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac, vol))
+            v_dac.append(v2d(self.parent.man.dac_bit,
+                             self.parent.man.vol_ref_dac,
+                             vol))
         # 3 подаем значения в плату
         self.ui.progress_bar.setMaximum(len(v_dac))
         mult_thread = MakeMult(v_dac, parent=self)
@@ -219,14 +221,14 @@ class Math(QDialog):
         for item in self.result:
             # постобработка
             if self.ui.combo_postprocess.currentText() == 'mapping':
-                result_for_show.append((a2v(self.parent.parent.man.gain,
-                                            self.parent.parent.man.adc_bit,
-                                            self.parent.parent.man.vol_ref_adc, 
+                result_for_show.append((a2v(self.parent.man.gain,
+                                            self.parent.man.adc_bit,
+                                            self.parent.man.vol_ref_adc, 
                                             item)/0.3)*float(self.ui.spinbox_max_input.value())) #todo: вынести из GUI
             elif self.ui.combo_postprocess.currentText() == 'нет':
-                result_for_show.append(a2v(self.parent.parent.man.gain,
-                                            self.parent.parent.man.adc_bit,
-                                            self.parent.parent.man.vol_ref_adc, 
+                result_for_show.append(a2v(self.parent.man.gain,
+                                            self.parent.man.adc_bit,
+                                            self.parent.man.vol_ref_adc, 
                                             item))
         # заполняем text
         self.ui.text_output_data.clear()
