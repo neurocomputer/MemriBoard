@@ -12,8 +12,9 @@ import copy
 # import pandas as pd
 # import plotly.express as px
 import matplotlib.pyplot as plt
+from PyQt5.QtCore import Qt
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QFileDialog
+from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 import numpy as np
 import numpy.typing as npt
@@ -59,7 +60,7 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     else:
         plt.show()
 
-class Testing(QDialog):
+class Testing(QWidget):
     """
     Тестирование всех ячеек
     """
@@ -88,8 +89,9 @@ class Testing(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.ui.setWindowFlags(Qt.Window)
         # доп настройки
-        self.setModal(True)
+        #self.setModal(True)
         # обработчик нажатия
         # вкладка Управление тестом
         self.ui.button_choose_exp.clicked.connect(self.button_choose_exp_clicked)
@@ -410,7 +412,8 @@ class Testing(QDialog):
             self.parent.opener = None
             self.parent.fill_table()
             self.parent.color_table()
-            self.set_up_init_values()            
+            self.set_up_init_values()
+            self.parent.showNormal()        
             event.accept()
         elif self.application_status == 'work':
             show_warning_messagebox('Дождитесь или прервите!')

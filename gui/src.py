@@ -5,6 +5,7 @@
 # pylint: disable=E0611
 
 import csv
+import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog
 
 def show_warning_messagebox(message: str) -> None:
@@ -94,3 +95,12 @@ def write_csv_data(fpath, header, coordinates):
         file_wr.writerow(header)
         for item in coordinates:
             file_wr.writerow(item)
+
+def snapshot(data) -> None:
+    """
+    Картинка с кнопки снимок
+    """
+    plt.clf()
+    if data is not None:
+        plt.imshow(data)
+        plt.show()

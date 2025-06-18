@@ -7,6 +7,7 @@
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
+from gui.windows.rram import Rram
 
 class Wait(QDialog):
     """
@@ -30,4 +31,7 @@ class Wait(QDialog):
             self.new_ann_dialog.fill_table_weights()
             event.accept()
         elif self.opener == 'crossbar':
+            event.accept()
+        elif self.opener == 'rram':
+            self.parent.rram_dialog.apply_tresh()
             event.accept()

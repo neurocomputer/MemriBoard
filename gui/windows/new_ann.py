@@ -55,9 +55,10 @@ class NewAnn(QDialog):
     SET_VOL_MAX = 1.2
     SET_STEP = 0.01
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, mode=None) -> None:
         super().__init__(parent)
         self.parent = parent
+        self.mode = mode
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
@@ -74,7 +75,7 @@ class NewAnn(QDialog):
         self.ui.button_drop_weights.clicked.connect(self.button_drop_weights_clicked)
         self.ui.button_update_cells.clicked.connect(self.button_update_cells_clicked)
         # нажатия кнопок вкладка Сеть
-        self.ui.table_ann_weights.setSortingEnabled(True) # Включаем сортировку
+        # self.ui.table_ann_weights.setSortingEnabled(True) # Включаем сортировку
         self.ui.table_ann_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_ann_weights.setColumnCount(6)
         self.ui.table_ann_weights.setHorizontalHeaderLabels(["W", "BL", "WL", "Rm (Ом)", "Rt (Ом)", "Статус"])
@@ -84,13 +85,13 @@ class NewAnn(QDialog):
         self.ui.spinbox_r_min.valueChanged.connect(self.on_spinbox_correction_weight_changed)
         self.ui.spinbox_r_max.valueChanged.connect(self.on_spinbox_correction_weight_changed)
         # параметры таблицы table_weights
-        self.ui.table_weights.setSortingEnabled(True) # Включаем сортировку
+        # self.ui.table_weights.setSortingEnabled(True) # Включаем сортировку
         self.ui.table_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_weights.setColumnCount(5)
         self.ui.table_weights.setHorizontalHeaderLabels(["BL", "WL", "Rm (Ом)", "W", "Статус"])
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # параметры таблицы table_match
-        self.ui.table_match.setSortingEnabled(True) # Включаем сортировку
+        # self.ui.table_match.setSortingEnabled(True) # Включаем сортировку
         self.ui.table_match.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_match.setColumnCount(7)
         self.ui.table_match.setHorizontalHeaderLabels(["id", "W", "Rt (Ом)", "Rm (Ом)", "BL", "WL", "Статус"])
@@ -142,7 +143,10 @@ class NewAnn(QDialog):
         self.cells_weights_all = {}
         for _, item in enumerate(self.cells_coordinates_all):
             resistance = self.cells_resistances_all[item]
-            weight = r2w(self.parent.man.res_load, resistance) * weights_correction
+            if self.mode == 'matmul':
+                weight = self.parent.man.sum_gain/resistance
+            else:
+                weight = r2w(self.parent.man.res_load, resistance) * weights_correction
             self.cells_weights_all[item] = weight
             qtable_item = QTableWidgetItem()
             qtable_item.setData(0, round(weight, 4)) # Устанавливаем числовые данные
@@ -230,9 +234,14 @@ class NewAnn(QDialog):
                 try:
                     self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
                     # уникальные абсолютные округленные
+<<<<<<< HEAD
                     self.weights_target_all = list(map(lambda x: float(x), np.unique(np.round(np.abs(self.weights_target_all), 4))))
                     if 0. in self.weights_target_all:
                         self.weights_target_all.remove(0.)
+=======
+                    if self.mode != 'matmul':
+                        self.weights_target_all = list(map(lambda x: float(x), np.round(np.unique(np.abs(self.weights_target_all)), 4)))
+>>>>>>> origin/math
                     self.fill_table_match()
                 except Exception as ex:
                     show_warning_messagebox(f'{ex}')
@@ -259,7 +268,10 @@ class NewAnn(QDialog):
             self.ui.table_match.setItem(row_position, 1, qtable_item)
             # Устанавливаем resistanse
             qtable_item = QTableWidgetItem()
-            qtable_item.setData(0, w2r(self.parent.man.res_load, value))
+            if self.mode == 'matmul':
+                qtable_item.setData(0, self.parent.man.sum_gain/value)
+            else:
+                qtable_item.setData(0, w2r(self.parent.man.res_load, value))
             self.ui.table_match.setItem(row_position, 2, qtable_item)
         self.on_spinbox_correction_weight_changed()
 
@@ -287,7 +299,10 @@ class NewAnn(QDialog):
         res_max = self.ui.spinbox_r_max.value()
         for i, weight in enumerate(self.weights_target_all):
             _, row = self.find_row_index_weight_id(i)
-            new_resistance = w2r(self.parent.man.res_load, weight/weights_correction)
+            if self.mode == 'matmul':
+                new_resistance = self.parent.man.sum_gain/(weight/weights_correction)
+            else:
+                new_resistance = w2r(self.parent.man.res_load, weight/weights_correction)
             # Устанавливаем resistanse
             qtable_item = QTableWidgetItem()
             qtable_item.setData(0, new_resistance)
@@ -381,27 +396,53 @@ class NewAnn(QDialog):
         if self.weights_target_all:
             if len(self.cells_coordinates_all) >= len(self.weights_target_all):
                 if 'не подходит' not in list(self.weights_status.values()):
-                    # ищем похожие
-                    self.target_cells_resistances = {}
-                    # цикл по табличке
-                    for row_position in range(self.ui.table_match.rowCount()):
-                        # вытаскиваем сопротивление
-                        target_resistance = self.ui.table_match.item(row_position, 2).data(Qt.DisplayRole)
-                        # ищем wl bl ближайшего сопротивления и записываем в эту таблицу
-                        closest_key, closest_resistance = self.find_close_value(target_resistance)
-                        # Устанавливаем wl
-                        qtable_item = QTableWidgetItem()
-                        qtable_item.setData(0, closest_key[0])
-                        self.ui.table_match.setItem(row_position, 5, qtable_item)
-                        # Устанавливаем bl
-                        qtable_item = QTableWidgetItem()
-                        qtable_item.setData(0, closest_key[1])
-                        self.ui.table_match.setItem(row_position, 4, qtable_item)
-                        # Устанавливаем resistanse
-                        qtable_item = QTableWidgetItem()
-                        qtable_item.setData(0, closest_resistance)
-                        self.ui.table_match.setItem(row_position, 3, qtable_item)
-                        self.target_cells_resistances[closest_key] = target_resistance
+                    if self.mode == 'matmul':
+                        self.target_cells_resistances = {}
+                        row_position = 0
+                        for i in range(self.parent.man.col_num):
+                            for j in range(self.parent.man.row_num):
+                                # вытаскиваем сопротивление
+                                target_resistance = self.ui.table_match.item(row_position, 2).data(Qt.DisplayRole)
+                                current_resistance = self.ui.table_weights.item(row_position, 2).data(Qt.DisplayRole)
+                                # вытаскиваем wl, bl
+                                wl = self.ui.table_weights.item(row_position, 1).data(Qt.DisplayRole)
+                                bl = self.ui.table_weights.item(row_position, 0).data(Qt.DisplayRole)
+                                # Устанавливаем wl
+                                qtable_item = QTableWidgetItem()
+                                qtable_item.setData(0, wl)
+                                self.ui.table_match.setItem(row_position, 5, qtable_item)
+                                # Устанавливаем bl
+                                qtable_item = QTableWidgetItem()
+                                qtable_item.setData(0, bl)
+                                self.ui.table_match.setItem(row_position, 4, qtable_item)
+                                # Устанавливаем resistanse
+                                qtable_item = QTableWidgetItem()
+                                qtable_item.setData(0, current_resistance)
+                                self.ui.table_match.setItem(row_position, 3, qtable_item)
+                                self.target_cells_resistances[(wl,bl)] = target_resistance
+                                row_position += 1
+                    else:
+                        # ищем похожие
+                        self.target_cells_resistances = {}
+                        # цикл по табличке
+                        for row_position in range(self.ui.table_match.rowCount()):
+                            # вытаскиваем сопротивление
+                            target_resistance = self.ui.table_match.item(row_position, 2).data(Qt.DisplayRole)
+                            # ищем wl bl ближайшего сопротивления и записываем в эту таблицу
+                            closest_key, closest_resistance = self.find_close_value(target_resistance)
+                            # Устанавливаем wl
+                            qtable_item = QTableWidgetItem()
+                            qtable_item.setData(0, closest_key[0])
+                            self.ui.table_match.setItem(row_position, 5, qtable_item)
+                            # Устанавливаем bl
+                            qtable_item = QTableWidgetItem()
+                            qtable_item.setData(0, closest_key[1])
+                            self.ui.table_match.setItem(row_position, 4, qtable_item)
+                            # Устанавливаем resistanse
+                            qtable_item = QTableWidgetItem()
+                            qtable_item.setData(0, closest_resistance)
+                            self.ui.table_match.setItem(row_position, 3, qtable_item)
+                            self.target_cells_resistances[closest_key] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
                     self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))
                     self.writen_cells = []
@@ -576,6 +617,8 @@ class NewAnn(QDialog):
         Закрытие окна
         """
         if self.application_status == 'stop':
+            if self.parent.opener == 'math':
+                self.parent.math_dialog.on_weights_written(copy.deepcopy(self.weights_target_all))
             # todo: сделать в parent функцию set_up_init_values()
             self.parent.fill_table()
             self.parent.color_table()
@@ -648,4 +691,4 @@ class NewAnn(QDialog):
         """
         Прочитать все ячейки
         """
-        self.parent.read_cell_all()
+        self.parent.read_cell_all('new_ann')

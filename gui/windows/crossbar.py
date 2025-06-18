@@ -38,9 +38,11 @@ from gui.windows.terminal import Terminal
 from gui.windows.testing import Testing
 from gui.windows.map import Map
 from gui.windows.cb_info import CbInfo
+from gui.windows.rram import Rram
 from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
-from gui.src import show_choose_window, show_warning_messagebox
+from gui.windows.math import Math
+from gui.src import show_choose_window, show_warning_messagebox, snapshot
 
 class Window(QMainWindow):
     """
@@ -78,6 +80,7 @@ class Window(QMainWindow):
     testing_dialog: Testing
     map_dialog: Map
     cb_info_dialog: CbInfo
+    rram_dialog: Rram
     new_ann_dialog: NewAnn
     wait_dialog: Wait
 
@@ -113,10 +116,10 @@ class Window(QMainWindow):
         self.ui.table_crossbar.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_crossbar.itemDoubleClicked.connect(self.show_cell_info_dialog)
         # обработчики кнопок
-        self.ui.button_rram.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
+        self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
-        self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
-        self.ui.button_snapshot.clicked.connect(self._snapshot)
+        self.ui.button_math.clicked.connect(self.show_math_dialog)
+        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         self.ui.button_reconnect.clicked.connect(self.reconnect)
@@ -130,7 +133,7 @@ class Window(QMainWindow):
         shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
         shortcut.activated.connect(self.show_new_ann_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
-        shortcut.activated.connect(self.read_cell_all)
+        shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # таймер
         self.timer = QTimer()
         # диалоговое окно подключения
@@ -163,12 +166,27 @@ class Window(QMainWindow):
         if status:
             self.show_exp_settings_dialog()
             self.exp_settings_dialog.load_tickets(exp_name, tickets)
-
-    def show_new_ann_dialog(self) -> None:
+    
+    def show_math_dialog(self) -> None:
+        """
+        Показать окно математики
+        """
+        self.opener = 'math'
+        self.current_bl = self.ui.table_crossbar.currentRow()
+        self.current_wl = self.ui.table_crossbar.currentColumn()
+        if self.current_bl == -1:
+            self.current_bl = 0
+            self.current_wl = 0
+        self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
+        self.math_dialog = Math(parent=self)
+        self.math_dialog.show()
+        self.showMinimized()
+   
+    def show_new_ann_dialog(self, mode=None) -> None: 
         """
         Показать окно записи
         """
-        self.new_ann_dialog = NewAnn(parent=self)
+        self.new_ann_dialog = NewAnn(parent=self, mode=mode)
         self.new_ann_dialog.show()
 
     def show_terminal_dialog(self) -> None:
@@ -198,7 +216,7 @@ class Window(QMainWindow):
         """
         self.history_dialog = History(parent=self, mode=mode)
         self.history_dialog.show()
-        if mode == 'all' and self.opener != 'testing':
+        if mode == 'all' and self.opener != 'testing' and self.opener != 'rram':
             self.exp_settings_dialog.close()
 
     def show_cell_info_dialog(self) -> None:
@@ -248,6 +266,7 @@ class Window(QMainWindow):
         self.opener = 'testing'
         self.testing_dialog = Testing(parent=self)
         self.testing_dialog.show()
+        self.showMinimized()
 
     def show_map_dialog(self) -> None:
         """
@@ -270,6 +289,15 @@ class Window(QMainWindow):
         """
         self.cb_info_dialog = CbInfo(parent=self)
         self.cb_info_dialog.show()
+
+    def show_rram_dialog(self) -> None:
+        """
+        Открытие окна инормации о кроссбаре
+        """
+        self.opener = 'rram'
+        self.rram_dialog = Rram(parent=self)
+        self.rram_dialog.show()
+        self.showMinimized()
 
     def show_wait_dialog(self, opener) -> None:
         """
@@ -309,15 +337,6 @@ class Window(QMainWindow):
             plt.savefig(os.path.join(save_path,"result_map.png"))
             plt.close()
         else:
-            plt.show()
-
-    def _snapshot(self) -> None:
-        """
-        Картинка с кнопки снимок
-        """
-        if not self.snapshot is None:
-            plt.clf()
-            plt.imshow(self.snapshot)
             plt.show()
 
     def update_current_cell_info(self):
@@ -429,7 +448,7 @@ class Window(QMainWindow):
         self.ui.button_settings.setEnabled(status)
         self.ui.button_reconnect.setEnabled(status)
 
-    def read_cell_all(self) -> None:
+    def read_cell_all(self, opener) -> None:
         """
         Прочитать все
         """
@@ -437,7 +456,7 @@ class Window(QMainWindow):
         if answer:
             self.button_all_set_enabled(False)
             # окно
-            self.show_wait_dialog(opener='crossbar')
+            self.show_wait_dialog(opener)
             # поток чтения
             self.wait_dialog.ui.progress_wait.setValue(0)
             self.wait_dialog.ui.progress_wait.setMaximum(self.man.col_num*self.man.row_num)
