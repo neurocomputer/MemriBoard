@@ -80,3 +80,23 @@ def send_mode_9_to_crossbar(crossbar: list, **kwargs) -> int:
     else:
         res = 0
     return res
+
+def send_mode_mvm_to_crossbar(crossbar: list, **kwargs) -> int:
+    """
+    Послать задачу в режиме 10 в модель кроссбара в симуляторе
+    """
+    sum_current = 0
+    if kwargs['vol']:
+        for i, item in enumerate(kwargs['vol']):
+            # print('Напряжение', item)
+            # print(i, item, kwargs['wl'])
+            current = crossbar[i][kwargs['wl']].apply_voltage(item)
+            sum_current += current
+        v_out = sum_current * kwargs['sum_gain']
+        # wl = kwargs['wl']
+        # print(f'wl={wl}, v_out={v_out}')
+        res = int(2**kwargs['adc_bit'] * v_out * kwargs['gain'] / kwargs['vol_ref_adc'])
+    else:
+        res = 0
+    # print('Результат', res)
+    return res

@@ -5,16 +5,66 @@
 # pylint: disable=E0611
 
 import os
-import time
+import numpy as np
+import random
+from copy import deepcopy
+from PyQt5.QtCore import Qt
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QFileDialog
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QHeaderView, QWidget
 from PyQt5.QtCore import QThread, pyqtSignal
 from manager.service import w2r, r2w, v2d, a2v
-from gui.src import show_warning_messagebox
+from gui.src import show_warning_messagebox, open_file_dialog, snapshot
 import csv
+import matplotlib.pyplot as plt
 
+def adjust_columns(arr, col_num_max):
+    """
+    Подстраиваем входные данные под нужный формат
+    """
+    current_cols = arr.shape[1] if arr.ndim > 1 else 1
+    if current_cols < col_num_max:
+        # Add zero columns
+        zeros_to_add = col_num_max - current_cols
+        return np.pad(arr, ((0, 0), (0, zeros_to_add))), 'added'
+    elif current_cols > col_num_max:
+        # Remove extra columns
+        return arr[:, :col_num_max], 'removed'
+    else:
+        # No change needed
+        return arr, 'no change'
 
-class Math(QDialog):
+def save_array_to_csv(array, file_path):
+    """
+    Сохранить numpy массив в csv
+    """
+    np.savetxt(file_path, array, delimiter=',')
+
+def save_as_array_to_csv(parent, array):
+    """
+    Сохранить массив через диалог
+    """
+    file_path = QFileDialog.getSaveFileName(parent,
+                                                "Выберите директорию для сохранения")[0]
+    if file_path:
+        try:
+            path_check = file_path.split('.')
+            # print(path_check)
+            if path_check[-1] != 'csv':
+                file_path += '.csv'
+            save_array_to_csv(array, file_path)
+            show_warning_messagebox(f'Сохранено в {file_path}')
+        except Exception as ex: # pylint: disable=W0718
+            # print(ex)
+            show_warning_messagebox('Ошибка сохранения!')
+
+def read_csv_to_array(file_path):
+    """
+    Загрузка numpy массива с диска
+    """
+    return np.loadtxt(file_path, delimiter=',', dtype=float)
+
+class Math(QWidget):
     """
     Окно математики
     """
@@ -22,6 +72,7 @@ class Math(QDialog):
     GUI_PATH = os.path.join("gui","uies","math.ui")
     result: list
     voltages: list
+    empty_table: list
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -29,7 +80,8 @@ class Math(QDialog):
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
-        self.setModal(True)
+        self.ui.setWindowFlags(Qt.Window)
+        # self.setModal(True)
         self.ui.text_voltage.setEnabled(False)
         self.ui.button_apply.setEnabled(False)
         self.result = [] # результат умножения
@@ -52,6 +104,176 @@ class Math(QDialog):
         # обновление лейблов
         self.update_label_cell_info()
         self.update_label_target_resistance()
+        # таблицы
+        self.empty_table = np.zeros(shape=(self.parent.man.row_num, self.parent.man.col_num))
+        # кнопки матричного умножения
+        # кнопки работы с весами
+        self.ui.table_goal_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.table_real_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.table_weights_errors.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.button_write_goal_weights_matrix.clicked.connect(self.button_write_weights_matrix_clicked)
+        self.ui.button_save_goal_weights_matrix.clicked.connect(lambda: save_as_array_to_csv(self, self.goal_weights))
+        self.ui.button_heatmap_goal_weights_matrix.clicked.connect(lambda: snapshot(self.goal_weights))
+        self.ui.button_read_current_weights_matrix.clicked.connect(self.read_current_weights_matrix)
+        self.ui.button_save_current_weights_matrix.clicked.connect(lambda: save_as_array_to_csv(self, self.current_weights))
+        self.ui.button_heatmap_current_weights_matrix.clicked.connect(lambda: snapshot(self.current_weights))
+        self.ui.button_calculate_error_weights.clicked.connect(self.calculate_weights_error)
+        self.ui.button_save_error_weights.clicked.connect(lambda: save_as_array_to_csv(self, self.error_weights))
+        self.ui.button_heatmap_error_weights.clicked.connect(lambda: snapshot(self.error_weights))
+        # кнопки работы с данными
+        self.ui.input_data_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.etalon_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.predicted_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.result_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.error_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.button_load_input_array_from_disk.clicked.connect(self.load_input_array_from_disk)
+        self.ui.button_generate_random_input_data.clicked.connect(self.generate_random_input_data)
+        self.ui.button_save_input_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.input_array))
+        self.ui.button_calculate_etalon_results.clicked.connect(self.calculate_etalon_results)
+        self.ui.button_save_etalon_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_etalon_results))
+        self.ui.button_predict_output_data.clicked.connect(self.predict_output_data)
+        self.ui.button_save_output_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_crossbar_results))
+        self.ui.button_etalon_vs_output_graph.clicked.connect(self.plot_etalon_vs_output)
+        self.ui.button_calculate_matmul_errors.clicked.connect(self.calculate_matmul_error)
+        self.ui.button_save_error_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_error_results))
+
+## кнопки работы с весами
+
+    def on_weights_written(self, goal_weights):
+        """
+        Запись целевых весов в табличку интерфейса
+        """
+        # print(goal_weights)
+        self.goal_weights = deepcopy(self.empty_table)
+        k = 0
+        for i in range(self.parent.man.row_num):
+            for j in range(self.parent.man.col_num):
+                self.goal_weights[i][j] = goal_weights[k]
+                k += 1
+        self.fill_table(self.table_goal_weights,
+                        self.goal_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+
+    def button_write_weights_matrix_clicked(self):
+        """
+        Запись весов
+        """
+        self.parent.show_new_ann_dialog(mode='matmul')
+
+    def read_current_weights_matrix(self):
+        """
+        Чтение текущих весов
+        """
+        # todo: добавить чтение с платы
+        self.current_weights = deepcopy(self.empty_table)
+        for i in range(self.parent.man.row_num):
+            for j in range(self.parent.man.col_num):
+                self.current_weights[i][j] = round(self.parent.man.sum_gain/self.parent.all_resistances[i][j], 2)
+        self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+
+    def calculate_weights_error(self):
+        """
+        Посчитать ошибку
+        """
+        self.error_weights = np.abs(self.goal_weights - self.current_weights)
+        self.fill_table(self.table_weights_errors,
+                        self.error_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+
+## кнопки работы с данными
+    def load_input_array_from_disk(self):
+        """
+        Загрузить входные данные (массив) с диска
+        """
+        file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
+        if file_path:
+            try:
+                # загружаем
+                self.input_array = read_csv_to_array(file_path)
+                self.input_array, _ = adjust_columns(self.input_array, self.parent.man.row_num)
+                # отображаем
+                self.fill_table(self.ui.input_data_table,
+                                self.input_array,
+                                self.input_array.shape[0],
+                                self.input_array.shape[1])
+            except Exception as ex: # pylint: disable=W0718
+                show_warning_messagebox(f'Файл не соответствует требованиям! {ex}')
+
+    def generate_random_input_data(self):
+        """
+        Сгенерировать случайные входные данные
+        """
+        np.random.seed(7)
+        self.input_array = np.random.uniform(0, 0.3, size=(10, self.parent.man.row_num))
+        self.fill_table(self.ui.input_data_table,
+                        self.input_array,
+                        self.input_array.shape[0],
+                        self.input_array.shape[1])
+
+    def calculate_etalon_results(self):
+        """
+        Посчитать результат матричного умножения (эталон)
+        """
+        self.matmul_etalon_results = self.input_array @ self.goal_weights
+        self.fill_table(self.ui.etalon_output_table,
+                        self.matmul_etalon_results,
+                        self.matmul_etalon_results.shape[0],
+                        self.matmul_etalon_results.shape[1])
+        self.ui.button_apply.setEnabled(True)
+
+    def predict_output_data(self):
+        """
+        Прогноз результата с текущими весами
+        """
+        self.matmul_predicted_results = self.input_array @ self.current_weights
+        self.fill_table(self.ui.predicted_output_table,
+                        self.matmul_predicted_results,
+                        self.matmul_predicted_results.shape[0],
+                        self.matmul_predicted_results.shape[1])
+        self.ui.button_apply.setEnabled(True)
+
+    def plot_etalon_vs_output(self):
+        """
+        График эталона и ошибок матричного умножения
+        """
+        plt.clf()
+        plt.plot(np.sort(self.matmul_crossbar_results.flatten()),
+                 np.sort(self.matmul_crossbar_results.flatten()))
+        plt.show()
+
+    def calculate_matmul_error(self):
+        """
+        Посчитать ошибку умножения
+        """
+        self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results
+        self.fill_table(self.ui.error_output_table,
+                        self.matmul_error_results,
+                        self.matmul_error_results.shape[0],
+                        self.matmul_error_results.shape[1])
+
+    def fill_table(self, table, data, row_count, column_count):
+        """
+        Заполнить таблицу
+        """
+        # row count
+        table.setRowCount(row_count)
+        # column count
+        table.setColumnCount(column_count)
+        # table will fit the screen horizontally
+        # table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # table.resizeColumnsToContents()
+        # заполнение весами
+        for i in range(row_count):
+            for j in range(column_count):
+                table.setItem(i,j, QTableWidgetItem(str(round(data[i][j],4))))
+        # todo: можно добавить остальные варианты для вызова из других окон
+        table.setHorizontalHeaderLabels([str(i) for i in range(column_count)])
+        table.setVerticalHeaderLabels([str(i) for i in range(row_count)])
 
     def set_weights(self):
         """
@@ -180,26 +402,63 @@ class Math(QDialog):
         self.parent.current_bl = None
         self.parent.current_wl = None
         self.parent.current_last_resistance = None
+        self.parent.showNormal()
         event.accept()
 
     def apply_math(self):
         """
         Выполнение умножения
         """
-        self.result = []
-        v_dac = []
-        # генерация ЦАП
-        for vol in self.voltages:
-            v_dac.append(v2d(self.parent.man.dac_bit,
-                             self.parent.man.vol_ref_dac,
-                             vol))
-        # 3 подаем значения в плату
-        self.ui.progress_bar.setMaximum(len(v_dac))
-        mult_thread = MakeMult(v_dac, parent=self)
-        mult_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
-        mult_thread.value_got.connect(self.on_value_got) # после выполнения
-        mult_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
-        mult_thread.start()
+        if self.tabwidget_mode.currentIndex() == 0:
+            # поэлементное умножение
+            self.result = []
+            v_dac = []
+            # генерация ЦАП
+            for vol in self.voltages:
+                v_dac.append(v2d(self.parent.man.dac_bit,
+                                self.parent.man.vol_ref_dac,
+                                vol))
+            # 3 подаем значения в плату
+            self.ui.progress_bar.setMaximum(len(v_dac))
+            mult_thread = MakeMult(v_dac, parent=self)
+            mult_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+            mult_thread.value_got.connect(self.on_value_got) # после выполнения
+            mult_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+            mult_thread.start()
+        elif self.tabwidget_mode.currentIndex() == 1:
+            # матричное умножение
+            # цикл по семплам
+            self.matmul_crossbar_results = deepcopy(self.matmul_predicted_results)
+            for i in range(self.input_array.shape[0]):
+                # подготавливаем семпл
+                v_dac = []
+                for h in range(self.input_array.shape[1]):
+                    if self.input_array[i][h] > 0.3:
+                        v_dac.append(v2d(self.parent.man.dac_bit,
+                                    self.parent.man.vol_ref_dac,
+                                    0.3))
+                    else:
+                        v_dac.append(v2d(self.parent.man.dac_bit,
+                                    self.parent.man.vol_ref_dac,
+                                    self.input_array[i][h]))
+                # проходим по всем строкам кроссбара
+                for j in range(self.parent.man.col_num):
+                    task = {'mode_flag': 10,
+                            'vol': v_dac,
+                            'id': 0,
+                            'wl': j}
+                    # print(task)
+                    # print(i, j)
+                    v_adc, _ = self.parent.man.conn.impact(task)
+                    self.matmul_crossbar_results[i][j] = a2v(self.parent.man.gain,
+                                            self.parent.man.adc_bit,
+                                            self.parent.man.vol_ref_adc,
+                                            v_adc)
+            # self.matmul_crossbar_results = self.input_array @ self.current_weights
+            self.fill_table(self.ui.result_output_table,
+                            self.matmul_crossbar_results,
+                            self.matmul_crossbar_results.shape[0],
+                            self.matmul_crossbar_results.shape[1])
 
     def on_value_got(self, value: int):
         """

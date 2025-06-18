@@ -30,6 +30,7 @@ class Application():
     vol_ref_adc: float # опорное напряжение АЦП
     res_switches: float # сопротивление переключателей
     gain: int # усиление
+    sum_gain: int # сопротивление ОС
     menu: dict # меню режимов
     blank_type: str # тип бланка
     connected_port: str # com порт
@@ -84,6 +85,7 @@ class Application():
         self.vol_ref_adc = float(self.ap_config['board']['vol_ref_adc'])
         self.res_switches = float(self.ap_config['board']['res_switches'])
         self.gain = float(self.ap_config['board']['gain'])
+        self.sum_gain = int(self.ap_config['board']['sum_gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
         self.backup = self.ap_config['backup']['backup_path']
 
@@ -95,6 +97,8 @@ class Application():
             self.ap_config['board']['adc_bit'] = kwargs["adc_bit"]
         if "gain" in kwargs:
             self.ap_config['board']['gain'] = kwargs["gain"]
+        if "sum_gain" in kwargs:
+            self.ap_config['board']['sum_gain'] = kwargs["sum_gain"]
         if "soft_cc" in kwargs:
             self.ap_config['board']['soft_cc'] = kwargs["soft_cc"]
         if "last_crossbar_serial" in kwargs:
@@ -118,6 +122,7 @@ class Application():
         meta_info['dac_bit'] = self.dac_bit
         meta_info['adc_bit'] = self.adc_bit
         meta_info['gain'] = self.gain
+        meta_info['sum_gain'] = self.sum_gain
         meta_info['soft_cc'] = self.soft_cc
         meta_info['vol_ref_dac'] = self.vol_ref_dac
         meta_info['vol_ref_adc'] = self.vol_ref_adc

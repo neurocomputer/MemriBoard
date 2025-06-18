@@ -168,24 +168,25 @@ class Window(QMainWindow):
             self.exp_settings_dialog.load_tickets(exp_name, tickets)
     
     def show_math_dialog(self) -> None:
-            """
-            Показать окно математики
-            """
-            self.opener = 'math'
-            self.current_bl = self.ui.table_crossbar.currentRow()
-            self.current_wl = self.ui.table_crossbar.currentColumn()
-            if self.current_bl == -1:
-                self.current_bl = 0
-                self.current_wl = 0
-            self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
-            self.math_dialog = Math(parent=self)
-            self.math_dialog.show()
+        """
+        Показать окно математики
+        """
+        self.opener = 'math'
+        self.current_bl = self.ui.table_crossbar.currentRow()
+        self.current_wl = self.ui.table_crossbar.currentColumn()
+        if self.current_bl == -1:
+            self.current_bl = 0
+            self.current_wl = 0
+        self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
+        self.math_dialog = Math(parent=self)
+        self.math_dialog.show()
+        self.showMinimized()
    
-    def show_new_ann_dialog(self) -> None:
+    def show_new_ann_dialog(self, mode=None) -> None: 
         """
         Показать окно записи
         """
-        self.new_ann_dialog = NewAnn(parent=self)
+        self.new_ann_dialog = NewAnn(parent=self, mode=mode)
         self.new_ann_dialog.show()
 
     def show_terminal_dialog(self) -> None:
@@ -265,6 +266,7 @@ class Window(QMainWindow):
         self.opener = 'testing'
         self.testing_dialog = Testing(parent=self)
         self.testing_dialog.show()
+        self.showMinimized()
 
     def show_map_dialog(self) -> None:
         """
@@ -295,6 +297,7 @@ class Window(QMainWindow):
         self.opener = 'rram'
         self.rram_dialog = Rram(parent=self)
         self.rram_dialog.show()
+        self.showMinimized()
 
     def show_wait_dialog(self, opener) -> None:
         """

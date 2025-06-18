@@ -11,7 +11,7 @@ from configparser import ConfigParser
 from manager.comport import Serial
 from manager.blanks import blanks, fill_blank, gather
 from manager.service import d2v
-from simulator.src import load_crossbar_array, send_mode_7_to_crossbar, send_mode_9_to_crossbar
+from simulator.src import load_crossbar_array, send_mode_7_to_crossbar, send_mode_9_to_crossbar, send_mode_mvm_to_crossbar
 
 class Connector():
     """
@@ -299,9 +299,22 @@ class Connector():
                                                adc_bit = int(self.config['board']['adc_bit']),
                                                vol_ref_adc = float(self.config['board']['vol_ref_adc'])
                                                ), task_id)
-            task = gather(task) # собираем из словаря строку
+            elif task['mode_flag'] == 10: # режим команды 10
+                vol = []
+                for item in task['vol']:
+                    vol.append(d2v(int(self.config['board']['dac_bit']),
+                               float(self.config['board']['vol_ref_dac']),
+                               item))
+                res = (send_mode_mvm_to_crossbar(self.crossbar_array,
+                                                vol = vol,
+                                                wl = wl,
+                                                gain = float(self.config['board']['gain']),
+                                                sum_gain = float(self.config['board']['sum_gain']),
+                                                adc_bit = int(self.config['board']['adc_bit']),
+                                                vol_ref_adc = float(self.config['board']['vol_ref_adc'])
+                                                ), task_id)
             if not self.silent:
-                self.logger.info('Send %s', task.rstrip())
+                self.logger.info('Send %s', str(task['mode_flag']))
             time.sleep(1/1000)
             if not self.silent:
                 self.logger.info('Recieved data: %s', str(res))

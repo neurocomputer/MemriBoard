@@ -412,7 +412,8 @@ class Testing(QWidget):
             self.parent.opener = None
             self.parent.fill_table()
             self.parent.color_table()
-            self.set_up_init_values()            
+            self.set_up_init_values()
+            self.parent.showNormal()        
             event.accept()
         elif self.application_status == 'work':
             show_warning_messagebox('Дождитесь или прервите!')
