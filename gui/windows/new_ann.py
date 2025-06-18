@@ -234,14 +234,8 @@ class NewAnn(QDialog):
                 try:
                     self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
                     # уникальные абсолютные округленные
-<<<<<<< HEAD
-                    self.weights_target_all = list(map(lambda x: float(x), np.unique(np.round(np.abs(self.weights_target_all), 4))))
-                    if 0. in self.weights_target_all:
-                        self.weights_target_all.remove(0.)
-=======
                     if self.mode != 'matmul':
                         self.weights_target_all = list(map(lambda x: float(x), np.round(np.unique(np.abs(self.weights_target_all)), 4)))
->>>>>>> origin/math
                     self.fill_table_match()
                 except Exception as ex:
                     show_warning_messagebox(f'{ex}')
