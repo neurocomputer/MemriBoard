@@ -28,7 +28,7 @@ class Wait(QDialog):
 
     def closeEvent(self, event) -> None:
         if self.opener == 'new_ann':
-            self.new_ann_dialog.fill_table_weights()
+            self.parent.new_ann_dialog.fill_table_weights()
             event.accept()
         elif self.opener == 'crossbar':
             event.accept()

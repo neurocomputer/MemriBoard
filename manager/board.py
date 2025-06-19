@@ -35,7 +35,7 @@ class Connector():
         self.config = config
         self.c_type = c_type
         self.cb_type = cb_type
-        # self.cb_type = 'raspberry'
+        self.c_type = 'memricore'
         # для симулятора
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
@@ -244,14 +244,28 @@ class Connector():
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
             elif self.c_type == 'memricore':
-                adc = self.rasp_driver.mode_7(task['vol'],
-                                          task['t_ms'],
-                                          task['t_us'],
-                                          task['sign'],
-                                          task['id'],
-                                          task['wl'],
-                                          task['bl']) # vDAC, tms, tus, rev, id, wl, bl
-                res = (int(adc[0]), int(adc[1]))
+                if task['mode_flag'] == 7: # режим команды 7
+                    adc = self.rasp_driver.mode_7(task['vol'],
+                                            task['t_ms'],
+                                            task['t_us'],
+                                            task['sign'],
+                                            task['id'],
+                                            task['wl'],
+                                            task['bl']) # vDAC, tms, tus, rev, id, wl, bl
+                    res = (int(adc[0]), int(adc[1]))
+                elif task['mode_flag'] == 9: # режим команды 9
+                    adc = self.rasp_driver.mode_9(task['vol'], 0, task['wl'], task['bl'])
+                    res = (int(adc[0]), int(adc[1]))
+                elif task['mode_flag'] == 10: # режим команды 10
+                    print(task['vol'])
+                    adc = self.rasp_driver.mode_mvm(task['vol'],
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    task['wl'],
+                                                    task["id"])
+                    res = (int(adc[0]), int(adc[1]))
             # можно добавить работу с другими платами
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -289,6 +303,8 @@ class Connector():
                 vol = d2v(int(self.config['board']['dac_bit']),
                         float(self.config['board']['vol_ref_dac']),
                         task['vol'])
+                if vol >= 0.3:
+                    vol = 0.3
                 res = (send_mode_9_to_crossbar(self.crossbar_array,
                                                vol = vol,
                                                wl = wl,

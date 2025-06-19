@@ -76,10 +76,10 @@ class NewAnn(QDialog):
         self.ui.button_update_cells.clicked.connect(self.button_update_cells_clicked)
         # нажатия кнопок вкладка Сеть
         # self.ui.table_ann_weights.setSortingEnabled(True) # Включаем сортировку
-        self.ui.table_ann_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.ui.table_ann_weights.setColumnCount(6)
-        self.ui.table_ann_weights.setHorizontalHeaderLabels(["W", "BL", "WL", "Rm (Ом)", "Rt (Ом)", "Статус"])
-        self.ui.table_ann_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        #self.ui.table_ann_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        #self.ui.table_ann_weights.setColumnCount(6)
+        #self.ui.table_ann_weights.setHorizontalHeaderLabels(["W", "BL", "WL", "Rm (Ом)", "Rt (Ом)", "Статус"])
+        #self.ui.table_ann_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # обработчики событий
         self.ui.spinbox_correction_weight.valueChanged.connect(self.on_spinbox_correction_weight_changed)
         self.ui.spinbox_r_min.valueChanged.connect(self.on_spinbox_correction_weight_changed)
@@ -103,6 +103,10 @@ class NewAnn(QDialog):
         self.fill_table_weights()
         # комбинация кнопок
         self.button_start_combination()
+        if self.parent.opener == 'math':
+            self.ui.button_load_good_cells.setEnabled(False)
+            self.ui.button_drop_cells.setEnabled(False)
+            self.ui.button_drop_weights.setEnabled(False)
 
     # методы для таблицы с сопротивлениями
 
@@ -144,7 +148,7 @@ class NewAnn(QDialog):
         for _, item in enumerate(self.cells_coordinates_all):
             resistance = self.cells_resistances_all[item]
             if self.mode == 'matmul':
-                weight = self.parent.man.sum_gain/resistance
+                weight = self.parent.man.sum_gain/resistance * weights_correction
             else:
                 weight = r2w(self.parent.man.res_load, resistance) * weights_correction
             self.cells_weights_all[item] = weight
@@ -236,6 +240,8 @@ class NewAnn(QDialog):
                     # уникальные абсолютные округленные
                     if self.mode != 'matmul':
                         self.weights_target_all = list(map(lambda x: float(x), np.round(np.unique(np.abs(self.weights_target_all)), 4)))
+                        if 0. in self.weights_target_all:
+                            self.weights_target_all.remove(0.)
                     self.fill_table_match()
                 except Exception as ex:
                     show_warning_messagebox(f'{ex}')
@@ -612,7 +618,8 @@ class NewAnn(QDialog):
         """
         if self.application_status == 'stop':
             if self.parent.opener == 'math':
-                self.parent.math_dialog.on_weights_written(copy.deepcopy(self.weights_target_all))
+                self.parent.math_dialog.on_weights_written(copy.deepcopy(self.weights_target_all),
+                                                           self.ui.spinbox_correction_weight.value())
             # todo: сделать в parent функцию set_up_init_values()
             self.parent.fill_table()
             self.parent.color_table()

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>892</width>
-    <height>582</height>
+    <width>969</width>
+    <height>555</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,7 +21,7 @@
      </property>
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
-       <string>Числа</string>
+       <string>Ячейка</string>
       </attribute>
       <layout class="QHBoxLayout" name="horizontalLayout_9">
        <item>
@@ -35,39 +35,6 @@
             <enum>QFrame::Raised</enum>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_8">
-            <item>
-             <widget class="QLabel" name="label_9">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Работа с</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="combo_math_mode">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <item>
-               <property name="text">
-                <string>ячейкой</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>кроссбаром</string>
-               </property>
-              </item>
-             </widget>
-            </item>
             <item>
              <widget class="QLabel" name="label_cell_info">
               <property name="sizePolicy">
@@ -109,14 +76,20 @@
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="decimals">
+               <number>4</number>
+              </property>
               <property name="minimum">
-               <double>0.010000000000000</double>
+               <double>0.000100000000000</double>
               </property>
               <property name="maximum">
-               <double>0.990000000000000</double>
+               <double>99.999899999999997</double>
               </property>
               <property name="singleStep">
-               <double>0.010000000000000</double>
+               <double>0.000100000000000</double>
+              </property>
+              <property name="value">
+               <double>0.100000000000000</double>
               </property>
              </widget>
             </item>
@@ -282,7 +255,7 @@
      </widget>
      <widget class="QWidget" name="tab_4">
       <attribute name="title">
-       <string>Матрицы</string>
+       <string>Кроссбар</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
@@ -300,54 +273,6 @@
              <property name="currentIndex">
               <number>0</number>
              </property>
-             <widget class="QWidget" name="tab_5">
-              <attribute name="title">
-               <string>Целевые</string>
-              </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout_11">
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_5">
-                 <item>
-                  <widget class="QPushButton" name="button_write_goal_weights_matrix">
-                   <property name="text">
-                    <string>Записать</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="button_save_goal_weights_matrix">
-                   <property name="text">
-                    <string>Сохранить csv</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="button_heatmap_goal_weights_matrix">
-                   <property name="text">
-                    <string>Хитмап</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="horizontalSpacer_6">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <widget class="QTableWidget" name="table_goal_weights"/>
-               </item>
-              </layout>
-             </widget>
              <widget class="QWidget" name="tab_6">
               <attribute name="title">
                <string>Записанные</string>
@@ -393,6 +318,54 @@
                </item>
                <item>
                 <widget class="QTableWidget" name="table_real_weights"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_5">
+              <attribute name="title">
+               <string>Целевые</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_11">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_5">
+                 <item>
+                  <widget class="QPushButton" name="button_write_goal_weights_matrix">
+                   <property name="text">
+                    <string>Записать</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_save_goal_weights_matrix">
+                   <property name="text">
+                    <string>Сохранить csv</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="button_heatmap_goal_weights_matrix">
+                   <property name="text">
+                    <string>Хитмап</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_6">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QTableWidget" name="table_goal_weights"/>
                </item>
               </layout>
              </widget>
@@ -465,7 +438,7 @@
              </property>
              <widget class="QWidget" name="tab_8">
               <attribute name="title">
-               <string>Данные</string>
+               <string>Числа</string>
               </attribute>
               <layout class="QVBoxLayout" name="verticalLayout_12">
                <item>
@@ -508,6 +481,40 @@
                </item>
                <item>
                 <widget class="QTableWidget" name="input_data_table"/>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_17">
+              <attribute name="title">
+               <string>Напряжения</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_21">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_11">
+                 <item>
+                  <widget class="QPushButton" name="button_save_input_voltage_to_disk">
+                   <property name="text">
+                    <string>Сохранить csv</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_10">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QTableWidget" name="input_data_voltage_table"/>
                </item>
               </layout>
              </widget>
@@ -720,7 +727,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Макс. абс.</string>
+           <string>Масш. входа</string>
           </property>
          </widget>
         </item>
@@ -731,6 +738,47 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>0.000100000000000</double>
+          </property>
+          <property name="maximum">
+           <double>99.999899999999997</double>
+          </property>
+          <property name="singleStep">
+           <double>0.000100000000000</double>
+          </property>
+          <property name="value">
+           <double>10.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Масш. весов</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="spinbox_max_weight">
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>0.000100000000000</double>
+          </property>
+          <property name="maximum">
+           <double>99.999899999999997</double>
+          </property>
+          <property name="singleStep">
+           <double>0.000100000000000</double>
+          </property>
+          <property name="value">
+           <double>1.000000000000000</double>
           </property>
          </widget>
         </item>
