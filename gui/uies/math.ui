@@ -428,6 +428,28 @@
               <attribute name="title">
                <string>Сводка</string>
               </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_22">
+               <item>
+                <widget class="QLabel" name="label_weight_info">
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
              </widget>
             </widget>
            </item>
@@ -529,7 +551,28 @@
               <attribute name="title">
                <string>Сводка</string>
               </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout_15"/>
+              <layout class="QVBoxLayout" name="verticalLayout_15">
+               <item>
+                <widget class="QLabel" name="label_data_info">
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
              </widget>
             </widget>
            </item>
@@ -657,7 +700,7 @@
                     <double>0.000100000000000</double>
                    </property>
                    <property name="maximum">
-                    <double>999.999899999999997</double>
+                    <double>999.999900000000025</double>
                    </property>
                    <property name="value">
                     <double>16.000000000000000</double>
@@ -739,6 +782,28 @@
               <attribute name="title">
                <string>Сводка</string>
               </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_23">
+               <item>
+                <widget class="QLabel" name="label_result_info">
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>228</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
              </widget>
             </widget>
            </item>

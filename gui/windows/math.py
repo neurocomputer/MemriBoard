@@ -85,6 +85,7 @@ class Math(QWidget):
     matmul_error_results = None
     input_array_scaled = None
     input_array_source = None
+    vol_comp: int # ограничитель напряжения
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -148,12 +149,18 @@ class Math(QWidget):
         self.ui.button_calculate_etalon_results.clicked.connect(self.calculate_etalon_results)
         self.ui.button_save_etalon_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_etalon_results))
         self.ui.button_predict_output_data.clicked.connect(self.predict_output_data)
-        self.ui.button_save_output_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_crossbar_results_scaled))
+        self.ui.button_save_output_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_crossbar_results))
         self.ui.button_etalon_vs_output_graph.clicked.connect(self.plot_etalon_vs_output)
         self.ui.button_calculate_matmul_errors.clicked.connect(self.calculate_matmul_error)
         self.ui.button_save_error_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_error_results))
         self.ui.button_goal_weights_from_current.clicked.connect(self.copy_goal_weights_from_current)
         self.read_current_weights_matrix()
+
+    def update_label_weight_info(self):
+        """
+        Данные о весах
+        """
+        self.ui.label_weight_info.setText("") # todo: доделать 
 
     def update_output_with_correction(self):
         """
@@ -161,6 +168,7 @@ class Math(QWidget):
         """
         self.predict_output_data()
         self.update_output_mvm_result()
+        self.calculate_matmul_error()
 
     def copy_goal_weights_from_current(self):
         """
@@ -314,7 +322,7 @@ class Math(QWidget):
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 target_flatten = self.matmul_crossbar_results.flatten() * correction * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
             elif self.ui.combo_postprocess.currentText() == 'нет':
-                target_flatten = self.matmul_etalon_results.flatten()
+                target_flatten = self.matmul_crossbar_results.flatten() * correction
             
             indices = np.argsort(source_flatten)
             
@@ -335,7 +343,10 @@ class Math(QWidget):
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled
             elif self.ui.combo_postprocess.currentText() == 'нет':
-                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results
+                correction = 1
+                if self.ui.checkbox_correction.isChecked():
+                    correction = self.ui.spinbox_correction.value()
+                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results * correction
             self.fill_table(self.ui.error_output_table,
                             self.matmul_error_results,
                             self.matmul_error_results.shape[0],
@@ -521,6 +532,7 @@ class Math(QWidget):
         self.matmul_error_results = None
         self.input_array_scaled = None
         self.input_array_source = None
+        self.vol_comp = 3.3
 
     def closeEvent(self, event): # pylint: disable=C0103
         """
@@ -560,34 +572,15 @@ class Math(QWidget):
             # матричное умножение
             # цикл по семплам
             self.matmul_crossbar_results = deepcopy(self.matmul_predicted_results)
-            for i in range(self.input_array_scaled.shape[0]):
-                # подготавливаем семпл
-                v_dac = [0 for i in range(32)] # todo: перенести в драйвер
-                # v_dac = [0 for i in range(self.input_array_scaled.shape[1])]
-                for h in range(self.input_array_scaled.shape[1]):
-                    if self.input_array_scaled[i][h] > 0.3:
-                        v_dac[h] = v2d(self.parent.man.dac_bit,
-                                    self.parent.man.vol_ref_dac,
-                                    0.3)
-                    else:
-                        v_dac[h] = v2d(self.parent.man.dac_bit,
-                                    self.parent.man.vol_ref_dac,
-                                    self.input_array_scaled[i][h])
-                # проходим по всем строкам кроссбара
-                for j in range(self.parent.man.col_num):
-                    if self.matmul_predicted_results[i][j] < 3.3: # todo: с учетом поправки???
-                        task = {'mode_flag': 10,
-                                'vol': v_dac,
-                                'id': 0,
-                                'wl': j}
-                        v_adc, _ = self.parent.man.conn.impact(task)
-                    else:
-                        v_adc = 0
-                    self.matmul_crossbar_results[i][j] = a2v(self.parent.man.gain,
-                                            self.parent.man.adc_bit,
-                                            self.parent.man.vol_ref_adc,
-                                            v_adc)
-                    self.update_output_mvm_result()
+            self.ui.progress_bar.setMaximum(self.matmul_predicted_results.shape[0]*self.matmul_predicted_results.shape[1])
+            self.vol_comp = 3.3
+            if self.ui.checkbox_correction.isChecked():
+                self.vol_comp *= self.ui.spinbox_correction.value()
+            mult_thread = MatMul(parent=self)
+            mult_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
+            mult_thread.value_got.connect(self.on_value_got) # после выполнения
+            mult_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+            mult_thread.start()
 
     def update_output_mvm_result(self):
         """
@@ -609,7 +602,8 @@ class Math(QWidget):
         """
         Получено значение
         """
-        self.result.append(value)
+        if self.tabwidget_mode.currentIndex() == 0:
+            self.result.append(value)
 
     def on_count_changed(self, value: int) -> None:
         """
@@ -645,7 +639,10 @@ class Math(QWidget):
         """
         Завершение выполнения
         """
-        self.fill_output_data()
+        if self.tabwidget_mode.currentIndex() == 0:
+            self.fill_output_data()
+        if self.tabwidget_mode.currentIndex() == 1:
+            self.update_output_mvm_result()
         self.ui.progress_bar.setValue(0)
 
 class MakeMult(QThread):
@@ -679,4 +676,53 @@ class MakeMult(QThread):
             counter += 1
             self.count_changed.emit(counter)
             self.value_got.emit(v_adc)
+        self.progress_finished.emit(counter)
+
+class MatMul(QThread):
+    """
+    Матричное умножение
+    """
+    count_changed = pyqtSignal(int)
+    value_got = pyqtSignal(int)
+    progress_finished = pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        QThread.__init__(self, parent)
+        self.parent = parent
+
+    def run(self):
+        """
+        Запуск потока умножения
+        """
+        counter = 0
+        for i in range(self.parent.input_array_scaled.shape[0]):
+            # подготавливаем семпл
+            v_dac = [0 for i in range(32)] # todo: перенести в драйвер
+            # v_dac = [0 for i in range(self.input_array_scaled.shape[1])]
+            for h in range(self.parent.input_array_scaled.shape[1]):
+                if self.parent.input_array_scaled[i][h] > 0.3:
+                    v_dac[h] = v2d(self.parent.parent.man.dac_bit,
+                                self.parent.parent.man.vol_ref_dac,
+                                0.3)
+                else:
+                    v_dac[h] = v2d(self.parent.parent.man.dac_bit,
+                                self.parent.parent.man.vol_ref_dac,
+                                self.parent.input_array_scaled[i][h])
+            # проходим по всем строкам кроссбара
+            for j in range(self.parent.parent.man.col_num):
+                if self.parent.matmul_predicted_results[i][j] < self.parent.vol_comp:
+                    task = {'mode_flag': 10,
+                            'vol': v_dac,
+                            'id': 0,
+                            'wl': j}
+                    v_adc, _ = self.parent.parent.man.conn.impact(task)
+                else:
+                    v_adc = 0
+                self.parent.matmul_crossbar_results[i][j] = a2v(self.parent.parent.man.gain,
+                                        self.parent.parent.man.adc_bit,
+                                        self.parent.parent.man.vol_ref_adc,
+                                        v_adc)
+                counter += 1
+                self.count_changed.emit(counter)
+                self.value_got.emit(v_adc)
         self.progress_finished.emit(counter)
