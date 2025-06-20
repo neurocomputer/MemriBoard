@@ -329,6 +329,13 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_5">
                  <item>
+                  <widget class="QPushButton" name="button_goal_weights_from_current">
+                   <property name="text">
+                    <string>Из записанных</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <widget class="QPushButton" name="button_write_goal_weights_matrix">
                    <property name="text">
                     <string>Записать</string>
@@ -635,6 +642,39 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QLabel" name="label_7">
+                   <property name="text">
+                    <string>Поправка:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QDoubleSpinBox" name="spinbox_correction">
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000100000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>99.999899999999997</double>
+                   </property>
+                   <property name="value">
+                    <double>16.000000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="checkbox_correction">
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="checked">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="horizontalSpacer_4">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
@@ -805,12 +845,12 @@
           </property>
           <item>
            <property name="text">
-            <string>mapping</string>
+            <string>нет</string>
            </property>
           </item>
           <item>
            <property name="text">
-            <string>нет</string>
+            <string>scaling</string>
            </property>
           </item>
          </widget>
@@ -838,12 +878,12 @@
           </property>
           <item>
            <property name="text">
-            <string>mapping</string>
+            <string>нет</string>
            </property>
           </item>
           <item>
            <property name="text">
-            <string>нет</string>
+            <string>scaling</string>
            </property>
           </item>
          </widget>

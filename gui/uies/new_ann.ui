@@ -268,6 +268,13 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="button_signal_parameters">
+             <property name="text">
+              <string>Сигнал</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="button_map_weights">
              <property name="text">
               <string>Записать</string>

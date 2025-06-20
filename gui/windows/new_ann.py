@@ -6,15 +6,15 @@
 
 import os
 import copy
-# import math
 import numpy as np
 import matplotlib.pyplot as plt
 from PyQt5.QtCore import Qt
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView, QFileDialog
 
-from manager.service import r2a, r2w, w2r, a2r, v2d
+from manager.service import r2a, r2w, w2r, a2r, v2d, d2v
 from manager.service.plots import calculate_counts_for_ticket
+from manager.service.global_settings import TICKET_PATH
 from gui.src import show_warning_messagebox, choose_cells, open_file_dialog, write_csv_data
 from gui.windows.apply import ApplyExp
 
@@ -40,13 +40,13 @@ class NewAnn(QDialog):
     application_status: str = 'stop'
     ticket = None
     coordinates: list = [] # координаты для окна ApplyExp
-    writen_cells: list = []
+    written_cells: list = []
     not_writen_cells: list = []
     written_weights: list = []
     not_written_weights: list = []
     map_thread: ApplyExp
 
-    # todo: сделать выбор по кнопке
+    # значения по умолчанию для сигнала записи
     PROG_COUNT = 3
     RESET_VOL_MIN = 0.3
     RESET_VOL_MAX = 1.2
@@ -76,10 +76,10 @@ class NewAnn(QDialog):
         self.ui.button_update_cells.clicked.connect(self.button_update_cells_clicked)
         # нажатия кнопок вкладка Сеть
         # self.ui.table_ann_weights.setSortingEnabled(True) # Включаем сортировку
-        #self.ui.table_ann_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        #self.ui.table_ann_weights.setColumnCount(6)
-        #self.ui.table_ann_weights.setHorizontalHeaderLabels(["W", "BL", "WL", "Rm (Ом)", "Rt (Ом)", "Статус"])
-        #self.ui.table_ann_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.ui.table_ann_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        # self.ui.table_ann_weights.setColumnCount(6)
+        # self.ui.table_ann_weights.setHorizontalHeaderLabels(["W", "BL", "WL", "Rm (Ом)", "Rt (Ом)", "Статус"])
+        # self.ui.table_ann_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # обработчики событий
         self.ui.spinbox_correction_weight.valueChanged.connect(self.on_spinbox_correction_weight_changed)
         self.ui.spinbox_r_min.valueChanged.connect(self.on_spinbox_correction_weight_changed)
@@ -107,6 +107,39 @@ class NewAnn(QDialog):
             self.ui.button_load_good_cells.setEnabled(False)
             self.ui.button_drop_cells.setEnabled(False)
             self.ui.button_drop_weights.setEnabled(False)
+        # загружаем тикет
+        ticket_name = self.parent.man.ap_config['gui']['program_ticket']
+        self.ticket = self.parent.read_ticket_from_disk(ticket_name)
+        # меняем параметры тикета
+        self.ticket['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MIN)
+        self.ticket['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MAX)
+        self.ticket['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_STEP)
+        self.ticket['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MIN)
+        self.ticket['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MAX)
+        self.ticket['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_STEP)
+        self.ticket['params']['count'] = self.PROG_COUNT
+        # привязываем к кнопке
+        self.ui.button_signal_parameters.clicked.connect(self.change_signal_parameters)
+
+    def change_signal_parameters(self):
+        """
+        Изменить параметры сигнала записи
+        """
+        self.parent.show_signal_dialog(self.ticket, "edit_for_programming")
+
+    def apply_edit_to_prog_ticket(self):
+        """
+        Обмен тикетом через диск
+        """
+        self.ticket = self.parent.read_ticket_from_disk("temp.json")
+        os.remove(os.path.join(TICKET_PATH,"temp.json"))
+        self.RESET_VOL_MIN = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_dir_strt_inc'])
+        self.RESET_VOL_MAX = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_dir_stop_inc'])
+        self.RESET_STEP = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_dir_step_inc'])
+        self.SET_VOL_MIN = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_rev_strt_inc'])
+        self.SET_VOL_MAX = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_rev_stop_inc'])
+        self.SET_STEP = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_rev_step_inc'])
+        self.PROG_COUNT = self.ticket['params']['count']
 
     # методы для таблицы с сопротивлениями
 
@@ -232,18 +265,18 @@ class NewAnn(QDialog):
                 try:
                     self.weights_target_all = file.readlines()
                     status_open = True
-                except Exception as ex:
+                except Exception as ex: # pylint: disable=W0718
                     show_warning_messagebox(f'{ex}')
             if status_open:
                 try:
                     self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
                     # уникальные абсолютные округленные
                     if self.mode != 'matmul':
-                        self.weights_target_all = list(map(lambda x: float(x), np.round(np.unique(np.abs(self.weights_target_all)), 4)))
+                        self.weights_target_all = list(map(float, np.round(np.unique(np.abs(self.weights_target_all)), 4)))
                         if 0. in self.weights_target_all:
                             self.weights_target_all.remove(0.)
                     self.fill_table_match()
-                except Exception as ex:
+                except Exception as ex: # pylint: disable=W0718
                     show_warning_messagebox(f'{ex}')
 
     def fill_table_match(self): # +
@@ -399,8 +432,8 @@ class NewAnn(QDialog):
                     if self.mode == 'matmul':
                         self.target_cells_resistances = {}
                         row_position = 0
-                        for i in range(self.parent.man.col_num):
-                            for j in range(self.parent.man.row_num):
+                        for _ in range(self.parent.man.col_num):
+                            for _ in range(self.parent.man.row_num):
                                 # вытаскиваем сопротивление
                                 target_resistance = self.ui.table_match.item(row_position, 2).data(Qt.DisplayRole)
                                 current_resistance = self.ui.table_weights.item(row_position, 2).data(Qt.DisplayRole)
@@ -445,8 +478,8 @@ class NewAnn(QDialog):
                             self.target_cells_resistances[closest_key] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
                     self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))
-                    self.writen_cells = []
-                    self.writen_weights = []
+                    self.written_cells = []
+                    self.written_weights = []
                     self.coordinates = list(self.target_cells_resistances.keys()) # apply.py
                     self.target_resistances = list(self.target_cells_resistances.values())
                     self.counter = 0
@@ -454,16 +487,16 @@ class NewAnn(QDialog):
                     self.button_work_combination()
                     self.data_for_plot_y = []
                     self.parent.exp_name = 'запись весов'
-                    ticket_name = self.parent.man.ap_config['gui']['program_ticket']
-                    self.ticket = self.parent.read_ticket_from_disk(ticket_name)
-                    # меняем параметры тикета
-                    self.ticket['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MIN)
-                    self.ticket['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MAX)
-                    self.ticket['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_STEP)
-                    self.ticket['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MIN)
-                    self.ticket['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MAX)
-                    self.ticket['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_STEP)
-                    self.ticket['params']['count'] = self.PROG_COUNT
+                    # ticket_name = self.parent.man.ap_config['gui']['program_ticket']
+                    # self.ticket = self.parent.read_ticket_from_disk(ticket_name)
+                    # # меняем параметры тикета
+                    # self.ticket['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MIN)
+                    # self.ticket['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MAX)
+                    # self.ticket['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_STEP)
+                    # self.ticket['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MIN)
+                    # self.ticket['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MAX)
+                    # self.ticket['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_STEP)
+                    # self.ticket['params']['count'] = self.PROG_COUNT
                     self.ticket['terminate']['type'] = "><"
                     self.ticket['terminate']['value'] = self.get_tolerance_ranges()
                     # заполняем список экспериментов
@@ -495,9 +528,8 @@ class NewAnn(QDialog):
         Изменился счетчик
         '''
         # print('on_count_changed')
-        pass
 
-    def on_progress_finished(self, value):
+    def on_progress_finished(self, _):
         """
         Выполнились все тикеты в эксперименте для одной ячейки
         """
@@ -520,8 +552,8 @@ class NewAnn(QDialog):
         shutdown_max = self.target_resistances[self.counter] + self.target_resistances[self.counter]*tolerance/100
         if shutdown_min <= data_for_plot_y[-1] <= shutdown_max:
             self.ui.table_match.setItem(row, 6, QTableWidgetItem('записано'))
-            self.writen_cells.append(self.coordinates[self.counter])
-            self.writen_weights.append(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
+            self.written_cells.append(self.coordinates[self.counter])
+            self.written_weights.append(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
             self.not_writen_cells.remove(self.coordinates[self.counter])
             self.not_written_weights.remove(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
         else:
@@ -563,7 +595,6 @@ class NewAnn(QDialog):
         Закончился тикет
         '''
         # print('on_finished_exp')
-        pass
 
     def on_finished_exp(self, value):
         """
@@ -607,7 +638,7 @@ class NewAnn(QDialog):
         self.application_status = 'stop'
         self.ticket = None
         self.coordinates = []
-        self.writen_cells = []
+        self.written_cells = []
         self.not_writen_cells = []
         self.written_weights = []
         self.not_written_weights = []
@@ -617,12 +648,12 @@ class NewAnn(QDialog):
         Закрытие окна
         """
         if self.application_status == 'stop':
-            if self.parent.opener == 'math':
-                self.parent.math_dialog.on_weights_written(copy.deepcopy(self.weights_target_all),
-                                                           self.ui.spinbox_correction_weight.value())
             # todo: сделать в parent функцию set_up_init_values()
             self.parent.fill_table()
             self.parent.color_table()
+            if self.parent.opener == 'math':
+                self.parent.math_dialog.on_weights_written(copy.deepcopy(self.weights_target_all),
+                                                           self.ui.spinbox_correction_weight.value())
             self.set_up_init_values()
             event.accept()
         elif self.application_status == 'work':
@@ -683,7 +714,7 @@ class NewAnn(QDialog):
         """
         folder = QFileDialog.getExistingDirectory(self)
         fname = os.path.join(folder, 'written_cells.csv')
-        write_csv_data(fname, ['wl', 'bl'], copy.deepcopy(self.writen_cells))
+        write_csv_data(fname, ['wl', 'bl'], copy.deepcopy(self.written_cells))
         fname = os.path.join(folder, 'not_written_cells.csv')
         write_csv_data(fname, ['wl', 'bl'], copy.deepcopy(self.not_writen_cells))
         # todo: добавить выгрузку записанных и не записанных весов

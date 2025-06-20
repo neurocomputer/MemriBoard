@@ -88,10 +88,13 @@ def send_mode_mvm_to_crossbar(crossbar: list, **kwargs) -> int:
     sum_current = 0
     if kwargs['vol']:
         for i, item in enumerate(kwargs['vol']):
-            # print('Напряжение', item)
-            # print(i, item, kwargs['wl'])
-            current = crossbar[i][kwargs['wl']].apply_voltage(item)
-            sum_current += current
+            try:
+                # print('Напряжение', item)
+                # print(i, item, kwargs['wl'])
+                current = crossbar[i][kwargs['wl']].apply_voltage(item)
+                sum_current += current
+            except IndexError:
+                break
         v_out = sum_current * kwargs['sum_gain']
         # wl = kwargs['wl']
         # print(f'wl={wl}, v_out={v_out}')

@@ -2,21 +2,20 @@
 Окно математики
 """
 
-# pylint: disable=E0611
+# pylint: disable=E0611, I1101, C0301
 
 import os
-import numpy as np
-import random
+import csv
 from copy import deepcopy
+import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QHeaderView, QWidget
+from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QWidget
 from PyQt5.QtCore import QThread, pyqtSignal
+import matplotlib.pyplot as plt
 from manager.service import w2r, r2w, v2d, a2v
 from gui.src import show_warning_messagebox, open_file_dialog, snapshot
-import csv
-import matplotlib.pyplot as plt
 
 AMOUNT_RANDOM_SAMPLES = 10
 
@@ -46,19 +45,18 @@ def save_as_array_to_csv(parent, array):
     """
     Сохранить массив через диалог
     """
-    file_path = QFileDialog.getSaveFileName(parent,
-                                                "Выберите директорию для сохранения")[0]
-    if file_path:
-        try:
-            path_check = file_path.split('.')
-            # print(path_check)
-            if path_check[-1] != 'csv':
-                file_path += '.csv'
-            save_array_to_csv(array, file_path)
-            show_warning_messagebox(f'Сохранено в {file_path}')
-        except Exception as ex: # pylint: disable=W0718
-            # print(ex)
-            show_warning_messagebox('Ошибка сохранения!')
+    if not array is None:
+        file_path = QFileDialog.getSaveFileName(parent,
+                                                    "Выберите директорию для сохранения")[0]
+        if file_path:
+            try:
+                path_check = file_path.split('.')
+                if path_check[-1] != 'csv':
+                    file_path += '.csv'
+                save_array_to_csv(array, file_path)
+                show_warning_messagebox(f'Сохранено в {file_path}')
+            except Exception: # pylint: disable=W0718
+                show_warning_messagebox('Ошибка сохранения!')
 
 def read_csv_to_array(file_path):
     """
@@ -76,8 +74,15 @@ class Math(QWidget):
     voltages: list
     empty_table: list
 
-    matmul_predicted_results = None
     current_weights = None
+    current_weights_scaled = None
+    goal_weights = None
+    error_weights = None
+    matmul_predicted_results = None
+    matmul_etalon_results = None
+    matmul_crossbar_results = None
+    matmul_crossbar_results_scaled = None
+    matmul_error_results = None
     input_array_scaled = None
     input_array_source = None
 
@@ -99,16 +104,17 @@ class Math(QWidget):
         self.ui.button_save_input_data.clicked.connect(self.save_voltage_file)
         self.ui.button_save_result.clicked.connect(self.save_result_file)
         self.ui.button_change_weight_cell.clicked.connect(self.set_weights)
-        # обработка комбобоксов
-        # self.ui.combo_math_mode.activated.connect(self.combo_math_mode_activated)
-        self.ui.combo_preprocess.activated.connect(self.on_text_input_data_changed)
-        self.ui.combo_postprocess.activated.connect(self.fill_result_text)
-        # обработка спинбоксов
+        # обработка виджетов
+        self.ui.combo_preprocess.activated.connect(self.activate_process)
+        self.ui.combo_postprocess.activated.connect(self.activate_process)
+        self.ui.spinbox_max_input.valueChanged.connect(self.update_all_data)
+        self.ui.text_input_data.textChanged.connect(self.update_text_input_data)
+        self.ui.spinbox_max_weight.valueChanged.connect(self.update_all_data)
+        self.ui.spinbox_max_input.setEnabled(False)
+        self.ui.spinbox_max_weight.setEnabled(False)
         self.ui.spinbox_new_weight.valueChanged.connect(self.update_label_target_resistance)
-        self.ui.spinbox_max_input.valueChanged.connect(self.on_text_input_data_changed)
-        self.ui.spinbox_max_weight.valueChanged.connect(self.on_max_weight_changed)
-        # обработка поля текста
-        self.ui.text_input_data.textChanged.connect(self.on_text_input_data_changed)
+        self.ui.spinbox_correction.valueChanged.connect(self.update_output_mvm_result)
+        self.ui.checkbox_correction.stateChanged.connect(self.update_output_mvm_result)
         # обновление лейблов
         self.update_label_cell_info()
         self.update_label_target_resistance()
@@ -142,10 +148,44 @@ class Math(QWidget):
         self.ui.button_calculate_etalon_results.clicked.connect(self.calculate_etalon_results)
         self.ui.button_save_etalon_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_etalon_results))
         self.ui.button_predict_output_data.clicked.connect(self.predict_output_data)
-        self.ui.button_save_output_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_crossbar_results))
+        self.ui.button_save_output_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_crossbar_results_scaled))
         self.ui.button_etalon_vs_output_graph.clicked.connect(self.plot_etalon_vs_output)
         self.ui.button_calculate_matmul_errors.clicked.connect(self.calculate_matmul_error)
         self.ui.button_save_error_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_error_results))
+        self.ui.button_goal_weights_from_current.clicked.connect(self.copy_goal_weights_from_current)
+        self.read_current_weights_matrix()
+
+    def copy_goal_weights_from_current(self):
+        """
+        Копировать в целевые текущие веса
+        """
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.goal_weights = deepcopy(self.current_weights_scaled)
+        elif self.ui.combo_preprocess.currentText() == 'нет':
+            self.goal_weights = deepcopy(self.current_weights)
+        self.fill_table(self.table_goal_weights,
+                            self.goal_weights,
+                            self.parent.man.row_num,
+                            self.parent.man.col_num)
+
+    def activate_spinboxes(self):
+        """
+        Активация спинбоксов
+        """
+        if self.ui.combo_preprocess.currentText() == 'scaling' or self.ui.combo_postprocess.currentText() == 'scaling':
+            self.ui.spinbox_max_input.setEnabled(True)
+            self.ui.spinbox_max_weight.setEnabled(True)
+        else:
+            self.ui.spinbox_max_input.setEnabled(False)
+            self.ui.spinbox_max_weight.setEnabled(False)
+
+    def activate_process(self):
+        """
+        Нужен препроцесс
+        """
+        self.activate_spinboxes()
+        # Обновить входы и расчетные веса
+        self.update_all_data()
 
 ## кнопки работы с весами
 
@@ -153,7 +193,6 @@ class Math(QWidget):
         """
         Запись целевых весов в табличку интерфейса
         """
-        # print(goal_weights)
         if goal_weights:
             self.goal_weights = deepcopy(self.empty_table)
             k = 0
@@ -166,6 +205,7 @@ class Math(QWidget):
                             self.parent.man.row_num,
                             self.parent.man.col_num)
             self.ui.spinbox_max_weight.setValue(weights_correction)
+        self.read_current_weights_matrix()
 
     def button_write_weights_matrix_clicked(self):
         """
@@ -178,13 +218,18 @@ class Math(QWidget):
         Чтение текущих весов
         """
         self.current_weights = deepcopy(self.empty_table)
+        self.current_weights_scaled = deepcopy(self.empty_table)
         for i in range(self.parent.man.row_num):
             for j in range(self.parent.man.col_num):
-                if self.ui.combo_postprocess.currentText() == 'mapping':
-                    self.current_weights[i][j] = round(self.parent.man.sum_gain/self.parent.all_resistances[i][j], 4) * float(self.ui.spinbox_max_weight.value())
-                elif self.ui.combo_postprocess.currentText() == 'нет':
-                    self.current_weights[i][j] = round(self.parent.man.sum_gain/self.parent.all_resistances[i][j], 4)
-        self.fill_table(self.table_real_weights,
+                self.current_weights_scaled[i][j] = round(self.parent.man.sum_gain/self.parent.all_resistances[i][j], 4) * float(self.ui.spinbox_max_weight.value())
+                self.current_weights[i][j] = round(self.parent.man.sum_gain/self.parent.all_resistances[i][j], 4)
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights_scaled,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        elif self.ui.combo_preprocess.currentText() == 'нет':
+            self.fill_table(self.table_real_weights,
                         self.current_weights,
                         self.parent.man.row_num,
                         self.parent.man.col_num)
@@ -193,11 +238,15 @@ class Math(QWidget):
         """
         Посчитать ошибку
         """
-        self.error_weights = np.abs(self.goal_weights - self.current_weights)
-        self.fill_table(self.table_weights_errors,
-                        self.error_weights,
-                        self.parent.man.row_num,
-                        self.parent.man.col_num)
+        if not self.goal_weights is None:
+            if self.ui.combo_preprocess.currentText() == 'scaling':
+                self.error_weights = np.abs(self.goal_weights - self.current_weights_scaled)
+            elif self.ui.combo_preprocess.currentText() == 'нет':
+                self.error_weights = np.abs(self.goal_weights - self.current_weights)
+            self.fill_table(self.table_weights_errors,
+                            self.error_weights,
+                            self.parent.man.row_num,
+                            self.parent.man.col_num)
 
 ## кнопки работы с данными
     def load_input_array_from_disk(self):
@@ -210,7 +259,7 @@ class Math(QWidget):
                 # загружаем
                 self.input_array_source = read_csv_to_array(file_path)
                 self.input_array_source, _ = adjust_columns(self.input_array_source, self.parent.man.row_num)
-                self.on_text_input_data_changed()
+                self.update_voltages_array()
             except Exception as ex: # pylint: disable=W0718
                 show_warning_messagebox(f'Файл не соответствует требованиям! {ex}')
 
@@ -219,86 +268,81 @@ class Math(QWidget):
         Сгенерировать случайные входные данные
         """
         self.input_array_source = np.random.uniform(0, 1, size=(AMOUNT_RANDOM_SAMPLES, self.parent.man.row_num))
-        self.on_text_input_data_changed()
+        self.update_voltages_array()
 
     def calculate_etalon_results(self):
         """
         Посчитать результат матричного умножения (эталон)
         """
-        self.matmul_etalon_results = self.input_array_source @ self.goal_weights
-        self.fill_table(self.ui.etalon_output_table,
-                        self.matmul_etalon_results,
-                        self.matmul_etalon_results.shape[0],
-                        self.matmul_etalon_results.shape[1])
-        self.ui.button_apply.setEnabled(True)
+        if (not self.input_array_source is None) and (not self.goal_weights is None):
+            self.matmul_etalon_results = self.input_array_source @ self.goal_weights
+            self.fill_table(self.ui.etalon_output_table,
+                            self.matmul_etalon_results,
+                            self.matmul_etalon_results.shape[0],
+                            self.matmul_etalon_results.shape[1])
+            self.ui.button_apply.setEnabled(True)
 
     def predict_output_data(self):
         """
         Прогноз результата с текущими весами
         """
-        if self.ui.combo_postprocess.currentText() == 'mapping':
-            self.matmul_predicted_results = (self.input_array_scaled @ self.current_weights) * float(self.ui.spinbox_max_input.value()) # / 16
-        elif self.ui.combo_postprocess.currentText() == 'нет':
-            self.matmul_predicted_results = (self.input_array_scaled @ self.current_weights) # / 16
-        self.fill_table(self.ui.predicted_output_table,
-                        self.matmul_predicted_results,
-                        self.matmul_predicted_results.shape[0],
-                        self.matmul_predicted_results.shape[1])
-        self.ui.button_apply.setEnabled(True)
+        if not self.input_array_scaled is None:
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                self.matmul_predicted_results = (self.input_array_scaled @ self.current_weights_scaled) * float(self.ui.spinbox_max_input.value())
+            elif self.ui.combo_postprocess.currentText() == 'нет':
+                self.matmul_predicted_results = self.input_array_source @ self.current_weights
+            self.fill_table(self.ui.predicted_output_table,
+                            self.matmul_predicted_results,
+                            self.matmul_predicted_results.shape[0],
+                            self.matmul_predicted_results.shape[1])
+            self.ui.button_apply.setEnabled(True)
 
     def plot_etalon_vs_output(self):
         """
         График эталона и ошибок матричного умножения
         """
-        plt.clf()
-        plt.plot(np.sort(self.matmul_etalon_results.flatten()),
-                 np.sort(self.matmul_etalon_results.flatten()))
-        plt.plot(np.sort(self.matmul_etalon_results.flatten()),
-                 np.sort(self.matmul_crossbar_results.flatten()))
-        plt.show()
+        if (not self.matmul_etalon_results is None) and (not self.matmul_crossbar_results is None):
+            plt.clf()
+            plt.plot(np.sort(self.matmul_etalon_results.flatten()),
+                    np.sort(self.matmul_etalon_results.flatten()), label='etalon')
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                plt.plot(np.sort(self.matmul_etalon_results.flatten()),
+                        np.sort(self.matmul_crossbar_results.flatten()) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value()), 'o', label='real')
+            elif self.ui.combo_postprocess.currentText() == 'нет':
+                plt.plot(np.sort(self.matmul_etalon_results.flatten()),
+                        np.sort(self.matmul_crossbar_results.flatten()), 'o', label='real')
+            plt.xlabel('MatMul results')
+            plt.ylabel('MatMul results')
+            plt.legend()
+            plt.grid(True, linestyle='--', linewidth=0.5)
+            plt.show()
 
     def calculate_matmul_error(self):
         """
         Посчитать ошибку умножения
         """
-        self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results
-        self.fill_table(self.ui.error_output_table,
-                        self.matmul_error_results,
-                        self.matmul_error_results.shape[0],
-                        self.matmul_error_results.shape[1])
+        if not self.matmul_crossbar_results is None:
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled
+            elif self.ui.combo_postprocess.currentText() == 'нет':
+                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results
+            self.fill_table(self.ui.error_output_table,
+                            self.matmul_error_results,
+                            self.matmul_error_results.shape[0],
+                            self.matmul_error_results.shape[1])
 
     def fill_table(self, table, data, row_count, column_count):
         """
         Заполнить таблицу
         """
-        # row count
         table.setRowCount(row_count)
-        # column count
         table.setColumnCount(column_count)
-        # table will fit the screen horizontally
-        # table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # table.resizeColumnsToContents()
-        # заполнение весами
+        # заполнение данными
         for i in range(row_count):
             for j in range(column_count):
                 table.setItem(i,j, QTableWidgetItem(str(round(data[i][j],4))))
-        # todo: можно добавить остальные варианты для вызова из других окон
         table.setHorizontalHeaderLabels([str(i) for i in range(column_count)])
         table.setVerticalHeaderLabels([str(i) for i in range(row_count)])
-
-    def on_max_weight_changed(self):
-        """
-        Масштабирование веса
-        """
-        if self.ui.combo_preprocess.currentText() == 'mapping':
-            if self.tabwidget_mode.currentIndex() == 0:
-                self.update_label_cell_info()
-                self.update_label_target_resistance()
-            elif self.tabwidget_mode.currentIndex() == 1:
-                if not self.current_weights is None:
-                    self.read_current_weights_matrix()
-                if not self.matmul_predicted_results is None:
-                    self.predict_output_data()
 
     def set_weights(self):
         """
@@ -340,57 +384,81 @@ class Math(QWidget):
                     for row in file_reader:
                         text += row[0].replace(',','.') + '\n'
                     self.ui.text_input_data.appendPlainText(text)
-        except:
+        except Exception: # pylint: disable=W0718
             show_warning_messagebox("Некорректный файл!")
 
-    def on_text_input_data_changed(self):
+    def update_all_data(self):
+        """
+        Обновить все данные
+        """
+        if self.tabwidget_mode.currentIndex() == 0:
+            # preprocess
+            self.update_text_input_data()
+            self.update_label_cell_info()
+            self.update_label_target_resistance()
+            # postprocess
+            self.fill_output_data()
+        elif self.tabwidget_mode.currentIndex() == 1:
+            # preprocess
+            self.update_voltages_array()
+            self.read_current_weights_matrix()
+            self.calculate_weights_error()
+            # postprocess
+            self.predict_output_data()
+            self.update_output_mvm_result()
+            self.calculate_matmul_error()
+
+    def update_voltages_array(self):
+        """
+        Обновить массив напряжений
+        """
+        if not self.input_array_source is None:
+            if self.ui.combo_preprocess.currentText() == 'scaling':
+                self.input_array_scaled = deepcopy(self.input_array_source) / self.ui.spinbox_max_input.value()
+            elif self.ui.combo_preprocess.currentText() == 'нет':
+                self.input_array_scaled = deepcopy(self.input_array_source)
+            # отображаем
+            self.fill_table(self.ui.input_data_table,
+                            self.input_array_source,
+                            self.input_array_source.shape[0],
+                            self.input_array_source.shape[1])
+            self.fill_table(self.ui.input_data_voltage_table,
+                            self.input_array_scaled,
+                            self.input_array_scaled.shape[0],
+                            self.input_array_scaled.shape[1])
+
+    def update_text_input_data(self):
         """
         Изменение поля входных данных
         """
         try:
-            if self.tabwidget_mode.currentIndex() == 0:
-                inp_text = self.ui.text_input_data.toPlainText()
-                inp_data = inp_text.split('\n')
-                try:
-                    inp_data = list(filter(lambda a: a != '', inp_data))
-                except:
-                    pass
-                inp_data = list(map(float, inp_data))
-                self.voltages = []
-                self.ui.text_voltage.clear()
-                # 1 Предобработка
-                if self.ui.combo_preprocess.currentText() == 'mapping':
-                    for val in inp_data:
-                        self.voltages.append(round(val/float(self.ui.spinbox_max_input.value()),4)) #todo: вынести из GUI
-                elif self.ui.combo_preprocess.currentText() == 'нет':
-                    for val in inp_data:
-                        self.voltages.append(val)
-                # заполнение текста
-                text = ''
-                for vol in self.voltages:
-                    text += str(vol).replace('.',',') + '\n'   
-                self.ui.text_voltage.appendPlainText(text)            
-                self.ui.label_input_data_status.setText(f"Введено {len(self.voltages)} значений!")
-                self.ui.button_apply.setEnabled(True)
-                if len(self.voltages) == 0:
-                    self.ui.label_input_data_status.setText("Введите по одному числу в строке!")
-                    self.ui.button_apply.setEnabled(False)
-            elif self.tabwidget_mode.currentIndex() == 1:
-                if not self.input_array_source is None:
-                    if self.ui.combo_preprocess.currentText() == 'mapping':
-                        self.input_array_scaled = deepcopy(self.input_array_source) / self.ui.spinbox_max_input.value()
-                    elif self.ui.combo_preprocess.currentText() == 'нет':
-                        self.input_array_scaled = deepcopy(self.input_array_source)
-                    # отображаем
-                    self.fill_table(self.ui.input_data_table,
-                                    self.input_array_source,
-                                    self.input_array_source.shape[0],
-                                    self.input_array_source.shape[1])
-                    self.fill_table(self.ui.input_data_voltage_table,
-                                    self.input_array_scaled,
-                                    self.input_array_scaled.shape[0],
-                                    self.input_array_scaled.shape[1])
-        except ValueError as er:
+            inp_text = self.ui.text_input_data.toPlainText()
+            inp_data = inp_text.split('\n')
+            try:
+                inp_data = list(filter(lambda a: a != '', inp_data))
+            except Exception: # pylint: disable=W0718
+                pass
+            inp_data = list(map(float, inp_data))
+            self.voltages = []
+            self.ui.text_voltage.clear()
+            # 1 Предобработка
+            if self.ui.combo_preprocess.currentText() == 'scaling':
+                for val in inp_data:
+                    self.voltages.append(round(val/float(self.ui.spinbox_max_input.value()),4))
+            elif self.ui.combo_preprocess.currentText() == 'нет':
+                for val in inp_data:
+                    self.voltages.append(val)
+            # заполнение текста
+            text = ''
+            for vol in self.voltages:
+                text += str(vol).replace('.',',') + '\n'
+            self.ui.text_voltage.appendPlainText(text)
+            self.ui.label_input_data_status.setText(f"Введено {len(self.voltages)} значений!")
+            self.ui.button_apply.setEnabled(True)
+            if len(self.voltages) == 0:
+                self.ui.label_input_data_status.setText("Введите по одному числу в строке!")
+                self.ui.button_apply.setEnabled(False)
+        except ValueError:
             self.ui.label_input_data_status.setText("Некорректное значение!")
             self.ui.button_apply.setEnabled(False)
         except ZeroDivisionError:
@@ -405,7 +473,11 @@ class Math(QWidget):
             wl = self.parent.current_wl
             bl = self.parent.current_bl
             res = self.parent.current_last_resistance
-            weight = round(r2w(self.parent.man.res_load, int(self.parent.current_last_resistance))*float(self.ui.spinbox_max_weight.value()), 4)
+            weight = 0
+            if self.ui.combo_preprocess.currentText() == 'scaling':
+                weight = round(r2w(self.parent.man.res_load, int(self.parent.current_last_resistance))*float(self.ui.spinbox_max_weight.value()), 4)
+            elif self.ui.combo_preprocess.currentText() == 'нет':
+                weight = round(r2w(self.parent.man.res_load, int(self.parent.current_last_resistance)), 4)
             self.ui.label_cell_info.setText(f"WL={wl}, BL={bl}, R={res}, Текущее значение={weight}")
         except ZeroDivisionError:
             pass
@@ -415,12 +487,32 @@ class Math(QWidget):
         Обновить значение сопротивления
         """
         try:
-            res = w2r(self.parent.man.res_load, self.ui.spinbox_new_weight.value()/self.ui.spinbox_max_weight.value())
+            res = 0
+            if self.ui.combo_preprocess.currentText() == 'scaling':
+                res = w2r(self.parent.man.res_load, self.ui.spinbox_new_weight.value()/self.ui.spinbox_max_weight.value())
+            elif self.ui.combo_preprocess.currentText() == 'нет':
+                res = w2r(self.parent.man.res_load, self.ui.spinbox_new_weight.value())
             self.ui.label_target_resistance.setText(f"R={res} Ом")
         except ZeroDivisionError:
             pass
 
-    def closeEvent(self, event):
+    def set_up_init_values(self):
+        """
+        Init values
+        """
+        self.current_weights = None
+        self.current_weights_scaled = None
+        self.goal_weights = None
+        self.error_weights = None
+        self.matmul_predicted_results = None
+        self.matmul_etalon_results = None
+        self.matmul_crossbar_results = None
+        self.matmul_crossbar_results_scaled = None
+        self.matmul_error_results = None
+        self.input_array_scaled = None
+        self.input_array_source = None
+
+    def closeEvent(self, event): # pylint: disable=C0103
         """
         Закрытие окна
         """
@@ -430,6 +522,7 @@ class Math(QWidget):
         self.parent.current_bl = None
         self.parent.current_wl = None
         self.parent.current_last_resistance = None
+        self.set_up_init_values()
         self.parent.showNormal()
         event.accept()
 
@@ -459,7 +552,8 @@ class Math(QWidget):
             self.matmul_crossbar_results = deepcopy(self.matmul_predicted_results)
             for i in range(self.input_array_scaled.shape[0]):
                 # подготавливаем семпл
-                v_dac = [0 for i in range(32)]
+                v_dac = [0 for i in range(32)] # todo: перенести в драйвер
+                # v_dac = [0 for i in range(self.input_array_scaled.shape[1])]
                 for h in range(self.input_array_scaled.shape[1]):
                     if self.input_array_scaled[i][h] > 0.3:
                         v_dac[h] = v2d(self.parent.man.dac_bit,
@@ -475,17 +569,28 @@ class Math(QWidget):
                             'vol': v_dac,
                             'id': 0,
                             'wl': j}
-                    # print(task)
-                    # print(i, j)
                     v_adc, _ = self.parent.man.conn.impact(task)
                     self.matmul_crossbar_results[i][j] = a2v(self.parent.man.gain,
                                             self.parent.man.adc_bit,
                                             self.parent.man.vol_ref_adc,
                                             v_adc)
+                    self.update_output_mvm_result()
+
+    def update_output_mvm_result(self):
+        """
+        Обновить отображение результата
+        """
+        if not self.matmul_crossbar_results is None:
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                self.matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
+            elif self.ui.combo_postprocess.currentText() == 'нет':
+                self.matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results)
+            if self.ui.checkbox_correction.isChecked():
+                self.matmul_crossbar_results_scaled *= self.ui.spinbox_correction.value()
             self.fill_table(self.ui.result_output_table,
-                            self.matmul_crossbar_results,
-                            self.matmul_crossbar_results.shape[0],
-                            self.matmul_crossbar_results.shape[1])
+                            self.matmul_crossbar_results_scaled,
+                            self.matmul_crossbar_results_scaled.shape[0],
+                            self.matmul_crossbar_results_scaled.shape[1])
 
     def on_value_got(self, value: int):
         """
@@ -499,40 +604,35 @@ class Math(QWidget):
         """
         self.ui.progress_bar.setValue(value)
 
-    def fill_result_text(self):
+    def fill_output_data(self):
         """
         Заполняем результат
         """
-        if self.tabwidget_mode.currentIndex() == 0:
-            result_for_show = []
-            for item in self.result:
-                # постобработка
-                if self.ui.combo_postprocess.currentText() == 'mapping':
-                    result_for_show.append(a2v(self.parent.man.gain,
-                                            self.parent.man.adc_bit,
-                                            self.parent.man.vol_ref_adc, 
-                                            item) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())) #todo: вынести из GUI
-                elif self.ui.combo_postprocess.currentText() == 'нет':
-                    result_for_show.append(a2v(self.parent.man.gain,
-                                            self.parent.man.adc_bit,
-                                            self.parent.man.vol_ref_adc, 
-                                            item))
-            # заполняем text
-            self.ui.text_output_data.clear()
-            text = ''
-            for value in result_for_show:
-                text += str(round(value,3)).replace('.',',') + '\n'
-            self.ui.text_output_data.appendPlainText(text)
-        elif self.tabwidget_mode.currentIndex() == 1:
-            self.read_current_weights_matrix()
-            if not self.input_array_scaled is None:
-                self.predict_output_data()
+        result_for_show = []
+        for item in self.result:
+            # постобработка
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                result_for_show.append(a2v(self.parent.man.gain,
+                                        self.parent.man.adc_bit,
+                                        self.parent.man.vol_ref_adc,
+                                        item) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value()))
+            elif self.ui.combo_postprocess.currentText() == 'нет':
+                result_for_show.append(a2v(self.parent.man.gain,
+                                        self.parent.man.adc_bit,
+                                        self.parent.man.vol_ref_adc,
+                                        item))
+        # заполняем text
+        self.ui.text_output_data.clear()
+        text = ''
+        for value in result_for_show:
+            text += str(round(value,4)).replace('.',',') + '\n'
+        self.ui.text_output_data.appendPlainText(text)
 
-    def on_progress_finished(self, value: int) -> None:
+    def on_progress_finished(self, _: int) -> None:
         """
         Завершение выполнения
         """
-        self.fill_result_text()
+        self.fill_output_data()
         self.ui.progress_bar.setValue(0)
 
 class MakeMult(QThread):
