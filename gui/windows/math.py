@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from manager.service import w2r, r2w, v2d, a2v
 from gui.src import show_warning_messagebox, open_file_dialog, snapshot
 
-AMOUNT_RANDOM_SAMPLES = 10
+AMOUNT_RANDOM_SAMPLES = 100
 
 def adjust_columns(arr, col_num_max):
     """
@@ -113,8 +113,8 @@ class Math(QWidget):
         self.ui.spinbox_max_input.setEnabled(False)
         self.ui.spinbox_max_weight.setEnabled(False)
         self.ui.spinbox_new_weight.valueChanged.connect(self.update_label_target_resistance)
-        self.ui.spinbox_correction.valueChanged.connect(self.update_output_mvm_result)
-        self.ui.checkbox_correction.stateChanged.connect(self.update_output_mvm_result)
+        self.ui.spinbox_correction.valueChanged.connect(self.update_output_with_correction)
+        self.ui.checkbox_correction.stateChanged.connect(self.update_output_with_correction)
         # обновление лейблов
         self.update_label_cell_info()
         self.update_label_target_resistance()
@@ -154,6 +154,13 @@ class Math(QWidget):
         self.ui.button_save_error_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_error_results))
         self.ui.button_goal_weights_from_current.clicked.connect(self.copy_goal_weights_from_current)
         self.read_current_weights_matrix()
+
+    def update_output_with_correction(self):
+        """
+        Correction
+        """
+        self.predict_output_data()
+        self.update_output_mvm_result()
 
     def copy_goal_weights_from_current(self):
         """
@@ -287,10 +294,7 @@ class Math(QWidget):
         Прогноз результата с текущими весами
         """
         if not self.input_array_scaled is None:
-            if self.ui.combo_postprocess.currentText() == 'scaling':
-                self.matmul_predicted_results = (self.input_array_scaled @ self.current_weights_scaled) * float(self.ui.spinbox_max_input.value())
-            elif self.ui.combo_postprocess.currentText() == 'нет':
-                self.matmul_predicted_results = self.input_array_source @ self.current_weights
+            self.matmul_predicted_results = self.input_array_scaled @ self.current_weights
             self.fill_table(self.ui.predicted_output_table,
                             self.matmul_predicted_results,
                             self.matmul_predicted_results.shape[0],
@@ -303,14 +307,20 @@ class Math(QWidget):
         """
         if (not self.matmul_etalon_results is None) and (not self.matmul_crossbar_results is None):
             plt.clf()
-            plt.plot(np.sort(self.matmul_etalon_results.flatten()),
-                    np.sort(self.matmul_etalon_results.flatten()), label='etalon')
+            correction = 1
+            if self.ui.checkbox_correction.isChecked():
+                correction = self.ui.spinbox_correction.value()
+            source_flatten = self.matmul_etalon_results.flatten()
             if self.ui.combo_postprocess.currentText() == 'scaling':
-                plt.plot(np.sort(self.matmul_etalon_results.flatten()),
-                        np.sort(self.matmul_crossbar_results.flatten()) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value()), 'o', label='real')
+                target_flatten = self.matmul_crossbar_results.flatten() * correction * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
             elif self.ui.combo_postprocess.currentText() == 'нет':
-                plt.plot(np.sort(self.matmul_etalon_results.flatten()),
-                        np.sort(self.matmul_crossbar_results.flatten()), 'o', label='real')
+                target_flatten = self.matmul_etalon_results.flatten()
+            
+            indices = np.argsort(source_flatten)
+            
+            plt.plot(source_flatten[indices], target_flatten[indices], 'o', label='real')
+            plt.plot(source_flatten[indices], source_flatten[indices], label='etalon')
+            
             plt.xlabel('MatMul results')
             plt.ylabel('MatMul results')
             plt.legend()

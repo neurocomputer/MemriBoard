@@ -257,7 +257,7 @@ class Connector():
                     adc = self.rasp_driver.mode_9(task['vol'], 0, task['wl'], task['bl'])
                     res = (int(adc[0]), int(adc[1]))
                 elif task['mode_flag'] == 10: # режим команды 10
-                    print(task['vol'])
+                    #print(task['vol'])
                     adc = self.rasp_driver.mode_mvm(task['vol'],
                                                     0,
                                                     0,
