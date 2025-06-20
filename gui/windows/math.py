@@ -565,11 +565,14 @@ class Math(QWidget):
                                     self.input_array_scaled[i][h])
                 # проходим по всем строкам кроссбара
                 for j in range(self.parent.man.col_num):
-                    task = {'mode_flag': 10,
-                            'vol': v_dac,
-                            'id': 0,
-                            'wl': j}
-                    v_adc, _ = self.parent.man.conn.impact(task)
+                    if self.matmul_predicted_results[i][j] < 3.3: # todo: с учетом поправки???
+                        task = {'mode_flag': 10,
+                                'vol': v_dac,
+                                'id': 0,
+                                'wl': j}
+                        v_adc, _ = self.parent.man.conn.impact(task)
+                    else:
+                        v_adc = 0
                     self.matmul_crossbar_results[i][j] = a2v(self.parent.man.gain,
                                             self.parent.man.adc_bit,
                                             self.parent.man.vol_ref_adc,
