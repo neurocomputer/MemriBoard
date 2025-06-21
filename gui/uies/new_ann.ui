@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1141</width>
+    <width>1260</width>
     <height>661</height>
    </rect>
   </property>
@@ -111,6 +111,13 @@
                     </property>
                     <property name="text">
                      <string>Выбрать</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="button_random_weights">
+                    <property name="text">
+                     <string>Случайно</string>
                     </property>
                    </widget>
                   </item>

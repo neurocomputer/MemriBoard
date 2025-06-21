@@ -120,6 +120,23 @@ class NewAnn(QDialog):
         self.ticket['params']['count'] = self.PROG_COUNT
         # привязываем к кнопке
         self.ui.button_signal_parameters.clicked.connect(self.change_signal_parameters)
+        self.ui.button_random_weights.clicked.connect(self.generate_random_weights)
+
+    def generate_random_weights(self):
+        """
+        Сгенерировать рандомные веса
+        """
+        # получаем с интерфейса сопротивления
+        res_min = self.ui.spinbox_r_min.value()
+        res_max = self.ui.spinbox_r_max.value()
+        random_res = np.random.uniform(res_min, res_max, size=(self.parent.man.row_num*self.parent.man.col_num,))
+        if self.mode == 'matmul':
+            random_weights = map(lambda x: self.parent.man.sum_gain/float(x), random_res)
+        else:
+            random_weights = map(lambda x: r2w(self.parent.man.res_load, float(x)), random_res)
+        self.weights_target_all = list(random_weights)
+        #print(self.weights_target_all)
+        self.fill_table_match()
 
     def change_signal_parameters(self):
         """
