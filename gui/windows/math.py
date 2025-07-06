@@ -129,12 +129,15 @@ class Math(QWidget):
         self.ui.button_write_goal_weights_matrix.clicked.connect(self.button_write_weights_matrix_clicked)
         self.ui.button_save_goal_weights_matrix.clicked.connect(lambda: save_as_array_to_csv(self, self.goal_weights))
         self.ui.button_heatmap_goal_weights_matrix.clicked.connect(lambda: snapshot(self.goal_weights))
+        self.ui.button_histogram_goal_weights_matrix.connect(self.array_to_vector(self))
         self.ui.button_read_current_weights_matrix.clicked.connect(self.read_current_weights_matrix)
         self.ui.button_save_current_weights_matrix.clicked.connect(lambda: save_as_array_to_csv(self, self.current_weights))
         self.ui.button_heatmap_current_weights_matrix.clicked.connect(lambda: snapshot(self.current_weights))
+        self.ui.button_histogram_current_weights_matrix.connect(self.array_to_vector(self))
         self.ui.button_calculate_error_weights.clicked.connect(self.calculate_weights_error)
         self.ui.button_save_error_weights.clicked.connect(lambda: save_as_array_to_csv(self, self.error_weights))
         self.ui.button_heatmap_error_weights.clicked.connect(lambda: snapshot(self.error_weights))
+        self.ui.button_histogram_error_weights_matrix.connect(self.array_to_vector(self))
         # кнопки работы с данными
         self.ui.input_data_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.input_data_voltage_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -262,6 +265,12 @@ class Math(QWidget):
                             self.error_weights,
                             self.parent.man.row_num,
                             self.parent.man.col_num)
+            
+    def array_to_vector(self):
+        """
+        Преобразовывать массив в вектор и строить для него гистограмму
+        """
+        print("meow")
 
 ## кнопки работы с данными
     def load_input_array_from_disk(self):
