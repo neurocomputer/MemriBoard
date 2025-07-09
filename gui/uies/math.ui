@@ -271,7 +271,7 @@
            <item>
             <widget class="QTabWidget" name="tabWidget_2">
              <property name="currentIndex">
-              <number>1</number>
+              <number>3</number>
              </property>
              <widget class="QWidget" name="tab_6">
               <attribute name="title">
@@ -456,6 +456,9 @@
                   <string/>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <widget class="QTableWidget" name="table_summary"/>
                </item>
                <item>
                 <spacer name="verticalSpacer">
