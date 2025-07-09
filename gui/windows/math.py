@@ -308,7 +308,10 @@ class Math(QWidget):
         max = None
         min = None
         if self.current_weights is not None:
-            max, min = self.get_max_min(self.current_weights)
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                max, min = self.get_max_min(self.current_weights_scaled)
+            elif self.ui.combo_postprocess.currentText() == 'нет':
+                max, min = self.get_max_min(self.current_weights)
             data.append(['Записанные:', str(max), str(min)])
             rows += 1
         if self.goal_weights is not None:
