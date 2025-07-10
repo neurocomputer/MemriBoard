@@ -171,6 +171,7 @@ class Window(QMainWindow):
         """
         Показать окно математики
         """
+        self.read_cell_all('crossbar') # чтение всех ячеек
         self.opener = 'math'
         self.current_bl = self.ui.table_crossbar.currentRow()
         self.current_wl = self.ui.table_crossbar.currentColumn()

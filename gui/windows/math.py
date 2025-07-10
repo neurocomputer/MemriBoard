@@ -158,6 +158,8 @@ class Math(QWidget):
         self.ui.button_calculate_matmul_errors.clicked.connect(self.calculate_matmul_error)
         self.ui.button_save_error_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.matmul_error_results))
         self.ui.button_goal_weights_from_current.clicked.connect(self.copy_goal_weights_from_current)
+        self.ui.button_histogram_numbers.clicked.connect(lambda: self.array_to_vector(self.input_array_source))
+        self.ui.button_histogram_voltage.clicked.connect(lambda: self.array_to_vector(self.input_array_scaled))
         self.read_current_weights_matrix()
 
     def update_label_weight_info(self):
