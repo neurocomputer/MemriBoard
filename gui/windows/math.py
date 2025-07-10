@@ -373,6 +373,20 @@ class Math(QWidget):
                 # загружаем
                 self.input_array_source = read_csv_to_array(file_path)
                 self.input_array_source, _ = adjust_columns(self.input_array_source, self.parent.man.row_num)
+                # проверка на нули
+                zeros = False
+                for i in range(len(self.input_array_source)):
+                    if zeros:
+                        break
+                    for j in range(len(self.input_array_source[0])):
+                        if self.input_array_source[i][j] < 0:
+                            zeros = True
+                            break                            
+                if zeros:
+                    show_warning_messagebox('В файле обнаружены отрицательные числа. Они будут загружены по модулю.')
+                    for i in range(len(self.input_array_source)):
+                        for j in range(len(self.input_array_source[0])):
+                            self.input_array_source[i][j] = abs(self.input_array_source[i][j])
                 self.update_voltages_array()
                 self.update_summary_data() # обновление сводки
             except Exception as ex: # pylint: disable=W0718
