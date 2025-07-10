@@ -145,7 +145,8 @@ class Math(QWidget):
         self.ui.predicted_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.result_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.error_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.ui.table_summary.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.table_summary_weights.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.table_summary_data.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.button_load_input_array_from_disk.clicked.connect(self.load_input_array_from_disk)
         self.ui.button_generate_random_input_data.clicked.connect(self.generate_random_input_data)
         self.ui.button_save_input_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.input_array_source))
@@ -189,7 +190,7 @@ class Math(QWidget):
                             self.parent.man.row_num,
                             self.parent.man.col_num)
         # обновление сводки
-        self.update_summary()
+        self.update_summary_weights()
 
     def activate_spinboxes(self):
         """
@@ -257,7 +258,7 @@ class Math(QWidget):
                         self.parent.man.row_num,
                         self.parent.man.col_num)
         # обновление сводки
-        self.update_summary()
+        self.update_summary_weights()
 
     def calculate_weights_error(self):
         """
@@ -273,7 +274,7 @@ class Math(QWidget):
                             self.parent.man.row_num,
                             self.parent.man.col_num)
         # обновить сводку
-        self.update_summary()
+        self.update_summary_weights()
             
     def array_to_vector(self, array):
         """
@@ -291,8 +292,8 @@ class Math(QWidget):
         min = list[0][0]
         max = list[0][0]
         k = 0
-        for i in range(self.parent.man.row_num):
-            for j in range(self.parent.man.col_num):
+        for i in range(len(list)):
+            for j in range(len(list[0])):
                 k = list[i][j]
                 if k < min:
                     min = k
@@ -300,9 +301,9 @@ class Math(QWidget):
                     max = k
         return(max, min)
 
-    def update_summary(self):
+    def update_summary_weights(self):
         """
-        Обновление сводки
+        Обновление сводки весов
         """
         data = []
         data.append(['', 'Минимум', 'Максимум'])
@@ -325,14 +326,41 @@ class Math(QWidget):
             data.append(['Ошибка:', str(min), str(max)])
             rows += 1
         if min != None or max != None:
-            self.ui.table_summary.setRowCount(rows)
-            self.ui.table_summary.setColumnCount(3)
+            self.ui.table_summary_weights.setRowCount(rows)
+            self.ui.table_summary_weights.setColumnCount(3)
             # заполнение данными
             for i in range(rows):
                 for j in range(3):
-                    self.ui.table_summary.setItem(i,j, QTableWidgetItem(data[i][j],4))
-            self.ui.table_summary.setHorizontalHeaderLabels([str(i) for i in range(3)])
-            self.ui.table_summary.setVerticalHeaderLabels([str(i) for i in range(rows)])
+                    self.ui.table_summary_weights.setItem(i,j, QTableWidgetItem(data[i][j],4))
+            self.ui.table_summary_weights.setHorizontalHeaderLabels([str(i) for i in range(3)])
+            self.ui.table_summary_weights.setVerticalHeaderLabels([str(i) for i in range(rows)])
+
+    def update_summary_data(self):
+        """
+        Обновление сводки данных
+        """
+        data = []
+        data.append(['', 'Минимум', 'Максимум'])
+        rows = 1
+        max = None
+        min = None
+        if self.input_array_source is not None:
+            max, min = self.get_max_min(self.input_array_source)
+            data.append(['Числа:', str(round(min, 4)), str(round(max, 4))])
+            rows += 1
+        if self.input_array_scaled is not None:
+            max, min = self.get_max_min(self.input_array_scaled)
+            data.append(['Напряжения:', str(round(min, 4)), str(round(max, 4))])
+            rows += 1
+        if min != None or max != None:
+            self.ui.table_summary_data.setRowCount(rows)
+            self.ui.table_summary_data.setColumnCount(3)
+            # заполнение данными
+            for i in range(rows):
+                for j in range(3):
+                    self.ui.table_summary_data.setItem(i,j, QTableWidgetItem(data[i][j],4))
+            self.ui.table_summary_data.setHorizontalHeaderLabels([str(i) for i in range(3)])
+            self.ui.table_summary_data.setVerticalHeaderLabels([str(i) for i in range(rows)])
 
 ## кнопки работы с данными
     def load_input_array_from_disk(self):
@@ -346,6 +374,7 @@ class Math(QWidget):
                 self.input_array_source = read_csv_to_array(file_path)
                 self.input_array_source, _ = adjust_columns(self.input_array_source, self.parent.man.row_num)
                 self.update_voltages_array()
+                self.update_summary_data() # обновление сводки
             except Exception as ex: # pylint: disable=W0718
                 show_warning_messagebox(f'Файл не соответствует требованиям! {ex}')
 
@@ -355,6 +384,7 @@ class Math(QWidget):
         """
         self.input_array_source = np.random.uniform(0, 1, size=(AMOUNT_RANDOM_SAMPLES, self.parent.man.row_num))
         self.update_voltages_array()
+        self.update_summary_data() # обновление сводки
 
     def calculate_etalon_results(self):
         """
