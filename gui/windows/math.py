@@ -145,6 +145,7 @@ class Math(QWidget):
         self.ui.predicted_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.result_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.error_output_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.table_summary.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.button_load_input_array_from_disk.clicked.connect(self.load_input_array_from_disk)
         self.ui.button_generate_random_input_data.clicked.connect(self.generate_random_input_data)
         self.ui.button_save_input_array_to_disk.clicked.connect(lambda: save_as_array_to_csv(self, self.input_array_source))
@@ -185,6 +186,8 @@ class Math(QWidget):
                             self.goal_weights,
                             self.parent.man.row_num,
                             self.parent.man.col_num)
+        # обновление сводки
+        self.update_summary()
 
     def activate_spinboxes(self):
         """
@@ -251,6 +254,8 @@ class Math(QWidget):
                         self.current_weights,
                         self.parent.man.row_num,
                         self.parent.man.col_num)
+        # обновление сводки
+        self.update_summary()
 
     def calculate_weights_error(self):
         """
@@ -265,6 +270,8 @@ class Math(QWidget):
                             self.error_weights,
                             self.parent.man.row_num,
                             self.parent.man.col_num)
+        # обновить сводку
+        self.update_summary()
             
     def array_to_vector(self, array):
         """
@@ -274,6 +281,56 @@ class Math(QWidget):
             vector = np.array(array).flatten("F")
             plt.hist(vector)
             plt.show()
+
+    def get_max_min(self, list):
+        """
+        Нахождение максимума, минимума из списка
+        """
+        min = list[0][0]
+        max = list[0][0]
+        k = 0
+        for i in range(self.parent.man.row_num):
+            for j in range(self.parent.man.col_num):
+                k = list[i][j]
+                if k < min:
+                    min = k
+                if k > max:
+                    max = k
+        return(max, min)
+
+    def update_summary(self):
+        """
+        Обновление сводки
+        """
+        data = []
+        data.append(['', 'Минимум', 'Максимум'])
+        rows = 1
+        max = None
+        min = None
+        if self.current_weights is not None:
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                max, min = self.get_max_min(self.current_weights_scaled)
+            elif self.ui.combo_postprocess.currentText() == 'нет':
+                max, min = self.get_max_min(self.current_weights)
+            data.append(['Записанные:', str(min), str(max)])
+            rows += 1
+        if self.goal_weights is not None:
+            max, min = self.get_max_min(self.goal_weights)
+            data.append(['Целевые:', str(min), str(max)])
+            rows += 1
+        if self.error_weights is not None:
+            max, min = self.get_max_min(self.error_weights)
+            data.append(['Ошибка:', str(min), str(max)])
+            rows += 1
+        if min != None or max != None:
+            self.ui.table_summary.setRowCount(rows)
+            self.ui.table_summary.setColumnCount(3)
+            # заполнение данными
+            for i in range(rows):
+                for j in range(3):
+                    self.ui.table_summary.setItem(i,j, QTableWidgetItem(data[i][j],4))
+            self.ui.table_summary.setHorizontalHeaderLabels([str(i) for i in range(3)])
+            self.ui.table_summary.setVerticalHeaderLabels([str(i) for i in range(rows)])
 
 ## кнопки работы с данными
     def load_input_array_from_disk(self):
