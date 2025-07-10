@@ -303,7 +303,7 @@ class Math(QWidget):
         Обновление сводки
         """
         data = []
-        data.append(['', 'max', 'min'])
+        data.append(['', 'Минимум', 'Максимум'])
         rows = 1
         max = None
         min = None
@@ -312,15 +312,15 @@ class Math(QWidget):
                 max, min = self.get_max_min(self.current_weights_scaled)
             elif self.ui.combo_postprocess.currentText() == 'нет':
                 max, min = self.get_max_min(self.current_weights)
-            data.append(['Записанные:', str(max), str(min)])
+            data.append(['Записанные:', str(min), str(max)])
             rows += 1
         if self.goal_weights is not None:
             max, min = self.get_max_min(self.goal_weights)
-            data.append(['Целевые:', str(max), str(min)])
+            data.append(['Целевые:', str(min), str(max)])
             rows += 1
         if self.error_weights is not None:
             max, min = self.get_max_min(self.error_weights)
-            data.append(['Ошибка:', str(max), str(min)])
+            data.append(['Ошибка:', str(min), str(max)])
             rows += 1
         if min != None or max != None:
             self.ui.table_summary.setRowCount(rows)
