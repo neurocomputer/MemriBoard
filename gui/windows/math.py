@@ -396,7 +396,7 @@ class Math(QWidget):
         """
         Сгенерировать случайные входные данные
         """
-        self.input_array_source = np.random.uniform(0, 1, size=(AMOUNT_RANDOM_SAMPLES, self.parent.man.row_num))
+        self.input_array_source = np.random.uniform(0, self.ui.spinbox_max.value(), size=(self.ui.spinbox_amount.value(), self.parent.man.row_num))
         self.update_voltages_array()
         self.update_summary_data() # обновление сводки
 
