@@ -35,7 +35,7 @@ class Connector():
         self.config = config
         self.c_type = c_type
         self.cb_type = cb_type
-        self.c_type = 'memricore'
+        self.c_type = 'memridriverc' # ''   memricore
         # для симулятора
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
@@ -104,6 +104,10 @@ class Connector():
                 from MemriCORE.rpi_modes import RPI_modes
                 self.rasp_driver = RPI_modes()
                 open_flag = True
+            elif self.c_type == 'memridriverc':
+                import MemriDriverC.mvmdriver_wrapper as driver
+                self.rasp_driver = driver.MVMDriver()
+                open_flag = True
         return open_flag
 
     def close_serial(self) -> bool:
@@ -126,7 +130,7 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi
-            elif self.c_type == 'memricore':
+            elif self.c_type in ['memricore', 'memridriverc']:
                 #todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -208,6 +212,9 @@ class Connector():
             elif self.c_type == 'memricore':
                 send_flag = True
                 rec_data = ['raspberry']
+            elif self.c_type == 'memridriverc':
+                send_flag = True
+                rec_data = ['raspberry_memridriverc']
                 # todo: добавить служебную инфу в драйвер
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -243,7 +250,7 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.c_type == 'memricore':
+            elif self.c_type in ['memricore', 'memridriverc']:
                 if task['mode_flag'] == 7: # режим команды 7
                     adc = self.rasp_driver.mode_7(task['vol'],
                                             task['t_ms'],
