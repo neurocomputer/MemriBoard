@@ -171,6 +171,7 @@ ticket.png
 base.db-shm
 base.db-wal
 MemriCORE/
+MemriDriveC/
 backup.db
 test.py
 models/
