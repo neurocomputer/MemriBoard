@@ -22,7 +22,7 @@ import matplotlib
 matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
 
-from manager import CrossbarManager
+from manager import Manager
 from manager.service import a2r
 from manager.service.global_settings import TICKET_PATH
 
@@ -41,6 +41,7 @@ from gui.windows.cb_info import CbInfo
 from gui.windows.rram import Rram
 from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
+from gui.windows.math import Math
 from gui.src import show_choose_window, show_warning_messagebox, snapshot
 
 class Window(QMainWindow):
@@ -48,7 +49,7 @@ class Window(QMainWindow):
     Основное окно
     """
 
-    man: CrossbarManager # менеджер работы с платой
+    man: Manager # менеджер работы с платой
     GUI_PATH = os.path.join("gui","uies","crossbar.ui")
     all_resistances: list # все сопротивления для раскраски
     snapshot = None # для кнопки снимок
@@ -82,10 +83,7 @@ class Window(QMainWindow):
     rram_dialog: Rram
     new_ann_dialog: NewAnn
     wait_dialog: Wait
-
     opener: str = ''
-
-    timer: QTimer
 
     protected_modes: list = ['blank', # защищенные от удаления и перезаписи файлы
                              'endurance',
@@ -106,10 +104,11 @@ class Window(QMainWindow):
     def __init__(self) -> None:
         super().__init__() # инит QMainWindow
         # менеджер работы с платой
-        self.man = CrossbarManager()
+        self.man = Manager()
+        self.man.blank_type = 'mode_7'
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
-        # параметры кроссбара 
+        # параметры кроссбара
         self.ui.crossbar_progress.setVisible(False)
         # параметры таблицы
         self.ui.table_crossbar.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -117,11 +116,10 @@ class Window(QMainWindow):
         # обработчики кнопок
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
-        self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
+        self.ui.button_math.clicked.connect(self.show_math_dialog)
         self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
-        self.ui.button_reconnect.clicked.connect(self.reconnect)
         # хоткей
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         shortcut.activated.connect(self.show_terminal_dialog)
@@ -133,26 +131,8 @@ class Window(QMainWindow):
         shortcut.activated.connect(self.show_new_ann_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
         shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
-        # таймер
-        self.timer = QTimer()
         # диалоговое окно подключения
         self.show_connect_dialog()
-
-    # обработка по таймеру
-
-    def check_connection(self) -> None:
-        """
-        Проверка соединения
-        """
-        if not self.man.conn.serial.com_is_open():
-            show_warning_messagebox("USB отключен, переподключитесь!")
-
-    def check_connection_start(self) -> None:
-        """
-        Периодическая проверка коннекта по таймеру
-        """
-        self.timer.timeout.connect(self.check_connection)
-        self.timer.start(200)
 
     # методы открытия диалоговых окон
 
@@ -165,12 +145,28 @@ class Window(QMainWindow):
         if status:
             self.show_exp_settings_dialog()
             self.exp_settings_dialog.load_tickets(exp_name, tickets)
-
-    def show_new_ann_dialog(self) -> None:
+    
+    def show_math_dialog(self) -> None:
+        """
+        Показать окно математики
+        """
+        self.read_cell_all('crossbar') # чтение всех ячеек
+        self.opener = 'math'
+        self.current_bl = self.ui.table_crossbar.currentRow()
+        self.current_wl = self.ui.table_crossbar.currentColumn()
+        if self.current_bl == -1:
+            self.current_bl = 0
+            self.current_wl = 0
+        self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
+        self.math_dialog = Math(parent=self)
+        self.math_dialog.show()
+        self.showMinimized()
+   
+    def show_new_ann_dialog(self, mode=None) -> None: 
         """
         Показать окно записи
         """
-        self.new_ann_dialog = NewAnn(parent=self)
+        self.new_ann_dialog = NewAnn(parent=self, mode=mode)
         self.new_ann_dialog.show()
 
     def show_terminal_dialog(self) -> None:
@@ -250,6 +246,7 @@ class Window(QMainWindow):
         self.opener = 'testing'
         self.testing_dialog = Testing(parent=self)
         self.testing_dialog.show()
+        self.showMinimized()
 
     def show_map_dialog(self) -> None:
         """
@@ -280,6 +277,7 @@ class Window(QMainWindow):
         self.opener = 'rram'
         self.rram_dialog = Rram(parent=self)
         self.rram_dialog.show()
+        self.showMinimized()
 
     def show_wait_dialog(self, opener) -> None:
         """
@@ -289,16 +287,6 @@ class Window(QMainWindow):
         self.wait_dialog.show()
 
     # обработчики кнопок
-
-    def reconnect(self) -> None:
-        """
-        Переподключение к плате
-        """
-        self.man.conn.close_serial()
-        if self.man.connect(self.man.connected_port):
-            show_warning_messagebox("Переподключились успешно!")
-        else:
-            show_warning_messagebox("Что-то пошло не так!")
 
     def custom_shaphop(self, data, title, save_flag=True, save_path=os.getcwd()):
         """
@@ -428,7 +416,6 @@ class Window(QMainWindow):
         self.ui.button_snapshot.setEnabled(status)
         self.ui.button_net.setEnabled(status)
         self.ui.button_settings.setEnabled(status)
-        self.ui.button_reconnect.setEnabled(status)
 
     def read_cell_all(self, opener) -> None:
         """

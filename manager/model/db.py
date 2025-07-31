@@ -221,7 +221,7 @@ class DBOperate():
         chip_data = []
         if self.db_connection:
             try:
-                QUERY = f"""SELECT id, bl, wl, cb_type, c_type FROM Crossbars
+                QUERY = f"""SELECT id, bl, wl, cb_type FROM Crossbars
                 WHERE serial='{serial}'"""
                 self.db_cursor.execute(QUERY)
                 chip_data = self.db_cursor.fetchall()[0]

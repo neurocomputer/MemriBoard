@@ -179,7 +179,7 @@ class Rram(QWidget):
         if save_file:
             save_file = os.path.join(save_file, "rram.bin")
             save_binary_string_to_file(binary_string, save_file)
-        show_warning_messagebox(f'{save_file} сохранен!')
+            show_warning_messagebox(f'{save_file} сохранен!')
 
     def load_text(self) -> None: #+
         """
@@ -515,5 +515,6 @@ class Rram(QWidget):
         Закрытие окна
         """
         self.parent.opener = None
+        self.parent.showNormal()
         self.set_up_init_values()
         event.accept()

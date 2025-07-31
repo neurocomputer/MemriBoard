@@ -66,6 +66,11 @@ class SignalMod(QDialog):
             self.base_json = base_ticket_name
             self.ui.button_save.setEnabled(False)
             self.ui.json_name.setEnabled(False)
+        elif self.mode == 'edit_for_programming':
+            self.base_ticket_name = base_ticket_name["name"]
+            self.base_json = base_ticket_name
+            self.ui.terminator_combobox.setEnabled(False)
+            self.ui.json_name.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
 
     def set_up_init_values(self) -> None:
@@ -202,7 +207,7 @@ class SignalMod(QDialog):
         if self._make_json():
             if self.mode == "create":
                 answer = show_choose_window(self, 'Сохранить файл?')
-            elif self.mode == "edit":
+            elif self.mode == "edit" or self.mode == "edit_for_programming":
                 answer = show_choose_window(self, 'Сохранить изменения?')
             if answer:
                 try:
@@ -218,7 +223,7 @@ class SignalMod(QDialog):
                             raise ValueError
                         # открываем файл и пишем
                         self.base_json["name"] = fname
-                    elif self.mode == "edit":
+                    elif self.mode == "edit" or "edit_for_programming":
                         fname = 'temp'
                     with open(os.path.join(TICKET_PATH,
                                         fname+'.json'),
@@ -356,6 +361,8 @@ class SignalMod(QDialog):
                 self.parent.exp_settings_dialog.refresh_list()
             elif self.mode == "edit":
                 self.parent.exp_settings_dialog.apply_edit_to_exp_list()
+            elif self.mode == "edit_for_programming":
+                self.parent.new_ann_dialog.apply_edit_to_prog_ticket()
             self.set_up_init_values()
             event.accept()
         else: # событие вызвала кнопка отмена

@@ -171,6 +171,13 @@ ticket.png
 base.db-shm
 base.db-wal
 MemriCORE/
+MemriDriverC/
 backup.db
 test.py
 models/
+tests/
+tickets/blank_1912.json
+tickets/blank_1913.json
+tickets/iv-curve-reversed_1914.json
+writtable_cells.csv
+*.csv
