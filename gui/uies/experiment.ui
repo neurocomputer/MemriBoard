@@ -101,6 +101,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QPushButton" name="button_duplicate">
+                <property name="text">
+                 <string>Дублировать</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="button_up_plan">
                 <property name="text">
                  <string>Вверх</string>

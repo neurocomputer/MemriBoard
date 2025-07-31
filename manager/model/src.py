@@ -17,8 +17,7 @@ def create_empty_db_crossbar(db_path,
                              comment = "Кроссбар 32х8 1T1R",
                              bl_num = 32,
                              wl_num = 8,
-                             cb_type = 'simulator',
-                             c_type = 'simulator'):
+                             cb_type = 'simulator'):
     """
     Cоздание таблиц и их заполнение
     """
@@ -38,16 +37,15 @@ def create_empty_db_crossbar(db_path,
                                     comment TEXT NOT NULL,
                                     bl INTEGER NOT NULL,
                                     wl INTEGER NOT NULL,
-                                    cb_type TEXT NOT NULL,
-                                    c_type TEXT NOT NULL
+                                    cb_type TEXT NOT NULL
                                     );'''
 
         cursor.execute(CREATE_TABLE_QUERY) # выполнить запрос в базу данных
         connection.commit() # сохранить изменение
         print("Таблица Crossbars создана")
 
-        INSERT_QUERY = "INSERT INTO Crossbars (serial, comment, bl, wl, cb_type, c_type) VALUES (?,?,?,?,?,?);"
-        cursor.execute(INSERT_QUERY, (serial, comment, bl_num, wl_num, cb_type, c_type))
+        INSERT_QUERY = "INSERT INTO Crossbars (serial, comment, bl, wl, cb_type) VALUES (?,?,?,?,?);"
+        cursor.execute(INSERT_QUERY, (serial, comment, bl_num, wl_num, cb_type))
         connection.commit() # сохранить изменение
         print("Таблица Crossbars заполнена")
 
@@ -93,6 +91,7 @@ def create_empty_db_crossbar(db_path,
                                     image BLOB,
                                     status INTEGER NOT NULL,
                                     memristor_id INTEGER NOT NULL,
+                                    last_resistance INTEGER,
                                     FOREIGN KEY (memristor_id) REFERENCES Memristors(id) 
                                     ON DELETE CASCADE
                                     );'''

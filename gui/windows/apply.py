@@ -11,41 +11,20 @@ from __future__ import annotations
 
 import os
 import time
+import pickle
 import pyqtgraph as pg
+# import plotly.express as px
 import matplotlib.pyplot as plt
+from PyQt5.QtCore import Qt
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QVBoxLayout
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
-from manager.service import d2v, a2r
+from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
 from gui.src import show_choose_window, show_warning_messagebox
 
-# todo: перенести в manager
-def convert_adc_to_current(config_data, adc, vol, sign):
-    """
-    Конвертировать значение АЦП в ток
-    """
-    current = 0
-    vol = d2v(config_data, vol)
-    if sign:
-        vol = - vol
-    res = a2r(config_data, adc)
-    if res != 0:
-        current = vol/res
-    return current
-
-# todo: перенести в manager (проверить на совпадение с d2v)
-def convert_dac_to_voltage(config_data,vol,sign):
-    """
-    Конвертировать значение ЦАП в напряжение
-    """
-    x_item = d2v(config_data, vol)
-    if sign:
-        x_item = - x_item
-    return x_item
-
-class Apply(QDialog):
+class Apply(QWidget):
     """
     Окно выполнения эксперимента
     """
@@ -60,9 +39,10 @@ class Apply(QDialog):
     _term_left_for_plot_x: list
     _term_right_for_plot_y: list
     _term_right_for_plot_x: list
-    _data_for_plot_y: list
-    _data_for_plot_x: list
+    data_for_plot_y: list
+    data_for_plot_x: list
     coordinates: list
+    ticket_image_name: str = "temp.png"
 
     def __init__(self, parent=None) -> None:
         """
@@ -73,7 +53,7 @@ class Apply(QDialog):
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
-        self.setModal(True)
+        self.ui.setWindowFlags(Qt.Window)
         # область графика
         self.graph_result = pg.PlotWidget()
         self.graph_result.setBackground('w')
@@ -120,8 +100,8 @@ class Apply(QDialog):
         """
         self.graph_result.clear()
         # массивы данных для отображения результатов
-        self._data_for_plot_y = []
-        self._data_for_plot_x = []
+        self.data_for_plot_y = []
+        self.data_for_plot_x = []
         # массивы данных для отображения терминаторов
         self._term_left_for_plot_y = []
         self._term_left_for_plot_x = []
@@ -135,16 +115,16 @@ class Apply(QDialog):
         self.graph_result.showGrid(x=True, y=True)
         plt_type = self.ui.plot_type_combobox.currentText()
         if plt_type == 'линия':
-            self.data_line = self.graph_result.plot(self._data_for_plot_x,
-                                                    self._data_for_plot_y,
+            self.data_line = self.graph_result.plot(self.data_for_plot_x,
+                                                    self.data_for_plot_y,
                                                     pen=pg.mkPen(width=3, color = (0, 128, 255)))
         elif plt_type == 'точки':
-            self.data_line = self.graph_result.plot(self._data_for_plot_x,
-                                                    self._data_for_plot_y,
+            self.data_line = self.graph_result.plot(self.data_for_plot_x,
+                                                    self.data_for_plot_y,
                                                     symbol='o')
         elif plt_type == 'звездочки':
-            self.data_line = self.graph_result.plot(self._data_for_plot_x,
-                                                    self._data_for_plot_y,
+            self.data_line = self.graph_result.plot(self.data_for_plot_x,
+                                                    self.data_for_plot_y,
                                                     symbol='star')
 
         self.termline_left = self.graph_result.plot(self._term_left_for_plot_x,
@@ -155,17 +135,49 @@ class Apply(QDialog):
                                                      pen=pg.mkPen(width=3, color = (255, 0, 0)))
         # задание функции для отрисовки осей
         if self.ylabel_text == 'сопротивление, кОм':
-            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man, y)/1000
+            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y)/1000
         elif self.ylabel_text == 'сопротивление, Ом':
-            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man, y)
+            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y)
         elif self.ylabel_text == 'отсчеты АЦП':
             self.y_value_process = lambda y,vol,sign: y
         elif self.ylabel_text == 'ток, мкА':
-            self.y_value_process = lambda y,vol,sign: convert_adc_to_current(self.parent.man,y,vol,sign)/1e6
+            self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
+                                                          self.parent.man.vol_ref_dac,
+                                                          self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y,
+                                                          vol,
+                                                          sign)*1e6
         elif self.ylabel_text == 'ток, мА':
-            self.y_value_process = lambda y,vol,sign: convert_adc_to_current(self.parent.man,y,vol,sign)/1e3
+            self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
+                                                          self.parent.man.vol_ref_dac,
+                                                          self.parent.man.gain,
+                                                          self.parent.man.res_load,
+                                                          self.parent.man.vol_read,
+                                                          self.parent.man.adc_bit,
+                                                          self.parent.man.vol_ref_adc,
+                                                          self.parent.man.res_switches,
+                                                          y,
+                                                          vol,
+                                                          sign)*1e3
         if self.xlabel_text == 'напряжение, В':
-            self.x_value_process = lambda vol,sign,count: convert_dac_to_voltage(self.parent.man,vol,sign)
+            self.x_value_process = lambda vol,sign,count: d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,vol,sign=sign)
         elif self.xlabel_text == 'отсчеты':
             self.x_value_process = lambda vol,sign,count: count
         self.update_label_mem_id()
@@ -180,7 +192,7 @@ class Apply(QDialog):
             self.start_start_thread()
         elif self.application_status == "pause":
             self.application_status = "start"
-            self.start_thread.need_pause = 0
+            self.start_thread.need_pause = False
         self.block_buttons([True, True, False, False]) # пауза остановить
         self.block_comdo(True)
 
@@ -190,7 +202,7 @@ class Apply(QDialog):
         """
         if self.application_status == "start": # работает
             self.application_status = "pause"
-            self.start_thread.need_pause = 1
+            self.start_thread.need_pause = True
             self.block_buttons([False, True, True, False]) # запустить остановить
 
     def stop_exp(self) -> None:
@@ -198,7 +210,7 @@ class Apply(QDialog):
         Остановить эксперимент
         """
         if self.application_status == "start" or "pause": # работает
-            self.start_thread.need_stop = 1
+            self.start_thread.need_stop = True
             self.application_status = "stop"
         self.block_buttons([False, False, True, True])
         self.block_comdo(False)
@@ -266,7 +278,9 @@ class Apply(QDialog):
         # ячейка для эксперимента
         self.coordinates = [(self.parent.current_wl, self.parent.current_bl)]
         # параметры потока
+        # mt = QMutex()
         self.start_thread = ApplyExp(parent=self)
+        # self.start_thread._mutex = mt
         self.start_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
         self.start_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
         self.start_thread.value_got.connect(self.on_value_got) # при получении каждого измеренного
@@ -274,7 +288,24 @@ class Apply(QDialog):
         self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
         self.start_thread.start()
 
-    def on_finished_exp(self, value: int) -> None: ...
+    def on_finished_exp(self, value: int) -> None:
+        """
+        Завершили эксперимент
+        """
+        value = value.split(",")
+        exp_status = int(value[0])
+        flag_soft_cc = int(value[1])
+        # блочим запуск
+        if exp_status == 1:
+            show_warning_messagebox("Эксперимент выполнен!")
+        elif exp_status == 2:
+            show_warning_messagebox("Эксперимент прерван!")
+        elif exp_status == 3:
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+        if flag_soft_cc:
+            show_warning_messagebox("Срабатывало программное ограничение!")
+        self.application_status = "stop"
+        self.stop_exp()
 
     def on_ticket_finished(self, value: str) -> None:
         """
@@ -287,15 +318,6 @@ class Apply(QDialog):
         self._term_right_for_plot_x = []
         self.termline_left.setData(self._term_left_for_plot_x, self._term_left_for_plot_y)
         self.termline_right.setData(self._term_right_for_plot_x, self._term_right_for_plot_y)
-        # сохраняем результат
-        value = value.split(",")
-        ticket_id = int(value[0])
-        result_file_path = value[1]
-        with open(result_file_path, 'rb') as file:
-            result_data = file.read()
-            # записываем в базу
-            self.parent.man.db.update_ticket(ticket_id, 'result', result_data)
-        os.remove(result_file_path)
 
     def on_count_changed(self, value: int) -> None:
         """
@@ -311,32 +333,23 @@ class Apply(QDialog):
         Завершение выполнения
         """
         value = value.split(",")
-        experiment_id = int(value[0])
         exp_status = int(value[1])
         flag_soft_cc = int(value[2])
-        # блочим запуск
-        if exp_status == 1:
-            show_warning_messagebox("Эксперимент выполнен!")
-        elif exp_status == 2:
-            show_warning_messagebox("Эксперимент прерван!")
-        if flag_soft_cc:
-            show_warning_messagebox("Срабатывало программное ограничение!")
-        self.application_status = "stop"
-        self.stop_exp()
-        # сохранить картинку
-        fname = "temp.png"
+        # рисунок для базы в matplotlib
         plt.clf()
-        plt.plot(self._data_for_plot_x, self._data_for_plot_y, 'o-')
-        plt.xlabel(self.ui.xaxes_combobox.currentText())
-        plt.ylabel(self.ui.yaxes_combobox.currentText())
+        plt.plot(self.data_for_plot_x, self.data_for_plot_y, marker='o', linewidth=0.5)
+        plt.xlabel(self.xlabel_text)
+        plt.ylabel(self.ylabel_text)
         plt.grid(True, linestyle='--')
         plt.tight_layout()
-        plt.savefig(fname, dpi=100)
-        with open(fname, 'rb') as file:
-            img_data = file.read()
-            # записываем в базу
-            self.parent.man.db.update_experiment(experiment_id, 'image', img_data)
-        os.remove(fname)
+        plt.savefig(self.ticket_image_name, dpi=100)
+        plt.close()
+        self.start_thread.setup_image_saved(True)
+        # рисунок для базы в plotly (решили отказаться из-за большого размера библиотеки)
+        # fig = px.scatter(x=self.data_for_plot_x, y=self.data_for_plot_y)
+        # fig.update_layout(xaxis_title=self.xlabel_text,
+        #                     yaxis_title=self.ylabel_text)
+        # fig.write_image(self.ticket_image_name, width=640, height=480)
 
     def on_value_got(self, value: str) -> None:
         """
@@ -357,15 +370,15 @@ class Apply(QDialog):
             # выбор отображения по осям
             y_item = self.y_value_process(value, vol, sign)
             x_item = self.x_value_process(vol, sign, count)
-            size = 3000 # todo: глубина отрисовки, вынести в константы
-            data_len = len(self._data_for_plot_y)
+            size = 400 # todo: глубина отрисовки, вынести в константы
+            data_len = len(self.data_for_plot_y)
             if data_len > size:
-                self._data_for_plot_y = self._data_for_plot_y[1:] + [y_item]
-                self._data_for_plot_x = self._data_for_plot_x[1:] + [x_item]
+                self.data_for_plot_y = self.data_for_plot_y[1:] + [y_item]
+                self.data_for_plot_x = self.data_for_plot_x[1:] + [x_item]
             else:
-                self._data_for_plot_y.append(y_item)
-                self._data_for_plot_x.append(x_item)
-            self.data_line.setData(self._data_for_plot_x, self._data_for_plot_y)
+                self.data_for_plot_y.append(y_item)
+                self.data_for_plot_x.append(x_item)
+            self.data_line.setData(self.data_for_plot_x, self.data_for_plot_y)
             # отображение терминаторов
             if term_left:
                 # левый
@@ -397,15 +410,26 @@ class ApplyExp(QThread):
     progress_finished = pyqtSignal(str) # для каждого мемристора из self.coordinates
     ticket_finished = pyqtSignal(str) # для каждого ticket
     value_got = pyqtSignal(str) # для каждого результата value_got
-    finished_exp = pyqtSignal(int) # для всего эксперимента
+    finished_exp = pyqtSignal(str) # для всего эксперимента
+    _mutex = QMutex()
     flag_soft_cc = 0
     PAUSE_TIME = 0.2
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.parent = parent
-        self.need_pause = 0 # нужна пауза
-        self.need_stop = 0 # нужна остановка
+        # todo: возможно need_pause и need_stop нужно тоже перезаписать на потокобезопасный
+        self.need_pause = False # нужна пауза
+        self.need_stop = False # нужна остановка
+        self.image_saved = False # рисунок создан и сохранен на диск
+
+    def setup_image_saved(self, status):
+        """
+        Установить значение
+        """
+        self._mutex.lock()
+        self.image_saved = status
+        self._mutex.unlock()
 
     def run(self):
         """
@@ -416,16 +440,41 @@ class ApplyExp(QThread):
             # читаем перед экспериментом
             resistance_previous = self.parent.parent.read_cell(item[0], # wl
                                                                item[1]) # bl
+            # проверка проблем с АЦП
+            current_adc = r2a(self.parent.parent.man.gain,
+                              self.parent.parent.man.res_load,
+                              self.parent.parent.man.vol_read,
+                              self.parent.parent.man.adc_bit,
+                              self.parent.parent.man.vol_ref_adc,
+                              self.parent.parent.man.res_switches,
+                              resistance_previous)
+            adc_vol = a2v(self.parent.parent.man.gain,
+                          self.parent.parent.man.adc_bit,
+                          self.parent.parent.man.vol_ref_adc,
+                          current_adc)
+            if adc_vol > 3.5: # todo: вынести 3.5 в константы
+                self.need_stop = True
+                stop_reason = 3 # высокое напряжение на АЦП
+                break
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
             status, memristor_id = self.parent.parent.man.db.get_memristor_id(item[0], # wl
                                                                               item[1], # bl
                                                                               self.parent.parent.man.crossbar_id)
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно получить id мемристора")
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно получить id мемристора")
             status, experiment_id = self.parent.parent.man.db.add_experiment(name, memristor_id)
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно добавить эксперимент")
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить эксперимент")
+            meta_info = self.parent.parent.man.get_meta_info()
+            status, info = self.parent.parent.man.conn.get_tech_info()
+            if not status:
+                self.parent.parent.man.ap_logger.warning("Ошибка подключения: не возможно получить метаинформацию")
+            if isinstance(meta_info, dict):
+                meta_info['board'] = str(info)
+            status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
+            if not status:
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить метаинформацию")
             # инициируем цикл по тикетам
             counter = 0
             for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, task_list, count
@@ -438,10 +487,10 @@ class ApplyExp(QThread):
                 # сохраняем в БД
                 status, ticket_id = self.parent.parent.man.db.add_ticket(ticket, experiment_id)
                 if not status:
-                    self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно добавить тикет")
+                    self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить тикет")
                 # временный файл для результата
-                fname = time.strftime("%Y%m%d-%H%M%S")
-                file = open(fname, 'wb')
+                result_file_path = time.strftime("%Y%m%d-%H%M%S")
+                result_file = open(result_file_path, 'wb')
                 #for task in task_list:
                 #start_time_loop = time.time()
                 # инициируем цикл по таскам
@@ -458,15 +507,23 @@ class ApplyExp(QThread):
                     # посылаем задачу в плату
                     # start_time_iter = time.time()
                     # прогнозируем ток
-                    current_predict = d2v(self.parent.parent.man, task[0]['vol']) / resistance_previous
+                    if resistance_previous == 0:
+                        resistance_previous = 0.00000001 # чтобы исключить деление на 0
+                    current_predict = d2v(self.parent.parent.man.dac_bit, self.parent.parent.man.vol_ref_dac, task[0]['vol']) / resistance_previous
                     if (task[0]['sign'] == 0 and current_predict <= 0.04) or (task[0]['sign'] == 1 and current_predict <= self.parent.parent.man.soft_cc):
                         #print(task[1])
                         result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id)
                         # учет выполнения
                         if result:
                             self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right}")
-                            save_list_to_bytearray(file, task[0]['vol'], result[0])
-                            resistance_previous = a2r(self.parent.parent.man, result[0])
+                            save_list_to_bytearray(result_file, task[0]['sign'], task[0]['vol'], result[0])
+                            resistance_previous = a2r(self.parent.parent.man.gain,
+                                                      self.parent.parent.man.res_load,
+                                                      self.parent.parent.man.vol_read,
+                                                      self.parent.parent.man.adc_bit,
+                                                      self.parent.parent.man.vol_ref_adc,
+                                                      self.parent.parent.man.res_switches,
+                                                      result[0])
                             # проверка прерывания тикета
                             interrupt = task[1](result)
                             if interrupt:
@@ -477,38 +534,62 @@ class ApplyExp(QThread):
                     counter += 1
                     self.count_changed.emit(counter)
                 #print("Весь цикл:", time.time()-start_time_loop)
-                # закрываем файл рещультата
-                file.close()
+                # закрываем файл результата
+                result_file.close()
                 # сохраняем в БД статус завершения
                 if result:
-                    last_resistance = int(a2r(self.parent.parent.man, result[0]))
+                    last_resistance = int(a2r(self.parent.parent.man.gain,
+                                              self.parent.parent.man.res_load,
+                                              self.parent.parent.man.vol_read,
+                                              self.parent.parent.man.adc_bit,
+                                              self.parent.parent.man.vol_ref_adc,
+                                              self.parent.parent.man.res_switches,
+                                              result[0]))
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                     if not status:
-                        self.parent.parent.man.ap_logger.critical("Ошибка БД не возможно обновить сопротивление")
+                        self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить информацию о сопротивлении")
+                    status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
+                    if not status:
+                        self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить сопротивление в эксперименте")
                 if self.need_stop:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 1)
+                if not status:
+                    self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить тикет")
                 # обновляем значения результата и изображения в БД (можно и здесь конечно)
-                time.sleep(self.PAUSE_TIME)
-                self.ticket_finished.emit(f"{ticket_id},{fname}")
-                time.sleep(self.PAUSE_TIME)
-            time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
+                #time.sleep(self.PAUSE_TIME)
+                # сохраняем результат выполнения тикета
+                with open(result_file_path, 'rb') as result_file:
+                    result_data = result_file.read()
+                    # записываем в базу
+                    self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)
+                os.remove(result_file_path)
+                # вызываем событие завершения тикета
+                self.ticket_finished.emit(f"{ticket_id},{result_file_path}")
+                #time.sleep(self.PAUSE_TIME)
+            #time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
             # сохраняем в БД статус завершения
             if self.need_stop:
-                status = self.parent.parent.man.db.update_experiment_status(experiment_id, 2) # прерван
-                self.progress_finished.emit(f"{experiment_id},{2},{self.flag_soft_cc},{item[0]},{item[1]}")
+                stop_reason = 2 # прерван
             else:
-                status = self.parent.parent.man.db.update_experiment_status(experiment_id, 1) # успешно завершен
-                self.progress_finished.emit(f"{experiment_id},{1},{self.flag_soft_cc},{item[0]},{item[1]}")
+                stop_reason = 1 # успешно завершен
+            status = self.parent.parent.man.db.update_experiment_status(experiment_id, stop_reason)
+            self.progress_finished.emit(f"{experiment_id},{stop_reason},{self.flag_soft_cc},{item[0]},{item[1]}")
             if not status:
-                self.parent.parent.man.ap_logger.critical("Не возможно обновить статус эксперимента")
+                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить статус эксперимента")
+            # сохранить картинку эксперимента
+            while not self.image_saved:
+                time.sleep(0.5)
+            with open(self.parent.ticket_image_name, 'rb') as ticket_image_file:
+                img_data = ticket_image_file.read()
+                # записываем в базу
+                self.parent.parent.man.db.update_experiment(experiment_id, 'image', img_data)
+            os.remove(self.parent.ticket_image_name)
+            self.setup_image_saved(False)
             # прерываем выполнение для всех
             if self.need_stop:
                 break
-            time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
-        if self.need_stop:
-            self.finished_exp.emit(2) # прерван
-        else:
-            self.finished_exp.emit(1) # успешно завершен
-        time.sleep(self.PAUSE_TIME)
+            #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
+        self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
+        #time.sleep(self.PAUSE_TIME)

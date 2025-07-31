@@ -18,11 +18,11 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QShortcut
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+import matplotlib
+matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
-#import matplotlib
-#matplotlib.use('TkAgg')
 
-from manager import CrossbarManager
+from manager import Manager
 from manager.service import a2r
 from manager.service.global_settings import TICKET_PATH
 
@@ -35,14 +35,21 @@ from gui.windows.settings import Settings
 from gui.windows.history import History
 from gui.windows.requests import RequestsList
 from gui.windows.terminal import Terminal
-from gui.src import show_choose_window, show_warning_messagebox
+from gui.windows.testing import Testing
+from gui.windows.map import Map
+from gui.windows.cb_info import CbInfo
+from gui.windows.rram import Rram
+from gui.windows.new_ann import NewAnn
+from gui.windows.wait import Wait
+from gui.windows.math import Math
+from gui.src import show_choose_window, show_warning_messagebox, snapshot
 
 class Window(QMainWindow):
     """
     Основное окно
     """
 
-    man: CrossbarManager # менеджер работы с платой
+    man: Manager # менеджер работы с платой
     GUI_PATH = os.path.join("gui","uies","crossbar.ui")
     all_resistances: list # все сопротивления для раскраски
     snapshot = None # для кнопки снимок
@@ -70,10 +77,13 @@ class Window(QMainWindow):
     requests_dialog: RequestsList
     history_dialog: History
     terminal_dialog: Terminal
-
-    opener: str
-
-    timer: QTimer
+    testing_dialog: Testing
+    map_dialog: Map
+    cb_info_dialog: CbInfo
+    rram_dialog: Rram
+    new_ann_dialog: NewAnn
+    wait_dialog: Wait
+    opener: str = ''
 
     protected_modes: list = ['blank', # защищенные от удаления и перезаписи файлы
                              'endurance',
@@ -94,43 +104,35 @@ class Window(QMainWindow):
     def __init__(self) -> None:
         super().__init__() # инит QMainWindow
         # менеджер работы с платой
-        self.man = CrossbarManager()
+        self.man = Manager()
+        self.man.blank_type = 'mode_7'
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        # параметры кроссбара
+        self.ui.crossbar_progress.setVisible(False)
         # параметры таблицы
         self.ui.table_crossbar.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_crossbar.itemDoubleClicked.connect(self.show_cell_info_dialog)
         # обработчики кнопок
-        self.ui.button_rram.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
-        self.ui.button_tests.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
-        self.ui.button_math.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
-        self.ui.button_snapshot.clicked.connect(self._snapshot)
+        self.ui.button_rram.clicked.connect(self.show_rram_dialog)
+        self.ui.button_tests.clicked.connect(self.show_testing_dialog)
+        self.ui.button_math.clicked.connect(self.show_math_dialog)
+        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
-        self.ui.button_reconnect.clicked.connect(self.reconnect)
         # хоткей
-        self.shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        self.shortcut.activated.connect(self.show_terminal_dialog)
-        # таймер
-        self.timer = QTimer()
+        shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
+        shortcut.activated.connect(self.show_terminal_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
+        shortcut.activated.connect(self.show_crossbar_weights_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
+        shortcut.activated.connect(self.show_cb_info_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
+        shortcut.activated.connect(self.show_new_ann_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
+        shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # диалоговое окно подключения
         self.show_connect_dialog()
-
-    # обработка по таймеру
-
-    def check_connection(self) -> None:
-        """
-        Проверка соединения
-        """
-        if not self.man.conn.serial.com_is_open():
-            show_warning_messagebox("USB отключен, переподключитесь!")
-
-    def check_connection_start(self) -> None:
-        """
-        Периодическая проверка коннекта по таймеру
-        """
-        self.timer.timeout.connect(self.check_connection)
-        self.timer.start(200)
 
     # методы открытия диалоговых окон
 
@@ -143,6 +145,29 @@ class Window(QMainWindow):
         if status:
             self.show_exp_settings_dialog()
             self.exp_settings_dialog.load_tickets(exp_name, tickets)
+    
+    def show_math_dialog(self) -> None:
+        """
+        Показать окно математики
+        """
+        self.read_cell_all('crossbar') # чтение всех ячеек
+        self.opener = 'math'
+        self.current_bl = self.ui.table_crossbar.currentRow()
+        self.current_wl = self.ui.table_crossbar.currentColumn()
+        if self.current_bl == -1:
+            self.current_bl = 0
+            self.current_wl = 0
+        self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
+        self.math_dialog = Math(parent=self)
+        self.math_dialog.show()
+        self.showMinimized()
+   
+    def show_new_ann_dialog(self, mode=None) -> None: 
+        """
+        Показать окно записи
+        """
+        self.new_ann_dialog = NewAnn(parent=self, mode=mode)
+        self.new_ann_dialog.show()
 
     def show_terminal_dialog(self) -> None:
         """
@@ -171,7 +196,7 @@ class Window(QMainWindow):
         """
         self.history_dialog = History(parent=self, mode=mode)
         self.history_dialog.show()
-        if mode == 'all' and self.opener != 'testing':
+        if mode == 'all' and self.opener != 'testing' and self.opener != 'rram':
             self.exp_settings_dialog.close()
 
     def show_cell_info_dialog(self) -> None:
@@ -214,17 +239,54 @@ class Window(QMainWindow):
             self.settings_dialog = Settings(parent=self)
         self.settings_dialog.show()
 
-    # обработчики кнопок
+    def show_testing_dialog(self) -> None:
+        """
+        Отобразить окно тестирования
+        """
+        self.opener = 'testing'
+        self.testing_dialog = Testing(parent=self)
+        self.testing_dialog.show()
+        self.showMinimized()
 
-    def reconnect(self) -> None:
+    def show_map_dialog(self) -> None:
         """
-        Переподключение к плате
+        Открытие карты
         """
-        self.man.conn.close_serial()
-        if self.man.connect(self.man._port):
-            show_warning_messagebox("Переподключились успешно!")
-        else:
-            show_warning_messagebox("Что-то пошло не так!")
+        self.map_dialog = Map(parent=self)
+        self.map_dialog.show()
+
+    def show_crossbar_weights_dialog(self) -> None:
+        """
+        Отображение весов кроссбара
+        """
+        self.show_map_dialog()
+        self.map_dialog.fill_table(mode='weights')
+        self.map_dialog.set_prompt("Веса кроссбара")
+
+    def show_cb_info_dialog(self) -> None:
+        """
+        Открытие окна инормации о кроссбаре
+        """
+        self.cb_info_dialog = CbInfo(parent=self)
+        self.cb_info_dialog.show()
+
+    def show_rram_dialog(self) -> None:
+        """
+        Открытие окна инормации о кроссбаре
+        """
+        self.opener = 'rram'
+        self.rram_dialog = Rram(parent=self)
+        self.rram_dialog.show()
+        self.showMinimized()
+
+    def show_wait_dialog(self, opener) -> None:
+        """
+        Диалоговое окно прогрессбара
+        """
+        self.wait_dialog = Wait(opener=opener, parent=self)
+        self.wait_dialog.show()
+
+    # обработчики кнопок
 
     def custom_shaphop(self, data, title, save_flag=True, save_path=os.getcwd()):
         """
@@ -243,16 +305,8 @@ class Window(QMainWindow):
         plt.tight_layout()
         if save_flag:
             plt.savefig(os.path.join(save_path,"result_map.png"))
+            plt.close()
         else:
-            plt.show()
-
-    def _snapshot(self) -> None:
-        """
-        Картинка с кнопки снимок
-        """
-        if not self.snapshot is None:
-            plt.clf()
-            plt.imshow(self.snapshot)
             plt.show()
 
     def update_current_cell_info(self):
@@ -331,34 +385,55 @@ class Window(QMainWindow):
         ticket["params"]["bl"] = bl
         # временное решение, лучше переписать на потоки
         _, memristor_id = self.man.db.get_memristor_id(wl, bl, self.man.crossbar_id)
-        _, experiment_id = self.man.db.add_experiment('measure', memristor_id)
-        _, ticket_id = self.man.db.add_ticket(ticket, experiment_id)
+        # _, experiment_id = self.man.db.add_experiment('measure', memristor_id)
+        # _, ticket_id = self.man.db.add_ticket(ticket, experiment_id)
         for task in self.man.menu[ticket['mode']](ticket['params'],
                                                   ticket['terminate'],
                                                   self.man.blank_type):
             result = self.man.conn.impact(task[0]) # result = (resistance, id)
         try:
-            last_resistance = int(a2r(self.man, result[0]))
+            last_resistance = int(a2r(self.man.gain,
+                                      self.man.res_load,
+                                      self.man.vol_read,
+                                      self.man.adc_bit,
+                                      self.man.vol_ref_adc,
+                                      self.man.res_switches,
+                                      result[0]))
         except IndexError:
             last_resistance = 0
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
-        _ = self.man.db.update_ticket(ticket_id, 'status', 1)
-        _ = self.man.db.update_experiment_status(experiment_id, 1)
+        # _ = self.man.db.update_ticket(ticket_id, 'status', 1)
+        # _ = self.man.db.update_experiment_status(experiment_id, 1)
         return last_resistance
 
-    def _read_all(self) -> None:
+    def button_all_set_enabled(self, status):
+        """
+        Блок кнопок
+        """
+        self.ui.button_rram.setEnabled(status)
+        self.ui.button_tests.setEnabled(status)
+        self.ui.button_math.setEnabled(status)
+        self.ui.button_snapshot.setEnabled(status)
+        self.ui.button_net.setEnabled(status)
+        self.ui.button_settings.setEnabled(status)
+
+    def read_cell_all(self, opener) -> None:
         """
         Прочитать все
         """
         answer = show_choose_window(self, 'Прочитать все?')
         if answer:
-            self.ui.button_read.setEnabled(False)
+            self.button_all_set_enabled(False)
+            # окно
+            self.show_wait_dialog(opener)
+            # поток чтения
+            self.wait_dialog.ui.progress_wait.setValue(0)
+            self.wait_dialog.ui.progress_wait.setMaximum(self.man.col_num*self.man.row_num)
+            self.wait_dialog.ui.progress_wait.setVisible(True)
+            # тикет
             ticket_name = self.man.ap_config['gui']['measure_ticket']
             ticket = self.read_ticket_from_disk(ticket_name)
-            # поток загруки тикета
-            self.ui.pbar.setValue(0)
-            self.ui.pbar.setMaximum(self.number_cells)
-            self.ui.pbar.setVisible(True)
+            # поток
             send_ticket_all_thread = SendTicketAll(ticket, parent=self)
             send_ticket_all_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             send_ticket_all_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
@@ -389,17 +464,17 @@ class Window(QMainWindow):
         """
         Изменение счетчика вызывает обновление прогрессбара
         """
-        self.ui.pbar.setValue(value)
+        self.wait_dialog.ui.progress_wait.setValue(value)
 
     def on_progress_finished(self, value: int) -> None:
         """
         Завершение выполнения скрываем прогресс бар
         """
-        self.ui.pbar.setValue(value)
-        self.ui.pbar.setVisible(False)
         self.fill_table()
         self.color_table()
-        self.ui.button_read.setEnabled(True)
+        self.button_all_set_enabled(True)
+        self.wait_dialog.ui.progress_wait.setValue(0)
+        self.wait_dialog.close()
 
     def closeEvent(self, event) -> None:
         """
@@ -420,6 +495,17 @@ class Window(QMainWindow):
         """
         Безопасное завершение
         """
+        # поиск и удаление бэкапа
+        backup = self.man.get_meta_info()["backup"]
+        if os.path.exists(backup+"backup.db"):
+            os.remove(backup+"backup.db")
+        elif os.path.exists(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db"):
+            os.remove(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db")
+        # резервное копирование дб
+        if not os.path.isdir(backup):
+            backup = os.path.join(os.getcwd(), "base.db")[:-7]
+        _ = self.man.db.db_backup(backup)
+        # закрытие программы
         self.man.abort()
         self.man.close()
         time.sleep(0.1) # может и не надо
@@ -443,7 +529,25 @@ class SendTicketAll(QThread):
         counter = 0
         for i in range(self.parent.man.col_num):
             for j in range(self.parent.man.row_num):
-                self.parent.read_cell(i, j)
+                self.ticket["params"]["wl"] = i
+                self.ticket["params"]["bl"] = j
+                # временное решение, лучше переписать на потоки
+                _, memristor_id = self.parent.man.db.get_memristor_id(i, j, self.parent.man.crossbar_id)
+                for task in self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
+                                                 self.ticket['terminate'],
+                                                 self.parent.man.blank_type):
+                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                try:
+                    last_resistance = int(a2r(self.parent.man.gain,
+                                            self.parent.man.res_load,
+                                            self.parent.man.vol_read,
+                                            self.parent.man.adc_bit,
+                                            self.parent.man.vol_ref_adc,
+                                            self.parent.man.res_switches,
+                                            result[0]))
+                except IndexError:
+                    last_resistance = 0
+                _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                 counter += 1
                 self.count_changed.emit(counter)
         self.progress_finished.emit(counter)

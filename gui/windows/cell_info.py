@@ -8,6 +8,9 @@ import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 
+from manager.service import r2a, a2v
+from gui.src import show_warning_messagebox
+
 class CellInfo(QDialog):
     """
     Окно информации о ячейке
@@ -30,6 +33,9 @@ class CellInfo(QDialog):
         self.ui.button_read_one_cells.clicked.connect(self.read_one_cell)
         self.ui.button_history.clicked.connect(lambda: self.parent.show_history_dialog(mode="single"))
         self.ui.button_cancel.clicked.connect(self.close)
+        if self.parent.man.board_type == 'offline':
+            self.ui.button_new_exp.setEnabled(False)
+            self.ui.button_read_one_cells.setEnabled(False)
 
     def read_one_cell(self):
         """
@@ -40,6 +46,20 @@ class CellInfo(QDialog):
                                                                     self.parent.current_bl)
         self.fill_info()
         self.ui.button_read_one_cells.setEnabled(True)
+        # проверка проблем с АЦП
+        current_adc = r2a(self.parent.man.gain,
+                            self.parent.man.res_load,
+                            self.parent.man.vol_read,
+                            self.parent.man.adc_bit,
+                            self.parent.man.vol_ref_adc,
+                            self.parent.man.res_switches,
+                            self.parent.current_last_resistance)
+        adc_vol = a2v(self.parent.man.gain,
+                        self.parent.man.adc_bit,
+                        self.parent.man.vol_ref_adc,
+                        current_adc)
+        if adc_vol > 3.5: # todo: вынести 3.5 в константы
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
 
     def fill_info(self) -> None:
         """

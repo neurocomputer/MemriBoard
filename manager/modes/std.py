@@ -65,7 +65,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
     # декремент dir
     try:
         dir_dec = np.arange(params['v_dir_strt_dec'],
-                            params['v_dir_stop_dec'] + params['v_dir_step_dec'],
+                            params['v_dir_stop_dec'] - params['v_dir_step_dec'],
                             -params['v_dir_step_dec'])
         dir_dec = [int(item) for item in dir_dec]
     except ZeroDivisionError:
@@ -81,7 +81,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
     # декремент rev
     try:
         rev_dec = np.arange(params['v_rev_strt_dec'],
-                            params['v_rev_stop_dec'] + params['v_rev_step_dec'],
+                            params['v_rev_stop_dec'] - params['v_rev_step_dec'],
                             -params['v_rev_step_dec'])
         rev_dec = [int(item) for item in rev_dec]
     except ZeroDivisionError:
@@ -101,7 +101,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['dir_inc_countr']):
                 for vol in dir_inc:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task
@@ -117,7 +117,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['dir_dec_countr']):
                 for vol in dir_dec:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task
@@ -133,7 +133,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['rev_inc_countr']):
                 for vol in rev_inc:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task
@@ -149,7 +149,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['rev_dec_countr']):
                 for vol in rev_dec:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task
@@ -167,7 +167,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['rev_inc_countr']):
                 for vol in rev_inc:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task
@@ -183,7 +183,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['rev_dec_countr']):
                 for vol in rev_dec:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task
@@ -199,7 +199,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['dir_inc_countr']):
                 for vol in dir_inc:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task
@@ -215,7 +215,7 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
             for _ in range(params['dir_dec_countr']):
                 for vol in dir_dec:
                     task = []
-                    data['vol'] = vol
+                    data['vol'] = abs(vol)
                     task.append(fill_blank(blanks[blank_type], data))
                     task.append(terminator)
                     yield task

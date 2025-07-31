@@ -18,11 +18,7 @@ filemode=w
 ; 0-подробная запись в лог
 silent=0
 ; com-порт
-com_port=choose...
-; тип платы
-c_type=memardboard
-; тип кроссбара
-cb_type=simulator
+com_port=
 ; таймаут запроса доступа (75)
 timeout=0.075
 ; количество попыток доступа
@@ -35,6 +31,8 @@ resmax=3000
 
 ; настройка параметров платы
 [board]
+; тип платы
+board_type=
 ; разрядность ЦАП
 dac_bit=12
 ; опорное напряжение ЦАП
@@ -44,13 +42,15 @@ res_load=3000
 ; напряжение чтения
 vol_read=0.3
 ; разрядность АЦП
-adc_bit=10
+adc_bit=14
 ; опорное напряжение АЦП
 vol_ref_adc=5
 ; сопротивление переключателей
-res_switches=13
+res_switches=10
 ; усиление
-gain=10.963
+gain=11
+; резистор обратной связи сумматора
+sum_gain=330
 ; время импульса чтения (мкс)
 read_time=1200
 ; время простоя между записью и чтением (мкс)
@@ -58,7 +58,7 @@ blank_time=5
 ; время простоя между запросами (мкс)
 blank_time_between=55000
 ; программный ограничитель тока
-soft_cc=0.02
+soft_cc=0.002
 
 ; настройки интерфейса
 [gui]
@@ -66,4 +66,11 @@ soft_cc=0.02
 last_crossbar_serial=
 ; тикет для чтения
 measure_ticket=measure.json
+; тикет для записи весов
+program_ticket=programming.json
+
+; бэкап датабазы
+[backup]
+; путь для бэкапа
+backup_path=
 """

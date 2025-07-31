@@ -26,17 +26,17 @@
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="5">
-          <widget class="QPushButton" name="button_snapshot">
+         <item row="0" column="2">
+          <widget class="QPushButton" name="button_math">
            <property name="text">
-            <string>Снапшот</string>
+            <string>Математика</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="3">
-          <widget class="QPushButton" name="button_net">
+         <item row="0" column="4">
+          <widget class="QPushButton" name="button_tests">
            <property name="text">
-            <string>ИНС</string>
+            <string>Тесты</string>
            </property>
           </widget>
          </item>
@@ -54,24 +54,17 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="4">
-          <widget class="QPushButton" name="button_tests">
+         <item row="0" column="3">
+          <widget class="QPushButton" name="button_net">
            <property name="text">
-            <string>Тесты</string>
+            <string>ИНС</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="2">
-          <widget class="QPushButton" name="button_math">
+         <item row="0" column="5">
+          <widget class="QPushButton" name="button_snapshot">
            <property name="text">
-            <string>Математика</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="7">
-          <widget class="QPushButton" name="button_reconnect">
-           <property name="text">
-            <string>Реконнект</string>
+            <string>Снапшот</string>
            </property>
           </widget>
          </item>
@@ -90,6 +83,13 @@
        </layout>
       </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QProgressBar" name="crossbar_progress">
+      <property name="value">
+       <number>0</number>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

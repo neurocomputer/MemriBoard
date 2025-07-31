@@ -61,6 +61,16 @@ class SignalMod(QDialog):
         elif self.mode == "edit":
             self.base_ticket_name = base_ticket_name["name"]
             self.base_json = base_ticket_name
+        elif self.mode == "view":
+            self.base_ticket_name = base_ticket_name["name"]
+            self.base_json = base_ticket_name
+            self.ui.button_save.setEnabled(False)
+            self.ui.json_name.setEnabled(False)
+        elif self.mode == 'edit_for_programming':
+            self.base_ticket_name = base_ticket_name["name"]
+            self.base_json = base_ticket_name
+            self.ui.terminator_combobox.setEnabled(False)
+            self.ui.json_name.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
 
     def set_up_init_values(self) -> None:
@@ -103,17 +113,17 @@ class SignalMod(QDialog):
         status = False
         try:
             # dir inc
-            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man,float(self.ui.forward_start.text()))
-            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man,float(self.ui.forward_stop.text()))
-            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man,float(self.ui.forward_step.text()))
+            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_start.text()))
+            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_stop.text()))
+            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_step.text()))
             self.base_json['params']['t_dir_msec_inc'] = int(self.ui.forward_ms.text())
             self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
             self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
             # чекбокс dir dec
             if self.ui.forward_dec.isChecked():
-                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man,float(self.ui.forward_stop.text()))
-                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man,float(self.ui.forward_start.text()))
-                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man,float(self.ui.forward_step.text()))
+                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_stop.text()))
+                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_start.text()))
+                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_step.text()))
                 self.base_json['params']['t_dir_msec_dec'] = int(self.ui.forward_ms.text())
                 self.base_json['params']['t_dir_usec_dec'] = int(self.ui.forward_mcs.text())
                 self.base_json['params']['dir_dec_countr'] = int(self.ui.forward_count.value())
@@ -125,17 +135,17 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_dir_usec_dec'] = 0
                 self.base_json['params']['dir_dec_countr'] = 0
             # rev inc
-            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man,float(self.ui.backward_start.text()))
-            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man,float(self.ui.backward_stop.text()))
-            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man,float(self.ui.backward_step.text()))
+            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_start.text()))
+            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_stop.text()))
+            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_step.text()))
             self.base_json['params']['t_rev_msec_inc'] = int(self.ui.backward_ms.text())
             self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
             self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
             # чекбокс rev dec
             if self.ui.backward_dec.isChecked():
-                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man,float(self.ui.backward_stop.text()))
-                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man,float(self.ui.backward_start.text()))
-                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man,float(self.ui.backward_step.text()))
+                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_stop.text()))
+                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_start.text()))
+                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_step.text()))
                 self.base_json['params']['t_rev_msec_dec'] = int(self.ui.backward_ms.text())
                 self.base_json['params']['t_rev_usec_dec'] = int(self.ui.backward_mcs.text())
                 self.base_json['params']['rev_dec_countr'] = int(self.ui.backward_count.value())
@@ -157,11 +167,29 @@ class SignalMod(QDialog):
             if term == 'pass':
                 self.base_json['terminate']['value'] = 0
             elif term in self.one_value_terminators:
-                self.base_json['terminate']['value'] = r2a(self.parent.man,int(self.ui.shutdown_value.text()))
+                self.base_json['terminate']['value'] = r2a(self.parent.man.gain,
+                                                           self.parent.man.res_load,
+                                                           self.parent.man.vol_read,
+                                                           self.parent.man.adc_bit,
+                                                           self.parent.man.vol_ref_adc,
+                                                           self.parent.man.res_switches,
+                                                           int(self.ui.shutdown_value.text()))
             else:
                 # сортируем
-                term_values = [r2a(self.parent.man,int(self.ui.shutdown_min.text())),
-                               r2a(self.parent.man,int(self.ui.shutdown_max.text()))]
+                term_values = [r2a(self.parent.man.gain,
+                                   self.parent.man.res_load,
+                                   self.parent.man.vol_read,
+                                   self.parent.man.adc_bit,
+                                   self.parent.man.vol_ref_adc,
+                                   self.parent.man.res_switches,
+                                   int(self.ui.shutdown_min.text())),
+                               r2a(self.parent.man.gain,
+                                   self.parent.man.res_load,
+                                   self.parent.man.vol_read,
+                                   self.parent.man.adc_bit,
+                                   self.parent.man.vol_ref_adc,
+                                   self.parent.man.res_switches,
+                                   int(self.ui.shutdown_max.text()))]
                 term_values.sort()
                 self.base_json['terminate']['value'] = term_values
 
@@ -179,13 +207,13 @@ class SignalMod(QDialog):
         if self._make_json():
             if self.mode == "create":
                 answer = show_choose_window(self, 'Сохранить файл?')
-            elif self.mode == "edit":
+            elif self.mode == "edit" or self.mode == "edit_for_programming":
                 answer = show_choose_window(self, 'Сохранить изменения?')
             if answer:
                 try:
                     if self.mode == "create":
                         fname = self.ui.json_name.text()
-                        # имя из одник пробелов
+                        # имя из одних пробелов
                         # todo: сменить логику на более подробную
                         if fname.replace(" ", "") == '':
                             raise ValueError
@@ -195,7 +223,7 @@ class SignalMod(QDialog):
                             raise ValueError
                         # открываем файл и пишем
                         self.base_json["name"] = fname
-                    elif self.mode == "edit":
+                    elif self.mode == "edit" or "edit_for_programming":
                         fname = 'temp'
                     with open(os.path.join(TICKET_PATH,
                                         fname+'.json'),
@@ -217,9 +245,9 @@ class SignalMod(QDialog):
         if self.mode == "edit":
             self.json_name.setEnabled(False)
 
-        self.ui.forward_start.setText(str(d2v(self.parent.man,self.base_json['params']['v_dir_strt_inc'])))
-        self.ui.forward_stop.setText(str(d2v(self.parent.man,self.base_json['params']['v_dir_stop_inc'])))
-        self.ui.forward_step.setText(str(d2v(self.parent.man,self.base_json['params']['v_dir_step_inc'])))
+        self.ui.forward_start.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc'])))
+        self.ui.forward_stop.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc'])))
+        self.ui.forward_step.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_step_inc'])))
         self.ui.forward_ms.setText(str(self.base_json['params']['t_dir_msec_inc']))
         self.ui.forward_mcs.setText(str(self.base_json['params']['t_dir_usec_inc']))
         self.ui.forward_count.setValue(self.base_json['params']['dir_inc_countr'])
@@ -229,9 +257,9 @@ class SignalMod(QDialog):
         else:
             self.ui.forward_dec.setCheckState(0)
 
-        self.ui.backward_start.setText(str(d2v(self.parent.man,self.base_json['params']['v_rev_strt_inc'])))
-        self.ui.backward_stop.setText(str(d2v(self.parent.man,self.base_json['params']['v_rev_stop_inc'])))
-        self.ui.backward_step.setText(str(d2v(self.parent.man,self.base_json['params']['v_rev_step_inc'])))
+        self.ui.backward_start.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_strt_inc'])))
+        self.ui.backward_stop.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_stop_inc'])))
+        self.ui.backward_step.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_step_inc'])))
         self.ui.backward_ms.setText(str(self.base_json['params']['t_rev_msec_inc']))
         self.ui.backward_mcs.setText(str(self.base_json['params']['t_rev_usec_inc']))
         self.ui.backward_count.setValue(self.base_json['params']['rev_inc_countr'])
@@ -247,9 +275,27 @@ class SignalMod(QDialog):
         self.ui.terminator_combobox.setCurrentText(self.base_json['terminate']['type'])
         self._choose_terminator()
         if self.base_json['terminate']['type'] in self.one_value_terminators:
-            self.ui.shutdown_value.setText(str(int(a2r(self.parent.man,self.base_json['terminate']['value']))))
+            self.ui.shutdown_value.setText(str(int(a2r(self.parent.man.gain,
+                                                       self.parent.man.res_load,
+                                                       self.parent.man.vol_read,
+                                                       self.parent.man.adc_bit,
+                                                       self.parent.man.vol_ref_adc,
+                                                       self.parent.man.res_switches,
+                                                       self.base_json['terminate']['value']))))
         elif self.base_json['terminate']['type'] != 'pass':
-            term_values = [int(a2r(self.parent.man,self.base_json['terminate']['value'][0])), int(a2r(self.parent.man,self.base_json['terminate']['value'][1]))]
+            term_values = [int(a2r(self.parent.man.gain,
+                                   self.parent.man.res_load,
+                                   self.parent.man.vol_read,
+                                   self.parent.man.adc_bit,
+                                   self.parent.man.vol_ref_adc,
+                                   self.parent.man.res_switches,
+                                   self.base_json['terminate']['value'][0])), int(a2r(self.parent.man.gain,
+                                                                                      self.parent.man.res_load,
+                                                                                      self.parent.man.vol_read,
+                                                                                      self.parent.man.adc_bit,
+                                                                                      self.parent.man.vol_ref_adc,
+                                                                                      self.parent.man.res_switches,
+                                                                                      self.base_json['terminate']['value'][1]))]
             term_values.sort()
             self.ui.shutdown_min.setText(str(term_values[0]))
             self.ui.shutdown_max.setText(str(term_values[1]))
@@ -315,8 +361,13 @@ class SignalMod(QDialog):
                 self.parent.exp_settings_dialog.refresh_list()
             elif self.mode == "edit":
                 self.parent.exp_settings_dialog.apply_edit_to_exp_list()
+            elif self.mode == "edit_for_programming":
+                self.parent.new_ann_dialog.apply_edit_to_prog_ticket()
             self.set_up_init_values()
             event.accept()
         else: # событие вызвала кнопка отмена
             self.set_up_init_values()
             event.accept()
+        # удаление ticket.png при закрытии окна
+        if os.path.isfile(self.IMG_PATH):
+            os.remove(self.IMG_PATH)

@@ -17,6 +17,7 @@ from manager.service import a2r
 from manager.model.src import create_empty_db_crossbar
 from manager.service.global_settings import *
 from manager.model.db import DBOperate
+from simulator.src import create_crossbar_array
 
 class Manager(Application):
     """
@@ -53,10 +54,13 @@ class Manager(Application):
     lock: Lock
     save_flag: bool = False
     connected_flag: bool = False
-    crossbar_id: int
-    cb_type: str
-    c_type: str
+    crossbar_id: int # вносит use_chip
+    cb_type: str # вносит connect
+    blank_type: str # тип бланка, нужно задавать
+    row_num: int # кол-во строк, вносит use_chip
+    col_num: int # кол-во столбцов, вносит use_chip
     conn: Connector
+    crossbar_serial: str
     _admin_thread: Thread
     _worker_thread: Thread
     _save_thread: Thread
@@ -86,11 +90,15 @@ class Manager(Application):
         """
         status, chip_data = self.db.get_chip_data(serial)
         if status:
+            self.crossbar_serial = serial
             self.crossbar_id = chip_data[0]
             self.row_num = chip_data[1]
             self.col_num = chip_data[2]
             self.cb_type = chip_data[3]
-            self.c_type = chip_data[4]
+            # внесения изменений в БД в новых версиях
+            # добавление поля last_resistance в таблицу Experiments
+            _ = self.db.add_column_if_not_exist('Experiments', 'last_resistance', 'INTEGER')
+            _ = self.db.add_column_if_not_exist('Experiments', 'meta_info', 'BLOB')
         return status, chip_data
 
     def add_chip(self,
@@ -98,8 +106,7 @@ class Manager(Application):
                  comment: str = "",
                  row_num: int = 32,
                  col_num: int = 8,
-                 cb_type: str = 'simulator',
-                 c_type: str = 'simulator') -> bool:
+                 cb_type: str = 'simulator') -> bool:
         """
         Добавление чипа в базу
         """
@@ -113,42 +120,34 @@ class Manager(Application):
                                                            comment,
                                                            row_num,
                                                            col_num,
-                                                           cb_type,
-                                                           c_type)
+                                                           cb_type)
             if status:
                 self.ap_logger.info('crossbar #%d with serial %s added', crossbar_id, serial)
                 status_add = status
+                if cb_type == 'simulator': # создаем модель кроссбара
+                    create_crossbar_array(serial, row_num, col_num)
         return status_add
 
-    def get_recorded_results(self) -> bool:
-        """
-        Получить значение счетчика записанных результатов
-        Для каждого тикета результатов будет равно:
-        кол-во тасков + 2 (метка начала и конца)
-        """
-        self.lock.acquire()
-        res = self._recorded_results
-        self.lock.release()
-        return res
-
-    def connect(self, port) -> bool:
+    def connect(self, **kwargs) -> bool:
         """
         Подключение к плате
         """
         self.conn = Connector(int(self.ap_config['connector']['silent']),
-                               self.ap_logger,
-                               self.ap_config,
-                               self.blank_type,
-                               self.cb_type)
-        self.connected_flag = self.conn.open_serial(port) # подключаемся к плате
+                              self.ap_logger,
+                              self.cb_type,
+                              self.board_type,
+                              crossbar_serial = self.crossbar_serial,
+                              config = self.ap_config)
+        # подключаемся к плате
+        if 'com_port' in kwargs:
+            # подключение по COM порту
+            self.connected_flag = self.conn.open_port(com_port=kwargs['com_port'],
+                                                      attempts = int(self.ap_config['connector']['attempts_to_kick']),
+                                                      timeout = float(self.ap_config["connector"]["timeout"]))
+        else:
+            # другое подключение
+            self.connected_flag = self.conn.open_port()
         return self.connected_flag
-
-    def try_connect(self) -> None:
-        """
-        Попытка открыть COM порт
-        """
-        if not self.connected_flag:
-            self.connected_flag = self.conn.open_serial(self._port) # подключаемся к плате
 
     def _admin(self) -> None:
         """
@@ -297,7 +296,13 @@ class Manager(Application):
                              self._done_tickets)
             # сохраняем в БД
             if result:
-                last_resistance = int(a2r(self, result[0]))
+                last_resistance = int(a2r(self.gain,
+                                          self.res_load,
+                                          self.vol_read,
+                                          self.adc_bit,
+                                          self.vol_ref_adc,
+                                          self.res_switches,
+                                          result[0]))
                 status_update_complited_ticket = db.update_complited_ticket(exp_id, mem_id, last_resistance)
                 if not status_update_complited_ticket:
                     self.ap_logger.critical("db exp_id:%d mem_id:%d result:%s", exp_id, mem_id, str(result))
@@ -352,7 +357,7 @@ class Manager(Application):
                 self._saver_read_results += 1
                 # 1 записать в файл
                 if isinstance(result, tuple) and self.save_flag and file_opened:
-                    save_list_to_bytearray(file, result[0]['vol'], result[1])
+                    save_list_to_bytearray(file, result[0]['sign'], result[0]['vol'], result[1])
                     saved_results += 1
                 # 2 создать имя файла
                 elif isinstance(result, str) and 'начало' in result.split('_') and not file_opened:
@@ -360,14 +365,14 @@ class Manager(Application):
                     file_path = os.path.join(os.getcwd(),'results', fname)
                     # сохраняем в БД
                     exp_id = int(result.split('_')[1])
-                    _ = db.update_ticket_result_path(exp_id, fname) 
+                    _ = db.update_ticket_result_path(exp_id, fname)
                 # 3 открыть файл и записать
                 elif isinstance(result, tuple) and self.save_flag and not file_opened:
                     file = open(file_path, 'wb')
                     file_opened = True
                     files_created += 1
                     self.ap_logger.info('file %s created!', fname)
-                    save_list_to_bytearray(file, result[0]['vol'], result[1])
+                    save_list_to_bytearray(file, result[0]['sign'], result[0]['vol'], result[1])
                     saved_results += 1
                 # 4 закрыть файл
                 elif result == 'конец' and file_opened:
@@ -400,6 +405,17 @@ class Manager(Application):
         self.ap_logger.info('save thread finished. %d results read. %d files created.',
                         saved_results,
                         files_created)
+
+    def get_recorded_results(self) -> bool:
+        """
+        Получить значение счетчика записанных результатов
+        Для каждого тикета результатов будет равно:
+        кол-во тасков + 2 (метка начала и конца)
+        """
+        self.lock.acquire()
+        res = self._recorded_results
+        self.lock.release()
+        return res
 
     def start(self) -> None:
         """
@@ -485,6 +501,8 @@ class Manager(Application):
         """
         Извлечь значения терминатора
         """
+        term_left = None
+        term_right = None
         term_type = terminate['type']
         term_value = terminate['value'] # adc
         if term_type == 'pass':
@@ -515,7 +533,7 @@ class Manager(Application):
         self.results.join()
         # закрываем COM порт
         if self.connected_flag:
-            self.conn.close_serial()
+            self.conn.close_port()
         # проверяем потоки
         try:
             while self._admin_thread.is_alive():

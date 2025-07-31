@@ -8,6 +8,7 @@ check_exp
 
 import os
 import pickle
+from copy import deepcopy
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import QtWidgets
@@ -31,6 +32,7 @@ class ExpSettings(QDialog):
     ticket_files: list = []
     list_experiments: QStandardItemModel
     list_model: QStandardItemModel
+    apply_exp_all_button_clicked: bool = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -50,6 +52,10 @@ class ExpSettings(QDialog):
         self._refresh_exp_list()
         self.ui.plan_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.plan_list.doubleClicked.connect(self._edit_ticket)
+        try:
+            self.ui.exp_name.setText("Эксперимент_" + str(self.parent.man.db.get_last_experiment()[1]+1))
+        except TypeError:
+            self.ui.exp_name.setText("Эксперимент_1")
         # обработка кнопок
         self.ui.button_new_signal.clicked.connect(lambda: self.parent.show_signal_dialog("blank",
                                                                                          "create"))
@@ -65,6 +71,7 @@ class ExpSettings(QDialog):
         self.ui.button_check_exp.clicked.connect(self.check_exp)
         self.ui.button_load_exp.clicked.connect(lambda: self.parent.show_history_dialog(mode="all"))
         self.ui.button_apply_all.clicked.connect(self.apply_exp_all)
+        self.ui.button_duplicate.clicked.connect(self.duplicate_ticket)
         # блок кнопок
         if parent.opener == 'testing':
             self.ui.button_apply_exp.setEnabled(False)
@@ -76,6 +83,7 @@ class ExpSettings(QDialog):
         Задать начальные значения
         """
         self.ticket_files = []
+        self.apply_exp_all_button_clicked = False
         self.parent.exp_list = []
         self.parent.exp_name = ''
         self.parent.exp_list_params = {}
@@ -233,6 +241,7 @@ class ExpSettings(QDialog):
             exp_name = self.ui.exp_name.text()
             if exp_name:
                 self.parent.exp_name = exp_name
+        self.apply_exp_all_button_clicked = True
         self.close()
 
     def _view_requests(self) -> None:
@@ -246,8 +255,9 @@ class ExpSettings(QDialog):
         Выход из планировщика
         """
         if self.parent.opener == 'testing':
-            if self.parent.exp_list:
+            if self.parent.exp_list and self.apply_exp_all_button_clicked:
                 self.parent.testing_dialog.button_ready_combination()
+                self.parent.testing_dialog.update_label_time_status()
         else:
             self.set_up_init_values()
             self.parent.update_current_cell_info()
@@ -277,3 +287,19 @@ class ExpSettings(QDialog):
         for ticket in tickets:
             tick = pickle.loads(ticket[0])
             self._add_exp_to_list(ticket=tick)
+
+    def duplicate_ticket(self) -> None:
+        """
+        Дублировать сигнал
+        """
+        # определяем номер тикета
+        ticket_position = self.ui.plan_list.currentIndex().row()
+        ticket = deepcopy(self.parent.exp_list[ticket_position][1])
+        task_list, count = calculate_counts_for_ticket(self.parent.man, deepcopy(ticket))
+        # копируем выбранный тикет
+        self.parent.exp_list.append((ticket["name"], deepcopy(ticket), deepcopy(task_list), count))
+        # обновляем параметры
+        self.parent.exp_list_params['total_tickets'] += 1
+        self.parent.exp_list_params['total_tasks'] += count
+        self._refresh_exp_list()
+        self.label_total_update()

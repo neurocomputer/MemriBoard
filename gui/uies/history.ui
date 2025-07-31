@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1424</width>
-    <height>779</height>
+    <width>1223</width>
+    <height>682</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,75 +34,124 @@
           <item>
            <widget class="QTableWidget" name="table_history_experiments"/>
           </item>
+          <item>
+           <layout class="QHBoxLayout" name="buttons_layout">
+            <item>
+             <widget class="QPushButton" name="button_load">
+              <property name="text">
+               <string>Загрузить</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_choose_exp">
+              <property name="text">
+               <string>Выбрать</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_cancel">
+              <property name="text">
+               <string>Отмена</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
          </layout>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_6">
-          <item>
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>История экспериментов:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QTableWidget" name="table_history_tickets"/>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Быстрый просмотр:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_image">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QTabWidget" name="tab_history_info">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="tab_brief">
+           <attribute name="title">
+            <string>Кратко</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_7">
+              <item>
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Быстрый просмотр:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTextEdit" name="quick_view">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_image">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_full">
+           <attribute name="title">
+            <string>Подробно</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_6">
+              <item>
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>История экспериментов:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTableWidget" name="table_history_tickets"/>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_2">
+                <item>
+                 <widget class="QPushButton" name="button_load_from_db">
+                  <property name="text">
+                   <string>Выгрузить в csv</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="button_export_to_json">
+                  <property name="text">
+                   <string>Экспортировать тикет</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </widget>
         </item>
        </layout>
       </item>
      </layout>
     </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="buttons_layout">
-     <item>
-      <widget class="QPushButton" name="button_load">
-       <property name="text">
-        <string>Загрузить</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="button_load_from_db">
-       <property name="text">
-        <string>Выгрузить в csv</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="button_cancel">
-       <property name="text">
-        <string>Отмена</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
    </item>
   </layout>
  </widget>
