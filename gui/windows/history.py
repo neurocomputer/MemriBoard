@@ -187,7 +187,7 @@ class History(QDialog):
             self.ui.table_history_tickets.setItem(row_position, 1, QTableWidgetItem(item[2]))
             self.ui.table_history_tickets.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3])))
         self.ui.table_history_tickets.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        if self.parent.man.connected_port != 'offline':
+        if self.parent.man.board_type != 'offline':
             self.ui.button_load.setDisabled(False)
             self.ui.button_choose_exp.setDisabled(False)
         self.ui.button_load_from_db.setDisabled(False)

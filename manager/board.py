@@ -63,7 +63,7 @@ class Connector():
             if count > attempts:
                 not_rec_flag = True
                 break
-            command = '100\n'
+            command = '7,0,0,0,0,0,0,0\n'
             _ = self.push(command)
             rec_data = self.pull()
             count += 1
@@ -241,6 +241,7 @@ class Connector():
             if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 self.inc_req_id() # увеличиваем счечик id
                 task["id"] = self.request_id # записываем id в тикет
+                task['vol'] = abs(task['vol'])
                 _ = self.push(gather(task))
                 try:
                     res = self.pull()
@@ -256,6 +257,7 @@ class Connector():
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
             elif self.board_type in ['rp5_python', 'rp5_c']:
                 if task['mode_flag'] == 7: # режим команды 7
+                    task['vol'] = abs(task['vol'])
                     adc = self.rasp_driver.mode_7(task['vol'],
                                             task['t_ms'],
                                             task['t_us'],

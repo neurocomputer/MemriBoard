@@ -17,7 +17,7 @@ def convert_volt_to_dac(dac_bit: int, vol_ref_dac: float, vol_value: float) -> i
         dac_value -- число для ЦАП
     """
     dac_value = int(round(vol_value*(2**dac_bit-1)/vol_ref_dac,0))
-    return dac_value
+    return abs(dac_value)
 
 def convert_dac_to_volt(dac_bit: int, vol_ref_dac: float, dac_value: int, **kwargs) -> float:
     """
