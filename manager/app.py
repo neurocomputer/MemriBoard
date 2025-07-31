@@ -32,10 +32,8 @@ class Application():
     gain: int # усиление
     sum_gain: int # сопротивление ОС
     menu: dict # меню режимов
-    blank_type: str # тип бланка
+    board_type: str # тип платы
     connected_port: str # com порт
-    row_num: int # кол-во строк
-    col_num: int # кол-во столбцов
     db: DBOperate
     status_db_connect: bool
     backup: str
@@ -75,7 +73,8 @@ class Application():
         """
         self.ap_config.read(self.ap_config_path, encoding="utf-8")  # читаем конфиг
         self.connected_port = self.ap_config['connector']['com_port']
-        self.blank_type = self.ap_config['connector']['c_type']
+        self.board_type = self.ap_config['board']['board_type']
+        self.backup = self.ap_config['backup']['backup_path']
         # для отдельных настроек создаем алиасы
         self.dac_bit = int(self.ap_config['board']['dac_bit'])
         self.vol_ref_dac = float(self.ap_config['board']['vol_ref_dac'])
@@ -87,7 +86,6 @@ class Application():
         self.gain = float(self.ap_config['board']['gain'])
         self.sum_gain = int(self.ap_config['board']['sum_gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
-        self.backup = self.ap_config['backup']['backup_path']
 
     def save_settings(self, **kwargs):
         """
@@ -105,8 +103,8 @@ class Application():
             self.ap_config['gui']['last_crossbar_serial'] = kwargs["last_crossbar_serial"]
         if "com_port" in kwargs:
             self.ap_config['connector']['com_port'] = kwargs["com_port"]
-        if "c_type" in kwargs:
-            self.ap_config['connector']['c_type'] = kwargs["c_type"]
+        if "board_type" in kwargs:
+            self.ap_config['board']['board_type'] = kwargs["board_type"]
         if "backup" in kwargs:
             self.ap_config['backup']['backup_path'] = kwargs["backup"]
         # запись в файл
@@ -119,6 +117,7 @@ class Application():
         Вернуть словарь с метаинформацией
         """
         meta_info = {}
+        meta_info['board_type'] = self.board_type
         meta_info['dac_bit'] = self.dac_bit
         meta_info['adc_bit'] = self.adc_bit
         meta_info['gain'] = self.gain
@@ -129,7 +128,6 @@ class Application():
         meta_info['vol_read'] = self.vol_read
         meta_info['res_load'] = self.res_load
         meta_info['res_switches'] = self.res_switches
-        meta_info['blank_type'] = self.blank_type
         meta_info['connected_port'] = self.connected_port
         meta_info['backup'] = self.backup
         return deepcopy(meta_info)

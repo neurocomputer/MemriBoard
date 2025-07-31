@@ -8,41 +8,46 @@ import random
 import time
 from logging import Logger
 from configparser import ConfigParser
-from manager.comport import Serial
-from manager.blanks import blanks, fill_blank, gather
+from manager.blanks import gather
 from manager.service import d2v
-from simulator.src import load_crossbar_array, send_mode_7_to_crossbar, send_mode_9_to_crossbar, send_mode_mvm_to_crossbar
+from simulator.src import (load_crossbar_array,
+                           send_mode_7_to_crossbar,
+                           send_mode_9_to_crossbar,
+                           send_mode_mvm_to_crossbar)
 
 class Connector():
     """
-    Взаимодействие с платой по COM порту
+    Взаимодействие с платой
     """
 
-    serial: Serial
     silent: int
     logger: Logger
-    config: ConfigParser
-    c_type: str
-    # для симулятора
-    crossbar_array: list
-    crossbar_serial: str
+    cb_type: str
+    board_type: str
     request_id: int = 0
 
-    def __init__(self, silent, logger, config, c_type, cb_type, **kwargs):
-        self.serial = Serial()
+    serial = None # COM порт
+    rasp_driver = None # драйвер для распберри плат
+
+    # для симулятора
+    config: ConfigParser
+    crossbar_serial: str
+    crossbar_array: list
+
+    def __init__(self, silent, logger, cb_type, board_type, **kwargs):
         self.silent = silent
         self.logger = logger
-        self.config = config
-        self.c_type = c_type
         self.cb_type = cb_type
-        self.c_type = 'memridriverc' # ''   memricore
+        self.board_type = board_type
         # для симулятора
+        if 'config' in kwargs:
+            self.config = kwargs['config']
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
 
     def _kick_board(self, attempts: int) -> bool:
         """
-        Опрашиваем плату пока не ответит
+        Опрашиваем плату по COM-порту пока не ответит
 
         Arguments:
             attempts -- количество попыток
@@ -53,43 +58,39 @@ class Connector():
         rec_data = []
         count = 1
         not_rec_flag = False
-        data = {'vol': 0,
-                't_ms': 0,
-                't_us': 0,
-                'sign': 0,
-                'id': count}
         while not rec_data:
             self.logger.info('Try %d', count)
             if count > attempts:
                 not_rec_flag = True
                 break
-            command = gather(fill_blank(blanks[self.c_type], data))
+            command = '100\n'
             _ = self.push(command)
             rec_data = self.pull()
             count += 1
-            data['id'] = count
         return not_rec_flag
 
-    def open_serial(self, portnum: str) -> bool:
+    def open_port(self, **kwargs) -> bool:
         """
-        Открытие COM порта
-
-        Arguments:
-            portnum -- номер порта в формате 'comX'
+        Открытие соединения
 
         Returns:
             open_flag -- статус открытия
         """
+
         open_flag = False
         if self.cb_type == 'simulator':
             # загрузка симулятора
             open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
         elif self.cb_type == 'real':
             # для плат на базе Arduino
-            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+                from manager.comport import Serial # pylint: disable=C0415
+                self.serial = Serial()
                 # кол-во попыток получить данные
-                attempts = int(self.config['connector']['attempts_to_kick'])
-                self.serial.com_open(portnum, timeout=float(self.config["connector"]["timeout"]))
+                portnum = kwargs['com_port']
+                attempts = kwargs['attempts']
+                timeout = kwargs['timeout']
+                self.serial.com_open(portnum, timeout=timeout)
                 if self.serial.com_is_open():
                     not_rec_flag = self._kick_board(attempts)
                     if not_rec_flag:
@@ -99,20 +100,26 @@ class Connector():
                         open_flag = True
                 else:
                     self.logger.info('Fail to open %s', portnum)
-            # для плат на базе Raspberry Pi
-            elif self.c_type == 'memricore':
-                from MemriCORE.rpi_modes import RPI_modes
-                self.rasp_driver = RPI_modes()
-                open_flag = True
-            elif self.c_type == 'memridriverc':
-                import MemriDriverC.mvmdriver_wrapper as driver
-                self.rasp_driver = driver.MVMDriver()
-                open_flag = True
+            # для плат на базе Raspberry Pi 5
+            elif self.board_type == 'rp5_python':
+                try:
+                    from MemriCORE.rpi_modes import RPI_modes # pylint: disable=C0415
+                    self.rasp_driver = RPI_modes()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
+            elif self.board_type == 'rp5_c':
+                try:
+                    import MemriDriverC.mvmdriver_wrapper as driver # pylint: disable=C0415,E0401
+                    self.rasp_driver = driver.MVMDriver()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
         return open_flag
 
-    def close_serial(self) -> bool:
+    def close_port(self) -> bool:
         """
-        Закрыть COM порт
+        Закрыть соединение
 
         Returns:
             close_flag -- статус закрытия
@@ -122,22 +129,22 @@ class Connector():
             close_flag = True
         elif self.cb_type == 'real':
             # для плат на базе Arduino
-            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 self.serial.com_close()
                 if self.serial.com_is_open():
                     self.logger.info('Fail to close')
                 else:
                     self.logger.info('Closed')
                     close_flag = True
-            # для плат на базе Raspberry Pi
-            elif self.c_type in ['memricore', 'memridriverc']:
-                #todo: может нужно что-то еще
+            # для плат на базе Raspberry Pi 5
+            elif self.board_type in ['rp5_python', 'rp5_c']:
+                # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
 
     def push(self, send_data: str) -> bool:
         """
-        Функция отправки данных
+        Функция отправки данных по COM порту
 
         Arguments:
             data -- данные для отправки
@@ -200,7 +207,7 @@ class Connector():
         rec_data = []
         send_flag = False
         if self.cb_type == 'real':
-            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 send_flag = self.push('100\n')
                 self.serial.com_whait_ready(float(self.config['connector']['timeout']))
                 if self.serial.com_can_read_line():
@@ -209,17 +216,14 @@ class Connector():
                         rec_data = str(rx, 'utf-8').strip().split(',')
                     except ValueError:
                         pass
-            elif self.c_type == 'memricore':
+            elif self.board_type in ['rp5_python', 'rp5_c']:
                 send_flag = True
-                rec_data = ['raspberry']
-            elif self.c_type == 'memridriverc':
-                send_flag = True
-                rec_data = ['raspberry_memridriverc']
+                rec_data = ['raspberry pi 5']
                 # todo: добавить служебную инфу в драйвер
         # режим симулятор
         elif self.cb_type == 'simulator':
             send_flag = True
-            rec_data = ['simulator']            
+            rec_data = ['simulator']        
         return send_flag, rec_data
 
     def impact(self, task: dict):
@@ -234,7 +238,7 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
-            if self.c_type == 'memardboard_single' or self.c_type == 'memardboard_crossbar':    
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 self.inc_req_id() # увеличиваем счечик id
                 task["id"] = self.request_id # записываем id в тикет
                 _ = self.push(gather(task))
@@ -250,7 +254,7 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.c_type in ['memricore', 'memridriverc']:
+            elif self.board_type in ['rp5_python', 'rp5_c']:
                 if task['mode_flag'] == 7: # режим команды 7
                     adc = self.rasp_driver.mode_7(task['vol'],
                                             task['t_ms'],
@@ -355,22 +359,27 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
-            _ = self.push(command)
-            while attempts:
-                time.sleep(timeout)
-                try:
-                    res = self.pull()
-                    if len(res) == 2:
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+                _ = self.push(command)
+                while attempts:
+                    time.sleep(timeout)
+                    try:
+                        res = self.pull()
+                        if len(res) == 2:
+                            break
+                    except ValueError:
+                        self.logger.critical('ValueError in board.py:pull!')
+                    attempts -= 1
+                    if attempts == 0:
                         break
-                except ValueError:
-                    self.logger.critical('ValueError in board.py:pull!')
-                attempts -= 1
-                if attempts == 0:
-                    break
+            elif self.board_type in ['rp5_python', 'rp5_c']:
+                # todo: пока не реализован
+                time.sleep(timeout)
+                res = (0, 0)
         # режим симулятор
         elif self.cb_type == 'simulator':
             time.sleep(timeout)
-            res = (random.randint(0,2**int(self.config['board']['adc_bit'])), 0)
+            res = (0, 0)
         # можно добавить работу с другими платами
         return res
 
