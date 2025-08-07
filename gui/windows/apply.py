@@ -24,6 +24,8 @@ from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
 from gui.src import show_choose_window, show_warning_messagebox
 
+BETWEEN_TIME = 10/1000
+
 class Apply(QWidget):
     """
     Окно выполнения эксперимента
@@ -370,7 +372,7 @@ class Apply(QWidget):
             # выбор отображения по осям
             y_item = self.y_value_process(value, vol, sign)
             x_item = self.x_value_process(vol, sign, count)
-            size = 400 # todo: глубина отрисовки, вынести в константы
+            size = 3000 # todo: глубина отрисовки, вынести в константы
             data_len = len(self.data_for_plot_y)
             if data_len > size:
                 self.data_for_plot_y = self.data_for_plot_y[1:] + [y_item]
@@ -496,6 +498,7 @@ class ApplyExp(QThread):
                 # инициируем цикл по таскам
                 result = 0
                 for task in self.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.man.blank_type):
+                    time.sleep(BETWEEN_TIME)
                     if self.need_stop:
                         break
                     if self.need_pause:

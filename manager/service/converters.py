@@ -93,8 +93,8 @@ def convert_adc_to_res(gain: float,
         res -- сопротивление мемристора
     """
     adc_value = int(adc_value)
-    if adc_value < 50:
-        adc_value = 50 # todo: это лучше вынести в настройки
+    if adc_value < 20:
+        adc_value = 20 # todo: это лучше вынести в настройки
     try:
         res = (gain*res_load*vol_read*(2**adc_bit))/ \
             (adc_value*vol_ref_adc) - res_switches - res_load
