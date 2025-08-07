@@ -25,6 +25,8 @@ from manager.service.saves import save_list_to_bytearray, init_csv_apply
 import csv
 from gui.src import show_choose_window, show_warning_messagebox
 
+BETWEEN_TIME = 10/1000
+
 class Apply(QWidget):
     """
     Окно выполнения эксперимента
@@ -400,7 +402,7 @@ class Apply(QWidget):
             # выбор отображения по осям
             y_item = self.y_value_process(value, vol, sign)
             x_item = self.x_value_process(vol=vol, sign=sign, count=count)
-            size = 400 # todo: глубина отрисовки, вынести в константы
+            size = 3000 # todo: глубина отрисовки, вынести в константы
             data_len = len(self.data_for_plot_y)
             if data_len > size:
                 self.data_for_plot_y = self.data_for_plot_y[1:] + [y_item]
