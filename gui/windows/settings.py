@@ -28,6 +28,7 @@ class Settings(QDialog):
         self.ui.button_cancel.clicked.connect(self.close)
         self.ui.button_update.clicked.connect(self.update_settings)
         self.ui.button_add_path.clicked.connect(self.add_path)
+        self.ui.button_add_writable_cells_csv.clicked.connect(self.get_writable_cells)
         # заполнение параметров
         self.fill_settings()
 
@@ -45,25 +46,40 @@ class Settings(QDialog):
         Сохранение настроек
         """
         backup_path = self.ui.lineedit_backup.text()
+        writable_cells = self.ui.lineedit_writable_cells.text()
         if len(backup_path) != 0:
-            if platform.system() == "Linux" and backup_path[-1] != "/":
+            if platform.system() == "Linux":
                 backup_path = backup_path + "/"
-            elif platform.system() == "Windows" and backup_path[-1] != "\\":
+            elif platform.system() == "Windows":
                 backup_path = backup_path + '\\'
         if not os.path.isdir(backup_path):
             backup_path = os.path.join(os.getcwd(), "base.db")[:-7]
+        if len(writable_cells) != 0:
+            if not os.path.isfile(writable_cells):
+                writable_cells = ''
+                self.ui.lineedit_writable_cells.setText(writable_cells)
         self.parent.man.save_settings(adc_bit = self.ui.choose_adc_bit.currentText(),
                                       gain = str(self.ui.choose_gain.value()),
                                       soft_cc = str(self.ui.choose_software_cc.value()),
-                                      backup = backup_path)
+                                      backup = backup_path,
+                                      writable_cells = writable_cells)
         self.close()
 
     def add_path(self) -> None:
         """
         Выбрать папку для бэкапа бд
         """
-        path = QFileDialog.getExistingDirectory(self, "Выберите директорию для резервного копирования") + "/"
-        self.ui.lineedit_backup.setText(path)
+        path = QFileDialog.getExistingDirectory(self, "Выберите директорию для резервного копирования")
+        if path[0]:
+            self.ui.lineedit_backup.setText(path[0])
+
+    def get_writable_cells(self) -> None:
+        """
+        Выбор csv с рабочими ячейками
+        """
+        path = QFileDialog.getOpenFileName(self, "Выберите файл ячеек", filter="*.csv")
+        if path[0]:
+            self.ui.lineedit_writable_cells.setText(path[0])
 
     def update_settings(self) -> None:
         """

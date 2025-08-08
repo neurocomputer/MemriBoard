@@ -37,6 +37,7 @@ class Application():
     db: DBOperate
     status_db_connect: bool
     backup: str
+    writable_cells: str
 
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
@@ -86,6 +87,7 @@ class Application():
         self.gain = float(self.ap_config['board']['gain'])
         self.sum_gain = int(self.ap_config['board']['sum_gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
+        self.writable_cells = self.ap_config['gui']['writable_cells']
 
     def save_settings(self, **kwargs):
         """
@@ -107,6 +109,8 @@ class Application():
             self.ap_config['board']['board_type'] = kwargs["board_type"]
         if "backup" in kwargs:
             self.ap_config['backup']['backup_path'] = kwargs["backup"]
+        if "writable_cells" in kwargs:
+            self.ap_config['gui']['writable_cells'] = kwargs["writable_cells"]
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
