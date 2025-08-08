@@ -68,6 +68,8 @@ last_crossbar_serial=
 measure_ticket=measure.json
 ; тикет для записи весов
 program_ticket=programming.json
+; ячейки для записи
+writable_cells=
 
 ; бэкап датабазы
 [backup]
