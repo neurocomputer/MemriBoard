@@ -134,4 +134,5 @@ class Application():
         meta_info['res_switches'] = self.res_switches
         meta_info['connected_port'] = self.connected_port
         meta_info['backup'] = self.backup
+        meta_info['writable_cells'] = self.writable_cells
         return deepcopy(meta_info)
