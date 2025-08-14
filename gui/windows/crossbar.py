@@ -11,6 +11,7 @@ https://stackoverflow.com/questions/57891219/how-to-make-a-fast-matplotlib-live-
 import os
 import time
 import json
+import csv
 import numpy as np
 from numpy import inf
 from PyQt5 import uic
@@ -345,7 +346,20 @@ class Window(QMainWindow):
             sum_values = np.sum(self.all_resistances)
             log_resistances = np.log10(self.all_resistances)
             self.snapshot = np.zeros((self.man.row_num, self.man.col_num))
+            writable = []
 
+            if self.man.get_meta_info()["writable_cells"] != '':
+                cells = []
+                with open(self.man.get_meta_info()["writable_cells"], 'r', newline='') as f:
+                    csvreader = csv.reader(f, delimiter=",")
+                    for row in csvreader:
+                        if row[0] != "wl":
+                            cells.append(row)
+                    f.close()
+                writable = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
+                for i in range(len(cells)):
+                    for j in range(len(cells[i])):
+                        writable[i][int(cells[i][j])] = 1
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
@@ -362,7 +376,13 @@ class Window(QMainWindow):
                         else:
                             color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
                             color_value = int(color_value*255)
-                        colors[i][j] = QColor(color_value, color_value, color_value)
+                        if writable != []:
+                            if writable[i][j] == 1:
+                                colors[i][j] = QColor(color_value, color_value, color_value)
+                            else:
+                                colors[i][j] = QColor(0, 0, 0)
+                        else:
+                            colors[i][j] = QColor(color_value, color_value, color_value)
                         self.snapshot[i][j] = color_value
         except ValueError:
             #show_warning_messagebox("Не возможно корректно задать цвета!")
