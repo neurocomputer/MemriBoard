@@ -382,7 +382,6 @@ class Window(QMainWindow):
                             writable[i][int(cells[i][j])] = 1
                 else:
                     show_warning_messagebox("Файл с рабочими ячейками некорректно сформирован!")
-            print(writable)
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
