@@ -338,6 +338,31 @@ class Window(QMainWindow):
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
 
+    def is_writable_cells_file_correct(self) -> None:
+        """
+        Проверка csv файла ячеек
+        """
+        is_correct = True
+        cells = []
+        # формирование списка
+        if self.man.get_meta_info()["writable_cells"] != '':
+            with open(self.man.get_meta_info()["writable_cells"], 'r', newline='') as f:
+                csvreader = csv.reader(f, delimiter=",")
+                for row in csvreader:
+                    if row[0] != "wl":
+                        cells.append(row)
+                f.close()
+            # проверки
+            if len(cells) >= self.man.row_num:
+                return False, []
+            for i in range(len(cells)):
+                for j in range(len(cells[i])):
+                    if cells[i][j].isalpha():
+                        return False, []
+                    if len(cells[i][j]) >= self.man.col_num:
+                        return False, []
+        return is_correct, cells
+
     def color_table(self) -> None:
         """
         Раскраска таблицы сопротивлений
@@ -349,17 +374,15 @@ class Window(QMainWindow):
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
-                cells = []
-                with open(self.man.get_meta_info()["writable_cells"], 'r', newline='') as f:
-                    csvreader = csv.reader(f, delimiter=",")
-                    for row in csvreader:
-                        if row[0] != "wl":
-                            cells.append(row)
-                    f.close()
-                writable = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
-                for i in range(len(cells)):
-                    for j in range(len(cells[i])):
-                        writable[i][int(cells[i][j])] = 1
+                is_correct, cells = self.is_writable_cells_file_correct()
+                if is_correct:
+                    writable = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
+                    for i in range(len(cells)):
+                        for j in range(len(cells[i])):
+                            writable[i][int(cells[i][j])] = 1
+                else:
+                    show_warning_messagebox("Файл с рабочими ячейками некорректно сформирован!")
+            print(writable)
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
