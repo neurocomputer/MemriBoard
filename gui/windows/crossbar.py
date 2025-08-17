@@ -151,17 +151,28 @@ class Window(QMainWindow):
         """
         Показать окно математики
         """
-        self.read_cell_all('crossbar') # чтение всех ячеек
-        self.opener = 'math'
-        self.current_bl = self.ui.table_crossbar.currentRow()
-        self.current_wl = self.ui.table_crossbar.currentColumn()
-        if self.current_bl == -1:
-            self.current_bl = 0
-            self.current_wl = 0
-        self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
-        self.math_dialog = Math(parent=self)
-        self.math_dialog.show()
-        self.showMinimized()
+        mode = ''
+        if self.man.cb_type == "real":
+            if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c']:
+                mode = "no_crossbar"
+            if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+                mode = "normal"
+            else:
+                show_warning_messagebox("Плата не распознана!")
+        elif self.man.cb_type == "simulator":
+            mode = "normal"
+        if mode != '':
+            self.read_cell_all('crossbar') # чтение всех ячеек
+            self.opener = 'math'
+            self.current_bl = self.ui.table_crossbar.currentRow()
+            self.current_wl = self.ui.table_crossbar.currentColumn()
+            if self.current_bl == -1:
+                self.current_bl = 0
+                self.current_wl = 0
+            self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
+            self.math_dialog = Math(parent=self, mode=mode)
+            self.math_dialog.show()
+            self.showMinimized()
    
     def show_new_ann_dialog(self, mode=None) -> None: 
         """
