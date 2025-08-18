@@ -73,6 +73,7 @@ class Math(QWidget):
     result: list
     voltages: list
     empty_table: list
+    mode: str
 
     current_weights = None
     current_weights_scaled = None
@@ -87,13 +88,16 @@ class Math(QWidget):
     input_array_source = None
     vol_comp: int # ограничитель напряжения
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, mode=str) -> None:
         super().__init__(parent)
         self.parent = parent
+        self.mode = mode
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
         self.ui.setWindowFlags(Qt.Window)
+        if self.mode == "no_crossbar":
+            self.ui.tabwidget_mode.setTabEnabled(1, False)
         # self.setModal(True)
         self.ui.text_voltage.setEnabled(False)
         self.ui.button_apply.setEnabled(False)
