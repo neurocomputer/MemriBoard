@@ -334,6 +334,9 @@ class Window(QMainWindow):
             for item in resistances:
                 self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(item[res])))
                 self.all_resistances[item[bl]][item[wl]] = item[res]
+            # TODO: make a GUI button with this functionality
+            with open('./all_resistances.json', 'w') as file:  # Dumping all resistances to JSON file in the root folder
+                json.dump(self.all_resistances, file, indent=4)
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
 
