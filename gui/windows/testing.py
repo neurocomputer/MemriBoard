@@ -610,6 +610,7 @@ class ImageGenerator(QThread):
         """
         Запуск потока посылки тикета
         """
+        # TODO: Add current in uA as ylabel type
         # создаем папку
         now = datetime.datetime.now()
         formatted_date = now.strftime("%d.%m.%Y_%H.%M.%S")
@@ -641,7 +642,7 @@ class ImageGenerator(QThread):
                     self.x_data = np.array(df['vol'])
                     self.y_data = np.array(df['res'])
                     if y_axes_type == 'cur':
-                        self.y_data = self.x_data/self.y_data
+                        self.y_data = self.x_data / self.y_data * 1000  # Converting current to mA
                     if x_axes_type == 'count':
                         self.x_data = [i+1 for i in range(len(self.x_data))]
                     # от plotly отказались из-за большого размера библиотеки
