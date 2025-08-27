@@ -121,6 +121,7 @@ class NewAnn(QDialog):
         # привязываем к кнопке
         self.ui.button_signal_parameters.clicked.connect(self.change_signal_parameters)
         self.ui.button_random_weights.clicked.connect(self.generate_random_weights)
+        self.ui.table_weights.itemDoubleClicked.connect(self.cell_info)
 
     def generate_random_weights(self):
         """
@@ -267,6 +268,14 @@ class NewAnn(QDialog):
             self.cells_coordinates_all = copy.deepcopy(self.cells_coordinates_choosen)
             self.fill_table_weights()
             self.update_good_cels()
+
+    def cell_info(self):
+        """
+        Отображение информации о ячейке
+        """
+        self.parent.extra = [self.ui.table_weights.item(self.ui.table_weights.currentRow(), 0).text(),
+                             self.ui.table_weights.item(self.ui.table_weights.currentRow(), 1).text()]
+        self.parent.show_cell_info_dialog()
 
     # методы для таблицы с весами
 

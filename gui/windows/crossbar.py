@@ -85,6 +85,7 @@ class Window(QMainWindow):
     new_ann_dialog: NewAnn
     wait_dialog: Wait
     opener: str = ''
+    extra = []
 
     protected_modes: list = ['blank', # защищенные от удаления и перезаписи файлы
                              'endurance',
@@ -216,8 +217,13 @@ class Window(QMainWindow):
         Диалоговое окно информации о ячейке
         """
         self.opener = 'cell_info'
-        self.current_bl = self.ui.table_crossbar.currentRow()
-        self.current_wl = self.ui.table_crossbar.currentColumn()
+        if self.extra != []:
+            self.current_bl = int(self.extra[0])
+            self.current_wl = int(self.extra[1])
+        else:
+            self.current_bl = self.ui.table_crossbar.currentRow()
+            self.current_wl = self.ui.table_crossbar.currentColumn()
+        print(self.current_bl, self.current_wl)
         self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
         self.cell_info_dialog = CellInfo(parent=self)
         self.cell_info_dialog.show()
