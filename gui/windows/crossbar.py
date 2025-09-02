@@ -86,6 +86,7 @@ class Window(QMainWindow):
     wait_dialog: Wait
     opener: str = ''
     extra = []
+    coordinate_error = False
 
     protected_modes: list = ['blank', # защищенные от удаления и перезаписи файлы
                              'endurance',
@@ -223,7 +224,6 @@ class Window(QMainWindow):
         else:
             self.current_bl = self.ui.table_crossbar.currentRow()
             self.current_wl = self.ui.table_crossbar.currentColumn()
-        print(self.current_bl, self.current_wl)
         self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
         self.cell_info_dialog = CellInfo(parent=self)
         self.cell_info_dialog.show()

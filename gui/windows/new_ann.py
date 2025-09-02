@@ -273,6 +273,13 @@ class NewAnn(QDialog):
         """
         Отображение информации о ячейке
         """
+        bl = self.ui.table_match.item(self.ui.table_weights.currentRow(), 4)
+        wl = self.ui.table_match.item(self.ui.table_weights.currentRow(), 5)
+        if bl == None or wl == None:
+            show_warning_messagebox('Отсутствуют координаты ячеек в таблице "Веса"')
+            self.parent.coordinate_error = True
+        else:
+            self.parent.coordinate_error = False
         self.parent.extra = [self.ui.table_weights.item(self.ui.table_weights.currentRow(), 0).text(),
                              self.ui.table_weights.item(self.ui.table_weights.currentRow(), 1).text()]
         self.parent.show_cell_info_dialog()
