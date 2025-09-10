@@ -16,7 +16,8 @@ from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib.pyplot as plt
 from manager.service import w2r, r2w, v2d, a2v
 from manager.service.converters import quantization
-from gui.src import show_warning_messagebox, open_file_dialog, snapshot
+from gui.src import show_warning_messagebox, open_file_dialog
+from gui.windows.snapshot import Snapshot
 
 AMOUNT_RANDOM_SAMPLES = 100
 
@@ -146,15 +147,15 @@ class Math(QWidget):
         self.ui.table_weights_errors.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.button_write_goal_weights_matrix.clicked.connect(self.button_write_weights_matrix_clicked)
         self.ui.button_save_goal_weights_matrix.clicked.connect(lambda: save_as_array_to_csv(self, self.goal_weights))
-        self.ui.button_heatmap_goal_weights_matrix.clicked.connect(lambda: snapshot(self.goal_weights))
+        self.ui.button_heatmap_goal_weights_matrix.clicked.connect(lambda: self.show_snapshot(self.goal_weights))
         self.ui.button_histogram_goal_weights_matrix.clicked.connect(lambda: self.array_to_vector(self.goal_weights))
         self.ui.button_read_current_weights_matrix.clicked.connect(self.read_current_weights_matrix)
         self.ui.button_save_current_weights_matrix.clicked.connect(lambda: save_as_array_to_csv(self, self.current_weights))
-        self.ui.button_heatmap_current_weights_matrix.clicked.connect(lambda: snapshot(self.current_weights))
+        self.ui.button_heatmap_current_weights_matrix.clicked.connect(lambda: self.show_snapshot(self.current_weights))
         self.ui.button_histogram_current_weights_matrix.clicked.connect(lambda: self.array_to_vector(self.current_weights))
         self.ui.button_calculate_error_weights.clicked.connect(self.calculate_weights_error)
         self.ui.button_save_error_weights.clicked.connect(lambda: save_as_array_to_csv(self, self.error_weights))
-        self.ui.button_heatmap_error_weights.clicked.connect(lambda: snapshot(self.error_weights))
+        self.ui.button_heatmap_error_weights.clicked.connect(lambda: self.show_snapshot(self.error_weights))
         self.ui.button_histogram_error_weights_matrix.clicked.connect(lambda: self.array_to_vector(self.error_weights))
         self.ui.button_heatmap_mask_weights_matrix.clicked.connect(lambda: snapshot(self.mask_weights))
         # кнопки работы с данными
@@ -988,6 +989,9 @@ class Math(QWidget):
         self.parent.current_bl = None
         self.parent.current_wl = None
         self.parent.current_last_resistance = None
+        if self.parent.snapshot_dialog is not None:
+            self.parent.snapshot_dialog.data = self.parent.all_resistances
+            self.parent.snapshot_dialog.plot_matrix()
         self.set_up_init_values()
         self.parent.showNormal()
         self.parent.math_dialog = Math
@@ -1105,6 +1109,19 @@ class Math(QWidget):
                                 self.matmul_crossbar_results.shape[0],
                                 self.matmul_crossbar_results.shape[1])
         self.ui.progress_bar.setValue(0)
+        
+    def show_snapshot(self, data: list) -> None:
+        """
+        Окно со снапшотом
+        """
+        if self.parent.snapshot_dialog is None:
+            self.parent.snapshot_dialog = Snapshot(parent=self, data=data, mode='weights')
+            self.parent.snapshot_dialog.show()
+        else:
+            self.parent.snapshot_dialog.data = data
+            self.parent.snapshot_dialog.plot_matrix(mode='weights')
+            self.parent.snapshot_dialog.showNormal()
+            self.parent.snapshot_dialog.activateWindow()
 
 class MakeMult(QThread):
     """
