@@ -12,8 +12,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog, QAbstractItemView, QWidget
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 import matplotlib.pyplot as plt
-from gui.src import show_warning_messagebox, show_choose_window, snapshot
+from gui.src import show_warning_messagebox, show_choose_window
 from gui.windows.apply import ApplyExp
+from gui.windows.snapshot import Snapshot
 from manager.service import a2r
 
 def save_binary_string_to_file(binary_str: str, filename: str) -> None:
@@ -89,7 +90,7 @@ class Rram(QWidget):
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(lambda: self.parent.read_cell_all('rram'))
-        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot_binary))
+        self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_save_bin.clicked.connect(self.save_bin)
         self.ui.button_load.clicked.connect(self.load_text)
         self.ui.button_set_0.clicked.connect(lambda: self.set_experiment(False))
@@ -509,6 +510,19 @@ class Rram(QWidget):
         self.ui.button_save_bin.setEnabled(state)
         self.ui.button_read.setEnabled(state)
         self.ui.button_interrupt.setEnabled(not state)
+        
+    def show_snapshot(self):
+        """
+        Окно со снапшотом
+        """
+        if self.parent.snapshot_dialog is None:
+            self.parent.snapshot_dialog = Snapshot(self.parent, self.snapshot_binary, mode='binary')
+            self.parent.snapshot_dialog.show()
+        else:
+            self.parent.snapshot_dialog.data = self.snapshot_binary
+            self.parent.snapshot_dialog.plot_matrix(mode='binary')
+            self.parent.snapshot_dialog.showNormal()
+            self.parent.snapshot_dialog.activateWindow()
 
     def closeEvent(self, event):
         """
@@ -517,4 +531,7 @@ class Rram(QWidget):
         self.parent.opener = None
         self.parent.showNormal()
         self.set_up_init_values()
+        if self.parent.snapshot_dialog is not None:
+            self.parent.snapshot_dialog.data = self.parent.all_resistances
+            self.parent.snapshot_dialog.plot_matrix()
         event.accept()

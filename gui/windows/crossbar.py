@@ -17,7 +17,7 @@ from PyQt5 import uic
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QShortcut
 from PyQt5.QtGui import QColor, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
 matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
@@ -42,7 +42,8 @@ from gui.windows.rram import Rram
 from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
 from gui.windows.math import Math
-from gui.src import show_choose_window, show_warning_messagebox, snapshot
+from gui.windows.snapshot import Snapshot
+from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
     """
@@ -52,7 +53,7 @@ class Window(QMainWindow):
     man: Manager # менеджер работы с платой
     GUI_PATH = os.path.join("gui","uies","crossbar.ui")
     all_resistances: list # все сопротивления для раскраски
-    snapshot = None # для кнопки снимок
+    snapshot_dialog = None # для кнопки снимок
     close_modal_flag: bool = False # главное окно закрывает модальное окно
 
     all_results_progressed = 0
@@ -117,7 +118,7 @@ class Window(QMainWindow):
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(self.show_math_dialog)
-        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
+        self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # хоткей
@@ -285,6 +286,19 @@ class Window(QMainWindow):
         """
         self.wait_dialog = Wait(opener=opener, parent=self)
         self.wait_dialog.show()
+        
+    def show_snapshot(self) -> None:
+        """
+        Окно со снапшотом
+        """
+        if self.snapshot_dialog is None:
+            self.snapshot_dialog = Snapshot(parent=self, data=self.all_resistances)
+            self.snapshot_dialog.show()
+        else:
+            self.snapshot_dialog.data = self.all_resistances
+            self.snapshot_dialog.plot_matrix()
+            self.snapshot_dialog.showNormal()      
+            self.snapshot_dialog.activateWindow()  # TODO: wayland doesn't support it
 
     # обработчики кнопок
 
@@ -334,9 +348,6 @@ class Window(QMainWindow):
             for item in resistances:
                 self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(item[res])))
                 self.all_resistances[item[bl]][item[wl]] = item[res]
-            # TODO: make a GUI button with this functionality
-            with open('./all_resistances.json', 'w') as file:  # Dumping all resistances to JSON file in the root folder
-                json.dump(self.all_resistances, file, indent=4)
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
 
@@ -347,7 +358,6 @@ class Window(QMainWindow):
         try:
             sum_values = np.sum(self.all_resistances)
             log_resistances = np.log10(self.all_resistances)
-            self.snapshot = np.zeros((self.man.row_num, self.man.col_num))
 
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
@@ -366,7 +376,6 @@ class Window(QMainWindow):
                             color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
                             color_value = int(color_value*255)
                         colors[i][j] = QColor(color_value, color_value, color_value)
-                        self.snapshot[i][j] = color_value
         except ValueError:
             #show_warning_messagebox("Не возможно корректно задать цвета!")
             pass
@@ -377,6 +386,10 @@ class Window(QMainWindow):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
                         item.setBackground(colors[i][j])
+                # Updating snapshot window
+                if self.snapshot_dialog is not None:
+                    self.snapshot_dialog.data = self.all_resistances
+                    self.snapshot_dialog.plot_matrix()
 
     def read_cell(self, wl: int, bl: int) -> None:
         """
@@ -508,6 +521,9 @@ class Window(QMainWindow):
         if not os.path.isdir(backup):
             backup = os.path.join(os.getcwd(), "base.db")[:-7]
         _ = self.man.db.db_backup(backup)
+        # closing snapshot window
+        if self.snapshot_dialog is not None:
+            self.snapshot_dialog.closeEvent(None)        
         # закрытие программы
         self.man.abort()
         self.man.close()
