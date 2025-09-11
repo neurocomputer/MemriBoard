@@ -298,7 +298,6 @@ class Window(QMainWindow):
             self.snapshot_dialog.data = self.all_resistances
             self.snapshot_dialog.plot_matrix()
             self.snapshot_dialog.showNormal()      
-            self.snapshot_dialog.activateWindow()  # TODO: wayland doesn't support it
 
     # обработчики кнопок
 

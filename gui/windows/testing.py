@@ -278,6 +278,9 @@ class Testing(QWidget):
                                   data_for_plot_y[item_index]])
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
+        plt.rcParams['agg.path.chunksize'] = 20000  # FIXME: This is a hacky fix
+        # При исполнении теста на множество ячеек с большим количеством точек (endurance 1e5 циклов)
+        # рисунок не сохраняется (OverflowError). Возможно, лучше рисовать не все точки
         plt.clf()
         plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
         plt.xlabel(self.xlabel_text)
