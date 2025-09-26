@@ -405,17 +405,20 @@ class Window(QMainWindow):
                         item = self.ui.table_crossbar.item(i, j)
                         resistance = np.log10(int(self.ui.table_crossbar.item(i, j).text()))
                         if resistance == -inf:
-                            color_value = 0
+                            color_value = 255
                         else:
                             color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
                             color_value = int(color_value*255)
                         if writable != []:
                             if writable[i][j] == 1:
-                                colors[i][j] = QColor(color_value, color_value, color_value)
+                                colors[i][j] = QColor(color_value, 0, 0)
                             else:
-                                colors[i][j] = QColor(0, 0, 0)
+                                colors[i][j] = QColor(0, color_value, 0)
                         else:
-                            colors[i][j] = QColor(color_value, color_value, color_value)
+                            if resistance == -inf:
+                                colors[i][j] = QColor(color_value, 0, 0)
+                            else:
+                                colors[i][j] = QColor(0, color_value, 0)
                         self.snapshot[i][j] = color_value
         except ValueError:
             #show_warning_messagebox("Не возможно корректно задать цвета!")
