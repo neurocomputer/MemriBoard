@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from PyQt5.QtCore import Qt
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView, QFileDialog
+from PyQt5.QtGui import QColor
 
 from manager.service import r2a, r2w, w2r, a2r, v2d, d2v
 from manager.service.plots import calculate_counts_for_ticket
@@ -122,6 +123,16 @@ class NewAnn(QDialog):
         self.ui.button_signal_parameters.clicked.connect(self.change_signal_parameters)
         self.ui.button_random_weights.clicked.connect(self.generate_random_weights)
 
+    def color_table_match(self):
+        """
+        окрашивание ячеек таблицы
+        """
+        for row in range(self.ui.table_match.rowCount()):
+            if self.ui.table_match.item(row, 6).text() == "записано":
+                self.ui.table_match.item(row, 6).setBackground(QColor(0,255,0))
+            else:
+                self.ui.table_match.item(row, 6).setBackground(QColor(255,0,0))
+
     def generate_random_weights(self):
         """
         Сгенерировать рандомные веса
@@ -137,6 +148,8 @@ class NewAnn(QDialog):
         self.weights_target_all = list(random_weights)
         #print(self.weights_target_all)
         self.fill_table_match()
+        # красим ячейки
+        self.ui.color_table_match()
 
     def change_signal_parameters(self):
         """
@@ -575,6 +588,8 @@ class NewAnn(QDialog):
             self.not_written_weights.remove(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
         else:
             self.ui.table_match.setItem(row, 6, QTableWidgetItem('не записано'))
+        # красим ячейки
+        self.ui.color_table_match()
         # подменяем значение
         self.counter += 1
         if self.counter < len(self.target_resistances):
