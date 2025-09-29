@@ -128,7 +128,7 @@ class NewAnn(QDialog):
         окрашивание ячеек таблицы
         """
         for row in range(self.ui.table_match.rowCount()):
-            if self.ui.table_match.item(row, 6).text() == "записано":
+            if self.ui.table_match.item(row, 6).text() == "записано" or self.ui.table_match.item(row, 6).text() == "подходит":
                 self.ui.table_match.item(row, 6).setBackground(QColor(0,255,0))
             else:
                 self.ui.table_match.item(row, 6).setBackground(QColor(255,0,0))
