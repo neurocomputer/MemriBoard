@@ -353,26 +353,26 @@ class Window(QMainWindow):
         """
         Проверка csv файла ячеек
         """
-        is_correct = True
         cells = []
-        # формирование списка
-        if self.man.get_meta_info()["writable_cells"] != '':
+        if self.man.get_meta_info()["writable_cells"] != '': # если файл ячеек отсутствует
+            # чтение файла
             with open(self.man.get_meta_info()["writable_cells"], 'r', newline='') as f:
                 csvreader = csv.reader(f, delimiter=",")
                 for row in csvreader:
                     if row[0] != "wl":
                         cells.append(row)
                 f.close()
-            # проверки
-            if len(cells) >= self.man.row_num:
+            # проверка прочитанного
+            if len(cells) > self.man.col_num * self.man.row_num: # кол-во строк не может превышать кол-во ячеек
                 return False, []
             for i in range(len(cells)):
+                if len(cells[i]) > self.man.row_num:
+                    return False, []
                 for j in range(len(cells[i])):
                     if cells[i][j].isalpha():
                         return False, []
-                    if len(cells[i][j]) >= self.man.col_num:
-                        return False, []
-        return is_correct, cells
+            return True, cells
+        return False, cells
 
     def color_table(self) -> None:
         """
@@ -389,8 +389,7 @@ class Window(QMainWindow):
                 if is_correct:
                     writable = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                     for i in range(len(cells)):
-                        for j in range(len(cells[i])):
-                            writable[i][int(cells[i][j])] = 1
+                        writable[int(cells[i][1])][int(cells[i][0])] = 1
                 else:
                     show_warning_messagebox("Файл с рабочими ячейками некорректно сформирован!")
             if sum_values != 0:

@@ -482,7 +482,21 @@ class NewAnn(QDialog):
                                 qtable_item = QTableWidgetItem()
                                 qtable_item.setData(0, current_resistance)
                                 self.ui.table_match.setItem(row_position, 3, qtable_item)
-                                self.target_cells_resistances[(wl,bl)] = target_resistance
+                                # если есть файл с рабочими ячейками
+                                is_correct, cells = self.parent.is_writable_cells_file_correct()
+                                if is_correct:
+                                    writable = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
+                                    for i in range(len(cells)):
+                                        writable[int(cells[i][1])][int(cells[i][0])] = 1
+                                    for i in range(len(writable)):
+                                        for j in range(len(writable[i])):
+                                            if writable[i][j] != 0:
+                                                self.target_cells_resistances[(wl,bl)] = target_resistance
+                                            else:
+                                                self.ui.table_match.item(bl*self.parent.man.row_num + wl, 6).setText("не рабочая")
+                                                self.ui.table_match.item(bl*self.parent.man.row_num + wl, 6).setBackground(QColor(255,0,0))
+                                else:
+                                    self.target_cells_resistances[(wl,bl)] = target_resistance
                                 row_position += 1
                     else:
                         # ищем похожие
@@ -505,7 +519,21 @@ class NewAnn(QDialog):
                             qtable_item = QTableWidgetItem()
                             qtable_item.setData(0, closest_resistance)
                             self.ui.table_match.setItem(row_position, 3, qtable_item)
-                            self.target_cells_resistances[closest_key] = target_resistance
+                            # если есть файл с рабочими ячейками
+                            is_correct, cells = self.parent.is_writable_cells_file_correct()
+                            if is_correct:
+                                writable = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
+                                for i in range(len(cells)):
+                                    writable[int(cells[i][1])][int(cells[i][0])] = 1
+                                for i in range(len(writable)):
+                                    for j in range(len(writable[i])):
+                                        if writable[i][j] != 0:
+                                            self.target_cells_resistances[(wl,bl)] = target_resistance
+                                        else:
+                                            self.ui.table_match.item(bl*self.parent.man.row_num + wl, 6).setText("не рабочая")
+                                            self.ui.table_match.item(bl*self.parent.man.row_num + wl, 6).setBackground(QColor(255,0,0))
+                            else:
+                                self.target_cells_resistances[(wl,bl)] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
                     self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))
                     self.written_cells = []
