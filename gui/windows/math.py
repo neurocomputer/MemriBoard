@@ -75,6 +75,7 @@ class Math(QWidget):
     empty_table: list
     mode: str
 
+    mask_weights = None
     current_weights = None
     current_weights_scaled = None
     goal_weights = None
@@ -142,6 +143,7 @@ class Math(QWidget):
         self.ui.button_save_error_weights.clicked.connect(lambda: save_as_array_to_csv(self, self.error_weights))
         self.ui.button_heatmap_error_weights.clicked.connect(lambda: snapshot(self.error_weights))
         self.ui.button_histogram_error_weights_matrix.clicked.connect(lambda: self.array_to_vector(self.error_weights))
+        self.ui.button_heatmap_mask_weights_matrix.clicked.connect(lambda: snapshot(self.mask_weights))
         # кнопки работы с данными
         self.ui.input_data_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.input_data_voltage_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -165,7 +167,9 @@ class Math(QWidget):
         self.ui.button_goal_weights_from_current.clicked.connect(self.copy_goal_weights_from_current)
         self.ui.button_histogram_numbers.clicked.connect(lambda: self.array_to_vector(self.input_array_source))
         self.ui.button_histogram_voltage.clicked.connect(lambda: self.array_to_vector(self.input_array_scaled))
+        self.ui.button_masking.clicked.connect(self.masking)
         self.read_current_weights_matrix()
+        self.fill_table_mask_with_ones()
 
     def update_label_weight_info(self):
         """
@@ -180,6 +184,16 @@ class Math(QWidget):
         self.predict_output_data()
         self.update_output_mvm_result()
         self.calculate_matmul_error()
+
+    def fill_table_mask_with_ones(self):
+        """
+        Заполнение маски единицами
+        """
+        self.mask_weights = np.ones_like(self.current_weights, dtype=int)
+        self.fill_table(self.ui.table_mask,
+                        self.mask_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
 
     def copy_goal_weights_from_current(self):
         """
@@ -636,6 +650,27 @@ class Math(QWidget):
         except ZeroDivisionError:
             pass
 
+    def masking(self):
+        """
+        Маскировать
+        """
+        # если есть файл в настройках
+        is_correct = False
+        if self.parent.man.get_meta_info()["writable_cells"] != '':
+            is_correct, cells = self.parent.is_writable_cells_file_correct(None)
+        else:
+            file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
+            is_correct, cells = self.parent.is_writable_cells_file_correct(file_path)
+        
+        if is_correct:
+            self.mask_weights = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
+            for i in range(len(cells)):
+                self.mask_weights[int(cells[i][1])][int(cells[i][0])] = 1
+            self.fill_table(self.ui.table_mask,
+                            self.mask_weights,
+                            self.parent.man.row_num,
+                            self.parent.man.col_num)
+
     def set_up_init_values(self):
         """
         Init values
@@ -652,6 +687,7 @@ class Math(QWidget):
         self.input_array_scaled = None
         self.input_array_source = None
         self.vol_comp = 3.3
+        self.mask_weights = None
 
     def closeEvent(self, event): # pylint: disable=C0103
         """

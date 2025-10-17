@@ -349,14 +349,23 @@ class Window(QMainWindow):
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
 
-    def is_writable_cells_file_correct(self) -> None:
+    def is_writable_cells_file_correct(self, file) -> None:
         """
         Проверка csv файла ячеек
         """
         cells = []
-        if self.man.get_meta_info()["writable_cells"] != '': # если файл ячеек отсутствует
+        ok = False
+        if file is None:
+            file = self.man.get_meta_info()["writable_cells"]
+            if self.man.get_meta_info()["writable_cells"] != '':
+                ok = True
+        else:
+            if os.path.exists(file):
+                ok = True
+    
+        if ok:
             # чтение файла
-            with open(self.man.get_meta_info()["writable_cells"], 'r', newline='') as f:
+            with open(file, 'r', newline='') as f:
                 csvreader = csv.reader(f, delimiter=",")
                 for row in csvreader:
                     if row[0] != "wl":
@@ -385,7 +394,7 @@ class Window(QMainWindow):
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
-                is_correct, cells = self.is_writable_cells_file_correct()
+                is_correct, cells = self.is_writable_cells_file_correct(None)
                 if is_correct:
                     writable = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                     for i in range(len(cells)):
