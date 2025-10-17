@@ -75,6 +75,10 @@ class Math(QWidget):
     empty_table: list
     mode: str
 
+    temp_current_weights = None
+    temp_current_weights_scaled = None
+    temp_goal_weights = None
+
     mask_weights = None
     current_weights = None
     current_weights_scaled = None
@@ -168,6 +172,7 @@ class Math(QWidget):
         self.ui.button_histogram_numbers.clicked.connect(lambda: self.array_to_vector(self.input_array_source))
         self.ui.button_histogram_voltage.clicked.connect(lambda: self.array_to_vector(self.input_array_scaled))
         self.ui.button_masking.clicked.connect(self.masking)
+        self.ui.button_reset_mask.clicked.connect(self.reset_mask)
         self.read_current_weights_matrix()
         self.fill_table_mask_with_ones()
 
@@ -670,6 +675,70 @@ class Math(QWidget):
                             self.mask_weights,
                             self.parent.man.row_num,
                             self.parent.man.col_num)
+        # применение маски
+        if not np.all(self.temp_current_weights):
+            self.temp_current_weights = deepcopy(self.current_weights)
+            self.temp_current_weights_scaled = deepcopy(self.current_weights_scaled)
+            self.temp_goal_weights = deepcopy(self.goal_weights)
+
+        for i in range(len(self.mask_weights)):
+            for j in range(len(self.mask_weights[0])):
+                if len(self.current_weights) != 0:
+                    self.current_weights[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
+                if len(self.current_weights_scaled) != 0:
+                    self.current_weights_scaled[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
+                if np.any(self.goal_weights):
+                    self.goal_weights[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
+
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights_scaled,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        elif self.ui.combo_preprocess.currentText() == 'нет':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if np.any(self.goal_weights):
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        # обновление сводки
+        self.update_summary_weights()
+            
+    def reset_mask(self):
+        """
+        Сбросить маску
+        """
+
+        self.fill_table_mask_with_ones()
+        if np.any(self.temp_current_weights):
+            self.current_weights = deepcopy(self.temp_current_weights)
+            self.current_weights_scaled = deepcopy(self.temp_current_weights_scaled)
+            self.goal_weights = deepcopy(self.temp_goal_weights)
+            self.temp_current_weights = None
+            self.temp_current_weights_scaled = None
+            self.temp_goal_weights = None
+
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights_scaled,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        elif self.ui.combo_preprocess.currentText() == 'нет':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if np.any(self.goal_weights):
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        # обновление сводки
+        self.update_summary_weights()
 
     def set_up_init_values(self):
         """
