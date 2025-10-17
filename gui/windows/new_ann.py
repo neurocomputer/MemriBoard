@@ -463,7 +463,7 @@ class NewAnn(QDialog):
                         self.target_cells_resistances = {}
                         row_position = 0
                         # если есть файл с рабочими ячейками
-                        is_correct, cells = self.parent.is_writable_cells_file_correct()
+                        is_correct, cells = self.parent.is_writable_cells_file_correct(None)
                         writable = []
                         if is_correct:
                             writable = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
