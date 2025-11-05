@@ -359,9 +359,10 @@ class Window(QMainWindow):
             file = self.man.get_meta_info()["writable_cells"]
             if self.man.get_meta_info()["writable_cells"] != '':
                 ok = True
+        if os.path.exists(file):
+            ok = True
         else:
-            if os.path.exists(file):
-                ok = True
+            ok = False
     
         if ok:
             # чтение файла

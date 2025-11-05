@@ -909,20 +909,22 @@ class MatMul(QThread):
     count_changed = pyqtSignal(int)
     value_got = pyqtSignal(int)
     progress_finished = pyqtSignal(int)
+    mask: list
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.parent = parent
+        self.mask = np.array(self.parent.mask_weights).T
 
     def run(self):
         """
         Запуск потока умножения
         """
         counter = 0
-        for i in range(self.parent.input_array_scaled.shape[0]):
+        for i in range(self.parent.input_array_scaled.shape[0]): #100
             # подготавливаем семпл
-            v_dac = [0 for i in range(32)] # todo: перенести в драйвер
-            # v_dac = [0 for i in range(self.input_array_scaled.shape[1])]
+            # v_dac = [0 for i in range(32)] # todo: перенести в драйвер
+            v_dac = [0 for i in range(self.parent.input_array_scaled.shape[1])]
             for h in range(self.parent.input_array_scaled.shape[1]):
                 if self.parent.input_array_scaled[i][h] > 0.3:
                     v_dac[h] = v2d(self.parent.parent.man.dac_bit,
@@ -933,8 +935,13 @@ class MatMul(QThread):
                                 self.parent.parent.man.vol_ref_dac,
                                 self.parent.input_array_scaled[i][h])
             # проходим по всем строкам кроссбара
-            for j in range(self.parent.parent.man.col_num):
+            for j in range(self.parent.parent.man.col_num): #8
                 if self.parent.matmul_predicted_results[i][j] < self.parent.vol_comp:
+                    # маскирование v_adc
+                    # наложение на v dac 8-ми разных масок
+                    for z in range(len(self.mask[0])):
+                        if (self.mask[j][z]) == 0:
+                            v_dac[z] = 0
                     task = {'mode_flag': 10,
                             'vol': v_dac,
                             'id': 0,
