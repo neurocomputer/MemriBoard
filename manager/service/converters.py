@@ -5,6 +5,7 @@
 # pylint: disable=W0212
 
 from typing import Union
+import numpy as np
 
 def convert_volt_to_dac(dac_bit: int, vol_ref_dac: float, vol_value: float) -> int:
     """
@@ -139,3 +140,17 @@ def convert_weight_to_res(res_load: float, weight: float) -> int:
     """
     res = round(res_load/weight - res_load, 0)
     return int(res)
+
+def quantization(data, **kwargs):
+    """
+    Квантование значений
+    """
+    max_data = np.max(data)
+    if 'bit_depth' in kwargs:
+        states = 2**kwargs['bit_depth']
+    else:
+        states = kwargs['states']
+    step = max_data/states
+    amount_steps = np.round(data.copy()/step, 0)
+    new_data = amount_steps * step
+    return new_data
