@@ -171,7 +171,7 @@ class Math(QWidget):
         self.ui.button_goal_weights_from_current.clicked.connect(self.copy_goal_weights_from_current)
         self.ui.button_histogram_numbers.clicked.connect(lambda: self.array_to_vector(self.input_array_source))
         self.ui.button_histogram_voltage.clicked.connect(lambda: self.array_to_vector(self.input_array_scaled))
-        self.ui.button_masking.clicked.connect(self.masking)
+        self.ui.button_masking.clicked.connect(self.apply_mask)
         self.ui.button_reset_mask.clicked.connect(self.reset_mask)
         self.read_current_weights_matrix()
         self.fill_table_mask_with_ones()
@@ -659,6 +659,13 @@ class Math(QWidget):
         except ZeroDivisionError:
             pass
 
+    def apply_mask(self):
+        """
+        Применение маски с выбором
+        """
+        self.get_mask_file()
+        self.masking()
+
     def get_mask_file(self):
         """
         Получить маску из файла
@@ -680,8 +687,6 @@ class Math(QWidget):
         """
         Маскировать
         """
-        self.get_mask_file()
-
         # применение маски
         # заполнение таблицы маски
         self.fill_table(self.ui.table_mask,
@@ -689,10 +694,9 @@ class Math(QWidget):
                         self.parent.man.row_num,
                         self.parent.man.col_num)
         # бэкапы весов
-        if not np.all(self.temp_current_weights):
-            self.temp_current_weights = deepcopy(self.current_weights)
-            self.temp_current_weights_scaled = deepcopy(self.current_weights_scaled)
-            self.temp_goal_weights = deepcopy(self.goal_weights)
+        self.temp_current_weights = deepcopy(self.current_weights)
+        self.temp_current_weights_scaled = deepcopy(self.current_weights_scaled)
+        self.temp_goal_weights = deepcopy(self.goal_weights)
 
         # маскировка весов
         for i in range(len(self.mask_weights)):
@@ -700,7 +704,7 @@ class Math(QWidget):
                 if len(self.current_weights) != 0:
                     self.current_weights[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
                 if len(self.current_weights_scaled) != 0:
-                    self.current_weights_scaled[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
+                    self.current_weights_scaled[i][j] = self.current_weights_scaled[i][j] * self.mask_weights[i][j]
                 if np.any(self.goal_weights):
                     self.goal_weights[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
 
