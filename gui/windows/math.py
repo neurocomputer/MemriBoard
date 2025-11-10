@@ -233,6 +233,8 @@ class Math(QWidget):
         self.activate_spinboxes()
         # Обновить входы и расчетные веса
         self.update_all_data()
+        if type(self.mask_weights) is list:
+            self.masking()
 
 ## кнопки работы с весами
 
@@ -566,6 +568,8 @@ class Math(QWidget):
             self.predict_output_data()
             self.update_output_mvm_result()
             self.calculate_matmul_error()
+            if type(self.mask_weights) is list:
+                self.masking()
 
     def update_voltages_array(self):
         """
@@ -655,15 +659,15 @@ class Math(QWidget):
         except ZeroDivisionError:
             pass
 
-    def masking(self):
+    def get_mask_file(self):
         """
-        Маскировать
+        Получить маску из файла
         """
         # если есть файл в настройках
         is_correct = False
         if self.parent.man.get_meta_info()["writable_cells"] != '':
             is_correct, cells = self.parent.is_writable_cells_file_correct(None)
-        else:
+        else:   # выбрать файл вручную
             file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
             is_correct, cells = self.parent.is_writable_cells_file_correct(file_path)
         
@@ -671,16 +675,26 @@ class Math(QWidget):
             self.mask_weights = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
             for i in range(len(cells)):
                 self.mask_weights[int(cells[i][1])][int(cells[i][0])] = 1
-            self.fill_table(self.ui.table_mask,
-                            self.mask_weights,
-                            self.parent.man.row_num,
-                            self.parent.man.col_num)
+
+    def masking(self):
+        """
+        Маскировать
+        """
+        self.get_mask_file()
+
         # применение маски
+        # заполнение таблицы маски
+        self.fill_table(self.ui.table_mask,
+                        self.mask_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        # бэкапы весов
         if not np.all(self.temp_current_weights):
             self.temp_current_weights = deepcopy(self.current_weights)
             self.temp_current_weights_scaled = deepcopy(self.current_weights_scaled)
             self.temp_goal_weights = deepcopy(self.goal_weights)
 
+        # маскировка весов
         for i in range(len(self.mask_weights)):
             for j in range(len(self.mask_weights[0])):
                 if len(self.current_weights) != 0:
@@ -756,7 +770,6 @@ class Math(QWidget):
         self.input_array_scaled = None
         self.input_array_source = None
         self.vol_comp = 3.3
-        self.mask_weights = None
 
     def closeEvent(self, event): # pylint: disable=C0103
         """
