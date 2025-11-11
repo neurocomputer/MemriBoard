@@ -1148,6 +1148,20 @@
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="button_do_quantisation">
+           <property name="text">
+            <string>Квантовать</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_undo_quantisation">
+           <property name="text">
+            <string>Отменить</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <spacer name="horizontalSpacer_14">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>

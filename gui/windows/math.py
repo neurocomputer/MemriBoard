@@ -92,6 +92,7 @@ class Math(QWidget):
     input_array_scaled = None
     input_array_source = None
     vol_comp: int # ограничитель напряжения
+    is_quintisation_on = False
 
     def __init__(self, parent=None, mode=str) -> None:
         super().__init__(parent)
@@ -106,6 +107,7 @@ class Math(QWidget):
         # self.setModal(True)
         self.ui.text_voltage.setEnabled(False)
         self.ui.button_apply.setEnabled(False)
+        self.ui.button_undo_quantisation.setEnabled(False)
         self.result = [] # результат умножения
         self.voltages = [] # напряжения
         # обработка кнопок
@@ -173,6 +175,8 @@ class Math(QWidget):
         self.ui.button_histogram_voltage.clicked.connect(lambda: self.array_to_vector(self.input_array_scaled))
         self.ui.button_masking.clicked.connect(self.apply_mask)
         self.ui.button_reset_mask.clicked.connect(self.reset_mask)
+        self.ui.button_do_quantisation.clicked.connect(self.do_quantize)
+        self.ui.button_undo_quantisation.clicked.connect(self.undo_quantize)
         self.read_current_weights_matrix()
         self.fill_table_mask_with_ones()
 
@@ -757,6 +761,22 @@ class Math(QWidget):
                                 self.parent.man.col_num)
         # обновление сводки
         self.update_summary_weights()
+
+    def do_quantize(self):
+        """
+        Квантизация
+        """
+        self.is_quintisation_on = True
+        self.ui.button_do_quantisation.setEnabled(False)
+        self.ui.button_undo_quantisation.setEnabled(True)
+
+    def undo_quantize(self):
+        """
+        Деквантизация
+        """
+        self.is_quintisation_on = False
+        self.ui.button_do_quantisation.setEnabled(True)
+        self.ui.button_undo_quantisation.setEnabled(False)
 
     def set_up_init_values(self):
         """
