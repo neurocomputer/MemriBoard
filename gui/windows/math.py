@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QWidget
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib.pyplot as plt
 from manager.service import w2r, r2w, v2d, a2v
+from manager.service.converters import quantization
 from gui.src import show_warning_messagebox, open_file_dialog, snapshot
 
 AMOUNT_RANDOM_SAMPLES = 100
@@ -78,6 +79,9 @@ class Math(QWidget):
     temp_current_weights = None
     temp_current_weights_scaled = None
     temp_goal_weights = None
+    temp_input_array_source = None
+    temp_matmul_crossbar_results = None
+    temp_matmul_crossbar_results_scaled = None
 
     mask_weights = None
     current_weights = None
@@ -766,6 +770,50 @@ class Math(QWidget):
         """
         Квантизация
         """
+        # получение значений из спинбоксов
+        weights_int = int(self.ui.spinbox_weights.value())
+        data_int = int(self.ui.spinbox_data.value())
+
+        # сохранение матриц
+        self.temp_current_weights = deepcopy(self.current_weights)
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.temp_current_weights_scaled = deepcopy(self.current_weights_scaled)
+        if self.goal_weights is not None:
+            self.temp_goal_weights = deepcopy(self.goal_weights)
+        if self.input_array_source is not None:
+            self.temp_input_appay_source = deepcopy(self.input_array_source)
+
+        # применение квантизации
+        self.current_weights = quantization(data = self.current_weights, bit_depth = weights_int, states = 4)
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.current_weights_scaled = quantization(data = self.current_weights_scaled, bit_depth = weights_int, states = 4)
+        if self.goal_weights is not None:
+            self.goal_weights = quantization(data = self.goal_weights, bit_depth = weights_int, states = 4)
+        if self.input_array_source is not None:
+            self.input_array_source = quantization(data = self.input_array_source, bit_depth = data_int, states = 8)
+
+        # запись в таблицы
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                            self.current_weights_scaled,
+                            self.parent.man.row_num,
+                            self.parent.man.col_num)
+        else:
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if self.goal_weights is not None:
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        if self.input_array_source is not None:
+            self.fill_table(self.ui.input_data_table,
+                                self.input_array_source,
+                                self.input_array_source.shape[0],
+                                self.input_array_source.shape[1])
+
         self.is_quintisation_on = True
         self.ui.button_do_quantisation.setEnabled(False)
         self.ui.button_undo_quantisation.setEnabled(True)
@@ -774,6 +822,56 @@ class Math(QWidget):
         """
         Деквантизация
         """
+        # восстановление матриц
+        self.current_weights = deepcopy(self.temp_current_weights)
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.current_weights_scaled = deepcopy(self.temp_current_weights_scaled)
+        if self.temp_goal_weights is not None:
+            self.goal_weights = deepcopy(self.temp_goal_weights)
+        if self.temp_input_array_source is not None:
+            self.input_appay_source = deepcopy(self.temp_input_array_source)
+        if self.is_quintisation_on:
+            if self.ui.combo_postprocess.currentText() == 'scaling' and self.temp_matmul_crossbar_results_scaled is not None:
+                    self.matmul_crossbar_results_scaled = deepcopy(self.temp_matmul_crossbar_results_scaled)
+            else:
+                if self.temp_matmul_crossbar_results is not None:
+                    self.matmul_crossbar_results = deepcopy(self.temp_matmul_crossbar_results)
+
+        # запись в таблицы
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                            self.current_weights_scaled,
+                            self.parent.man.row_num,
+                            self.parent.man.col_num)
+        else:
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if self.goal_weights is not None:
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        if self.input_array_source is not None:
+            self.fill_table(self.ui.input_data_table,
+                                self.input_array_source,
+                                self.input_array_source.shape[0],
+                                self.input_array_source.shape[1])
+        
+        if self.is_quintisation_on:
+            if self.ui.combo_postprocess.currentText() == 'scaling'  and self.matmul_crossbar_results_scaled is not None:
+                self.fill_table(self.ui.result_output_table,
+                                self.matmul_crossbar_results_scaled,
+                                self.matmul_crossbar_results_scaled.shape[0],
+                                self.matmul_crossbar_results_scaled.shape[1])
+            else:
+                if self.matmul_crossbar_results is not None:
+                    self.fill_table(self.ui.result_output_table,
+                                    self.matmul_crossbar_results,
+                                    self.matmul_crossbar_results.shape[0],
+                                    self.matmul_crossbar_results.shape[1])
+        
         self.is_quintisation_on = False
         self.ui.button_do_quantisation.setEnabled(True)
         self.ui.button_undo_quantisation.setEnabled(False)
@@ -904,6 +1002,22 @@ class Math(QWidget):
             self.fill_output_data()
         if self.tabwidget_mode.currentIndex() == 1:
             self.update_output_mvm_result()
+        if self.is_quintisation_on:
+            result_int = int(self.ui.spinbox_result.value())
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                self.temp_matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results_scaled)
+                self.matmul_crossbar_results_scaled = quantization(data = self.matmul_crossbar_results_scaled, bit_depth = result_int, states = 8)
+                self.fill_table(self.ui.result_output_table,
+                                self.matmul_crossbar_results_scaled,
+                                self.matmul_crossbar_results_scaled.shape[0],
+                                self.matmul_crossbar_results_scaled.shape[1])
+            else:
+                self.temp_matmul_crossbar_results = deepcopy(self.matmul_crossbar_results)
+                self.matmul_crossbar_results = quantization(data = self.matmul_crossbar_results, bit_depth = result_int, states = 8)
+                self.fill_table(self.ui.result_output_table,
+                                self.matmul_crossbar_results,
+                                self.matmul_crossbar_results.shape[0],
+                                self.matmul_crossbar_results.shape[1])
         self.ui.progress_bar.setValue(0)
 
 class MakeMult(QThread):
