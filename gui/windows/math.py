@@ -905,6 +905,7 @@ class Math(QWidget):
         self.parent.current_last_resistance = None
         self.set_up_init_values()
         self.parent.showNormal()
+        self.parent.math_dialog = Math
         event.accept()
 
     def apply_math(self):
