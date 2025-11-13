@@ -271,7 +271,7 @@
            <item>
             <widget class="QTabWidget" name="tabWidget_2">
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tab_6">
               <attribute name="title">
@@ -1144,6 +1144,20 @@
            </property>
            <property name="value">
             <number>8</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_do_quantisation">
+           <property name="text">
+            <string>Квантовать</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="button_undo_quantisation">
+           <property name="text">
+            <string>Отменить</string>
            </property>
           </widget>
          </item>

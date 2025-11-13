@@ -286,17 +286,24 @@ class NewAnn(QDialog):
         """
         Отображение информации о ячейке
         """
-        bl = self.ui.table_match.item(self.ui.table_match.currentRow(), 4)
-        wl = self.ui.table_match.item(self.ui.table_match.currentRow(), 5)
-        if bl == None or wl == None:
+        bl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 4)
+        wl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 5)
+        if bl_item == None or wl_item == None:
             show_warning_messagebox('Отсутствуют координаты ячеек в таблице "Веса"')
             self.parent.coordinate_error = True
             self.parent.extra = []
         else:
             self.parent.coordinate_error = False
-            self.parent.extra = [bl.text(), wl.text()]
-        self.parent.show_cell_info_dialog()
-
+            self.parent.extra = [bl_item.text(), wl_item.text()]
+            self.parent.show_cell_info_dialog()
+            status, resistances = self.parent.man.db.get_all_resistances(self.parent.man.crossbar_id)
+            if status:
+                resistance = None
+                for item in resistances:
+                    if item[0] == int(bl_item.text()) and item[1] == int(wl_item.text()):
+                        resistance = item[2]
+                if resistance is not None:
+                    self.ui.table_match.item(self.ui.table_match.currentRow(), 3).setText(str(resistance))
     # методы для таблицы с весами
 
     def button_choose_weights_clicked(self): # +
@@ -394,6 +401,8 @@ class NewAnn(QDialog):
                 self.weights_status[i] = 'не подходит'
                 self.ui.table_match.setItem(row, 6, QTableWidgetItem('не подходит'))
         self.update_weights_table_weights()
+        # красим ячейки
+        self.ui.color_table_match()
 
     def button_drop_weights_clicked(self): # +
         """
@@ -478,8 +487,17 @@ class NewAnn(QDialog):
                     if self.mode == 'matmul':
                         self.target_cells_resistances = {}
                         row_position = 0
-                        # если есть файл с рабочими ячейками
-                        is_correct, cells = self.parent.is_writable_cells_file_correct(None)
+                        # если есть рабочие ячейки
+                        cells = []
+                        if type(self.parent.math_dialog.mask_weights) is list:
+                            is_correct = False
+                        else:
+                            is_correct = True
+                            mask = copy.deepcopy(self.parent.math_dialog.mask_weights)
+                            for i in range(len(mask)):
+                                for j in range(len(mask[i])):
+                                    if mask[i][j] == 1:
+                                        cells.append([str(j), str(i)])
                         writable = []
                         if is_correct:
                             writable = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
@@ -638,6 +656,16 @@ class NewAnn(QDialog):
         # прогрессбар
         self.ui.progress_bar_mapping.setValue(self.counter)
 
+    def set_up_parent_init_values(self):
+        """
+        Задать начальные значения родителя после работы потока
+        """
+        self.parent.exp_list = []
+        self.parent.exp_name = ''
+        self.parent.exp_list_params = {}
+        self.parent.exp_list_params['total_tickets'] = 0
+        self.parent.exp_list_params['total_tasks'] = 0
+
     def on_value_got(self, value):
         """
         Получили значение из тикета
@@ -677,6 +705,8 @@ class NewAnn(QDialog):
         self.application_status = 'stop'
         self.button_after_combination()
         self.ui.progress_bar_mapping.setValue(0)
+
+        self.set_up_parent_init_values()
 
     def button_cancel_map_weights_clicked(self):
         """
