@@ -129,7 +129,8 @@ class Math(QWidget):
         self.ui.spinbox_max_input.setEnabled(False)
         self.ui.spinbox_max_weight.setEnabled(False)
         self.ui.spinbox_new_weight.valueChanged.connect(self.update_label_target_resistance)
-        self.ui.spinbox_correction.valueChanged.connect(self.update_output_with_correction)
+        self.ui.spinbox_correction_a.valueChanged.connect(self.update_output_with_correction)
+        self.ui.spinbox_correction_b.valueChanged.connect(self.update_output_with_correction)
         self.ui.checkbox_correction.stateChanged.connect(self.update_output_with_correction)
         # обновление лейблов
         self.update_label_cell_info()
@@ -430,6 +431,7 @@ class Math(QWidget):
         Сгенерировать случайные входные данные
         """
         self.input_array_source = np.random.uniform(0, self.ui.spinbox_max.value(), size=(self.ui.spinbox_amount.value(), self.parent.man.row_num))
+        #self.input_array_source[:,16:] = 0
         self.update_voltages_array()
         self.update_summary_data() # обновление сводки
 
@@ -439,6 +441,7 @@ class Math(QWidget):
         """
         if (not self.input_array_source is None) and (not self.goal_weights is None):
             self.matmul_etalon_results = self.input_array_source @ self.goal_weights
+            print(self.matmul_etalon_results)
             self.fill_table(self.ui.etalon_output_table,
                             self.matmul_etalon_results,
                             self.matmul_etalon_results.shape[0],
@@ -463,15 +466,17 @@ class Math(QWidget):
         """
         if (not self.matmul_etalon_results is None) and (not self.matmul_crossbar_results is None):
             plt.clf()
-            correction = 1
-            if self.ui.checkbox_correction.isChecked():
-                correction = self.ui.spinbox_correction.value()
+            # correction_a = 1
+            # correction_b = 0
+            # if self.ui.checkbox_correction.isChecked():
+            #     correction_a = self.ui.spinbox_correction_a.value()
+            #     correction_b = self.ui.spinbox_correction_b.value()
             source_flatten = self.matmul_etalon_results.flatten()
-            if self.ui.combo_postprocess.currentText() == 'scaling':
-                target_flatten = self.matmul_crossbar_results.flatten() * correction * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
-            elif self.ui.combo_postprocess.currentText() == 'нет':
-                target_flatten = self.matmul_crossbar_results.flatten() * correction
-            
+            # if self.ui.combo_postprocess.currentText() == 'scaling':
+            #     target_flatten = self.matmul_crossbar_results.flatten() * correction * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
+            # elif self.ui.combo_postprocess.currentText() == 'нет':
+            #     target_flatten = self.matmul_crossbar_results.flatten() * correction
+            target_flatten = self.matmul_crossbar_results_scaled.flatten()
             indices = np.argsort(source_flatten)
             
             plt.plot(source_flatten[indices], target_flatten[indices], 'o', label='real')
@@ -491,10 +496,12 @@ class Math(QWidget):
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled
             elif self.ui.combo_postprocess.currentText() == 'нет':
-                correction = 1
-                if self.ui.checkbox_correction.isChecked():
-                    correction = self.ui.spinbox_correction.value()
-                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results * correction
+                # correction_a = 1
+                # correction_b = 0
+                # if self.ui.checkbox_correction.isChecked():
+                #     correction_a = self.ui.spinbox_correction_a.value()
+                #     correction_b = self.ui.spinbox_correction_b.value()
+                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled # (self.matmul_crossbar_results * correction_a + correction_b)
             self.fill_table(self.ui.error_output_table,
                             self.matmul_error_results,
                             self.matmul_error_results.shape[0],
@@ -509,7 +516,7 @@ class Math(QWidget):
         # заполнение данными
         for i in range(row_count):
             for j in range(column_count):
-                table.setItem(i,j, QTableWidgetItem(str(round(data[i][j],4))))
+                table.setItem(i,j, QTableWidgetItem(str(round(data[i][j],8))))
         table.setHorizontalHeaderLabels([str(i) for i in range(column_count)])
         table.setVerticalHeaderLabels([str(i) for i in range(row_count)])
 
@@ -935,7 +942,7 @@ class Math(QWidget):
             self.ui.progress_bar.setMaximum(self.matmul_predicted_results.shape[0]*self.matmul_predicted_results.shape[1])
             self.vol_comp = 3.3
             if self.ui.checkbox_correction.isChecked():
-                self.vol_comp *= self.ui.spinbox_correction.value()
+                self.vol_comp *= self.ui.spinbox_correction_a.value() #todo: ??????? ЧТО ЗА!
             mult_thread = MatMul(parent=self)
             mult_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             mult_thread.value_got.connect(self.on_value_got) # после выполнения
@@ -952,7 +959,7 @@ class Math(QWidget):
             elif self.ui.combo_postprocess.currentText() == 'нет':
                 self.matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results)
             if self.ui.checkbox_correction.isChecked():
-                self.matmul_crossbar_results_scaled *= self.ui.spinbox_correction.value()
+                self.matmul_crossbar_results_scaled = self.matmul_crossbar_results_scaled * self.ui.spinbox_correction_a.value() + self.ui.spinbox_correction_b.value()
             self.fill_table(self.ui.result_output_table,
                             self.matmul_crossbar_results_scaled,
                             self.matmul_crossbar_results_scaled.shape[0],
@@ -992,7 +999,7 @@ class Math(QWidget):
         self.ui.text_output_data.clear()
         text = ''
         for value in result_for_show:
-            text += str(round(value,4)).replace('.',',') + '\n'
+            text += str(round(value,8)).replace('.',',') + '\n'
         self.ui.text_output_data.appendPlainText(text)
 
     def on_progress_finished(self, _: int) -> None:
@@ -1072,6 +1079,7 @@ class MatMul(QThread):
         """
         Запуск потока умножения
         """
+        #print(self.mask)
         counter = 0
         for i in range(self.parent.input_array_scaled.shape[0]): #100
             # подготавливаем семпл
@@ -1090,15 +1098,18 @@ class MatMul(QThread):
             for j in range(self.parent.parent.man.col_num): #8
                 if self.parent.matmul_predicted_results[i][j] < self.parent.vol_comp:
                     # маскирование v_adc
+                    v_dac_current = deepcopy(v_dac)
                     # наложение на v dac 8-ми разных масок
-                    for z in range(len(self.mask[0])):
-                        if (self.mask[j][z]) == 0:
-                            v_dac[z] = 0
+                    print(v_dac_current)
+                    for z in range(self.parent.parent.man.row_num):
+                        if self.mask[j][z] == 0:
+                            v_dac_current[z] = 0
                     task = {'mode_flag': 10,
-                            'vol': v_dac,
+                            'vol': v_dac_current,
                             'id': 0,
                             'wl': j}
                     v_adc, _ = self.parent.parent.man.conn.impact(task)
+                    #print(v_adc)
                 else:
                     v_adc = 0
                 self.parent.matmul_crossbar_results[i][j] = a2v(self.parent.parent.man.gain,

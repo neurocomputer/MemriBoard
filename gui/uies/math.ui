@@ -805,7 +805,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QDoubleSpinBox" name="spinbox_correction">
+                  <widget class="QDoubleSpinBox" name="spinbox_correction_a">
                    <property name="decimals">
                     <number>4</number>
                    </property>
@@ -817,6 +817,22 @@
                    </property>
                    <property name="value">
                     <double>16.000000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QDoubleSpinBox" name="spinbox_correction_b">
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000000000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>999.999900000000025</double>
+                   </property>
+                   <property name="value">
+                    <double>0.000000000000000</double>
                    </property>
                   </widget>
                  </item>
