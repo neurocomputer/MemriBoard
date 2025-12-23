@@ -269,13 +269,24 @@ class Testing(QWidget):
         fpath = os.path.join(self.result_path, fname)
         with open(fpath, 'w', newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['sign','dac','adc','vol','res'])
+            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain"])
             for item_index, item in enumerate(raw_data):
-                file_wr.writerow([item[0],
-                                  item[1],
-                                  item[2],
-                                  data_for_plot_x[item_index],
-                                  data_for_plot_y[item_index]])
+                file_wr.writerow([item[0],  # 'sign'
+                                  item[1],  # 'dac'
+                                  item[2],  # 'adc'
+                                  data_for_plot_x[item_index],  # 'vol'
+                                  data_for_plot_y[item_index],  # 'res'
+                                  item[3],   # 'timestamp'
+                                  self.crossbar_serial, # "crossbar_id"
+                                  self.parent.man.get_meta_info()["dac_bit"],
+                                  self.parent.man.get_meta_info()["vol_ref_dac"],
+                                  self.parent.man.get_meta_info()["res_load"],
+                                  self.parent.man.get_meta_info()["vol_read"],
+                                  self.parent.man.get_meta_info()["adc_bit"],
+                                  self.parent.man.get_meta_info()["vol_ref_adc"],
+                                  self.parent.man.get_meta_info()["res_switches"],
+                                  self.parent.man.get_meta_info()["gain"]
+                                  ])
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
         plt.clf()
@@ -299,7 +310,7 @@ class Testing(QWidget):
         adc_value = int(value[1])
         dac_value = int(value[2])
         sign = int(value[3])
-        self.raw_data.append((sign, dac_value, adc_value))
+        self.raw_data.append((sign, dac_value, adc_value, datetime.datetime.now().timestamp()))
         self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
                                         self.parent.man.vol_ref_dac,
                                         dac_value,
