@@ -34,6 +34,7 @@ class ExpSettings(QDialog):
     list_experiments: QStandardItemModel
     list_model: QStandardItemModel
     apply_exp_all_button_clicked: bool = False
+    importing_experiment: bool = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -150,7 +151,10 @@ class ExpSettings(QDialog):
             # 6 обновляем значение лейблов
             self.label_total_update()
         except KeyError:
-            show_warning_messagebox("Тикет не возможно прочитать!")
+            self.import_experiment_json(mode='dblclick')
+            if not self.importing_experiment:
+                self.importing_experiment = False
+                show_warning_messagebox("Тикет не возможно прочитать!")
 
     def _refresh_exp_list(self) -> None:
         """
@@ -290,11 +294,16 @@ class ExpSettings(QDialog):
             tick = pickle.loads(ticket[0])
             self._add_exp_to_list(ticket=tick)
 
-    def import_experiment_json(self) -> None:
+    def import_experiment_json(self, mode='') -> None:
         """
         Импорт json с экспериментом
         """
-        filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
+        filepath = ''
+        if mode == 'dblclick':
+            self.importing_experiment = True
+            filepath = os.path.join(os.getcwd(), "tickets", self.ui.exp_list.currentIndex().data()) + ".json"
+        if not filepath:
+            filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
         if filepath:
             data: str
             with open (filepath, "r+") as f:
