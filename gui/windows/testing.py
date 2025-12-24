@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 import numpy as np
 import numpy.typing as npt
+import ast
 
 from manager.service import a2r, d2v
 from gui.src import open_file_dialog, show_warning_messagebox, show_choose_window, choose_cells
@@ -74,6 +75,7 @@ class Testing(QWidget):
     # raw_adc_all: list
     crossbar_serial: str
     raw_data: list
+    raw_data_extended: list
     data_for_plot_x: list
     data_for_plot_y: list
     start_thread: ApplyExp
@@ -83,6 +85,7 @@ class Testing(QWidget):
     xlabel_text: str = 'Напряжение, В'
     ylabel_text: str = 'Сопротивление, Ом'
     ticket_image_name: str = "temp.png"
+    terminator: dict
 
     def __init__(self, parent=None) -> None: # +
         super().__init__(parent)
@@ -119,6 +122,7 @@ class Testing(QWidget):
             for j in range(self.parent.man.col_num):
                 self.coordinates.append((j,i))
         self.raw_data = []
+        self.raw_data_extended = []
         self.data_for_plot_x = []
         self.data_for_plot_y = []
         self.start_time = 0.
@@ -254,10 +258,12 @@ class Testing(QWidget):
         """
         # чтобы успеть пока поток ApplyExp не начнет работать
         raw_data = copy.deepcopy(self.raw_data)
+        raw_data_extended = copy.deepcopy(self.raw_data_extended)
         data_for_plot_x = copy.deepcopy(self.data_for_plot_x)
         data_for_plot_y = copy.deepcopy(self.data_for_plot_y)
         # очищаем для потока ApplyExp
         self.raw_data = []
+        self.raw_data_extended = []
         self.data_for_plot_x = []
         self.data_for_plot_y = []
         # сохраняем результат в файл
@@ -267,9 +273,9 @@ class Testing(QWidget):
         bl = int(value[4])
         fname = f'{self.crossbar_serial}_{self.parent.exp_name}_{wl}_{bl}.csv'
         fpath = os.path.join(self.result_path, fname)
-        with open(fpath, 'w', newline='', encoding='utf-8') as file:
+        with open(fpath, 'w+', newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain"])
+            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "terminate_type", "terminate_1", "terminate_2"])
             for item_index, item in enumerate(raw_data):
                 file_wr.writerow([item[0],  # 'sign'
                                   item[1],  # 'dac'
@@ -285,7 +291,16 @@ class Testing(QWidget):
                                   self.parent.man.get_meta_info()["adc_bit"],
                                   self.parent.man.get_meta_info()["vol_ref_adc"],
                                   self.parent.man.get_meta_info()["res_switches"],
-                                  self.parent.man.get_meta_info()["gain"]
+                                  self.parent.man.get_meta_info()["gain"],
+                                  wl,
+                                  bl,
+                                  raw_data_extended[item_index][0],
+                                  raw_data_extended[item_index][1],
+                                  self.parent.exp_name,
+                                  raw_data_extended[item_index][2],
+                                  raw_data_extended[item_index][3],
+                                  raw_data_extended[item_index][4],
+                                  raw_data_extended[item_index][5],
                                   ])
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
@@ -310,7 +325,18 @@ class Testing(QWidget):
         adc_value = int(value[1])
         dac_value = int(value[2])
         sign = int(value[3])
+        if len(value) > 11:
+            self.terminator = ast.literal_eval(value[9]+", " +value[10] + ", " +value[11])
+        else:
+            self.terminator = ast.literal_eval(value[9]+", " +value[10])
+        if isinstance(self.terminator.get("value"), int):
+            term_1 = self.terminator.get("value")
+            term_2 = ""
+        else:
+            term_1 = self.terminator.get("value")[0]
+            term_2 = self.terminator.get("value")[1]
         self.raw_data.append((sign, dac_value, adc_value, datetime.datetime.now().timestamp()))
+        self.raw_data_extended.append((int(value[6]), int(value[7]), value[8], self.terminator.get("type"), term_1, term_2)) # t_ms, t_us, ticket_name, terminate
         self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
                                         self.parent.man.vol_ref_dac,
                                         dac_value,

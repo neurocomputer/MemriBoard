@@ -94,6 +94,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QPushButton" name="button_import">
+                <property name="text">
+                 <string>Импорт</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="button_edit_ticket">
                 <property name="text">
                  <string>Править</string>
