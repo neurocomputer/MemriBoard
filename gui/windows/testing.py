@@ -257,7 +257,6 @@ class Testing(QWidget):
         Завершился поток для одного мемристора
         """
         # чтобы успеть пока поток ApplyExp не начнет работать
-        print(self.raw_data_extended)
         raw_data = copy.deepcopy(self.raw_data)
         raw_data_extended = copy.deepcopy(self.raw_data_extended)
         data_for_plot_x = copy.deepcopy(self.data_for_plot_x)
