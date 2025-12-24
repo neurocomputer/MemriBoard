@@ -276,7 +276,7 @@ class Testing(QWidget):
         fpath = os.path.join(self.result_path, fname)
         with open(fpath, 'w+', newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name"])#, "terminate type", "terminate 1", "terminate 2"])
+            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "terminate_type", "terminate_1", "terminate_2"])
             for item_index, item in enumerate(raw_data):
                 file_wr.writerow([item[0],  # 'sign'
                                   item[1],  # 'dac'
