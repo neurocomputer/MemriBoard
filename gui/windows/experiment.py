@@ -8,6 +8,7 @@ check_exp
 
 import os
 import pickle
+import json
 from copy import deepcopy
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
@@ -16,7 +17,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 from manager.service.global_settings import TICKET_PATH
 from manager.service.plots import calculate_counts_for_ticket
-from gui.src import show_warning_messagebox, show_choose_window
+from gui.src import show_warning_messagebox, show_choose_window, open_file_dialog
 
 class ExpSettings(QDialog):
     """
@@ -72,6 +73,7 @@ class ExpSettings(QDialog):
         self.ui.button_load_exp.clicked.connect(lambda: self.parent.show_history_dialog(mode="all"))
         self.ui.button_apply_all.clicked.connect(self.apply_exp_all)
         self.ui.button_duplicate.clicked.connect(self.duplicate_ticket)
+        self.ui.button_import.clicked.connect(self.import_experiment_json)
         # блок кнопок
         if parent.opener == 'testing':
             self.ui.button_apply_exp.setEnabled(False)
@@ -287,6 +289,19 @@ class ExpSettings(QDialog):
         for ticket in tickets:
             tick = pickle.loads(ticket[0])
             self._add_exp_to_list(ticket=tick)
+
+    def import_experiment_json(self) -> None:
+        """
+        Импорт json с экспериментом
+        """
+        filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
+        if filepath:
+            data: str
+            with open (filepath, "r+") as f:
+                data = f.read()
+            tickets = json.loads(data)
+            for i in range(len(tickets)):
+                self._add_exp_to_list(ticket=tickets.get(str(i)))
 
     def duplicate_ticket(self) -> None:
         """
