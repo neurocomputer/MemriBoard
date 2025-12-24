@@ -44,6 +44,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="button_export">
+              <property name="text">
+               <string>Экспорт</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="button_choose_exp">
               <property name="text">
                <string>Выбрать</string>
