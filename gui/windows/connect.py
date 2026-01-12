@@ -134,6 +134,7 @@ class ConnectDialog(QDialog):
                       'rp5_c',
                       'rp5_fpga_python',
                       'rp5_fpga_c',
+                      'rp5_fpga_elbear',
                       'rp5_rram_python',
                       'rp5_rram_c']
         try:

@@ -159,7 +159,7 @@ class Window(QMainWindow):
             if self.man.cb_type == "real":
                 if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c']:
                     mode = "no_crossbar"
-                if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+                if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_fpga_elbear']:
                     mode = "normal"
                 else:
                     show_warning_messagebox("Плата не распознана!")

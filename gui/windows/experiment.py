@@ -311,6 +311,7 @@ class ExpSettings(QDialog):
             tickets = json.loads(data)
             for i in range(len(tickets)):
                 self._add_exp_to_list(ticket=tickets.get(str(i)))
+            self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
 
     def duplicate_ticket(self) -> None:
         """

@@ -305,7 +305,10 @@ class Testing(QWidget):
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
         plt.clf()
-        plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
+        if len(data_for_plot_x) > 1000:
+            plt.plot(data_for_plot_x[0:1000], data_for_plot_y[0:1000], marker='o', linewidth=0.5)
+        else:
+            plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
         plt.xlabel(self.xlabel_text)
         plt.ylabel(self.ylabel_text)
         plt.grid(True, linestyle='--')

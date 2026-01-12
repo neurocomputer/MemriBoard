@@ -129,6 +129,13 @@ class Connector():
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
+            elif self.board_type == 'rp5_fpga_elbear':
+                try:
+                    from MemriCORE.rp5_fpga_elbear.rpi_ELBEAR import RPI_modes_ELBEAR
+                    self.rasp_driver = RPI_modes_ELBEAR()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
         return open_flag
 
     def close_port(self) -> bool:
@@ -151,7 +158,7 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_fpga_elbear']:
                 # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -230,7 +237,7 @@ class Connector():
                         rec_data = str(rx, 'utf-8').strip().split(',')
                     except ValueError:
                         pass
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_fpga_elbear']:
                 send_flag = True
                 rec_data = ['raspberry pi 5']
                 # todo: добавить служебную инфу в драйвер
@@ -269,7 +276,7 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_fpga_elbear']:
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
                     adc = self.rasp_driver.mode_7(task['vol'],
@@ -388,7 +395,7 @@ class Connector():
                     attempts -= 1
                     if attempts == 0:
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_fpga_elbear']:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
