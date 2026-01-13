@@ -41,7 +41,10 @@ def read_csv(file_path, delimiter):
                 if item.isdigit():
                    data[keys[i]].append(int(item))
                 else:
-                    data[keys[i]].append(float(item))
+                    try:
+                        data[keys[i]].append(float(item))
+                    except:
+                        data[keys[i]].append(item)
         return copy.deepcopy(data)
 
 def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
