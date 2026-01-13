@@ -38,6 +38,7 @@ class Application():
     status_db_connect: bool
     backup: str
     writable_cells: str
+    lock_board_type: bool
 
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
@@ -88,6 +89,7 @@ class Application():
         self.sum_gain = int(self.ap_config['board']['sum_gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
         self.writable_cells = self.ap_config['gui']['writable_cells']
+        self.lock_board_type = eval(self.ap_config['gui']['lock_board_type'])
 
     def save_settings(self, **kwargs):
         """
@@ -111,6 +113,8 @@ class Application():
             self.ap_config['backup']['backup_path'] = kwargs["backup"]
         if "writable_cells" in kwargs:
             self.ap_config['gui']['writable_cells'] = kwargs["writable_cells"]
+        if "lock_board_type" in kwargs:
+            self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
@@ -135,4 +139,5 @@ class Application():
         meta_info['connected_port'] = self.connected_port
         meta_info['backup'] = self.backup
         meta_info['writable_cells'] = self.writable_cells
+        meta_info['lock_board_type'] = self.lock_board_type
         return deepcopy(meta_info)

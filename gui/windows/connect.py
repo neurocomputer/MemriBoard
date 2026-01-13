@@ -43,6 +43,8 @@ class ConnectDialog(QDialog):
         self.update_crossbar_list()
         self.update_board_list()
         self.on_combo_board_type_changed()
+        # блокировка выбора плат
+        self.ui.combo_board_type.setDisabled(self.parent.man.get_meta_info()["lock_board_type"])
 
     def on_com_name_changed(self) -> None:
         """
