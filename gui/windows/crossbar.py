@@ -175,8 +175,10 @@ class Window(QMainWindow):
                     self.current_wl = 0
                 self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
                 self.math_dialog = Math(parent=self, mode=mode)
-                self.math_dialog.show()
-                self.showMinimized()
+                self.hide()
+                self.math_dialog.exec_()
+                self.showNormal()
+                self.activateWindow()
    
     def show_new_ann_dialog(self, mode=None) -> None: 
         """
@@ -265,9 +267,11 @@ class Window(QMainWindow):
         Отобразить окно тестирования
         """
         self.opener = 'testing'
+        self.hide()
         self.testing_dialog = Testing(parent=self)
-        self.testing_dialog.show()
-        self.showMinimized()
+        self.testing_dialog.exec_()
+        self.showNormal()
+        self.activateWindow()
 
     def show_map_dialog(self) -> None:
         """
@@ -296,9 +300,11 @@ class Window(QMainWindow):
         Открытие окна инормации о кроссбаре
         """
         self.opener = 'rram'
+        self.hide()
         self.rram_dialog = Rram(parent=self)
-        self.rram_dialog.show()
-        self.showMinimized()
+        self.rram_dialog.exec_()
+        self.showNormal()
+        self.activateWindow()
 
     def show_wait_dialog(self, opener) -> None:
         """
