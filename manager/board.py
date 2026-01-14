@@ -4,7 +4,6 @@
 
 # pylint: disable=no-name-in-module
 
-import random
 import time
 from logging import Logger
 from configparser import ConfigParser
@@ -103,7 +102,7 @@ class Connector():
             # для плат на базе Elbear
             elif self.board_type == 'elbear_nano':
                 try:
-                    from MemriCORE.rp5_fpga_elbear.rpi_ELBEAR import RPI_modes_ELBEAR
+                    from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
                     self.interface = RPI_modes_ELBEAR(kwargs['com_port'])
                     open_flag = self.interface.check_connection(kwargs['attempts'])
                 except ModuleNotFoundError:
