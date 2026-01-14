@@ -229,7 +229,7 @@ class Connector():
         rec_data = []
         send_flag = False
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano']:
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 send_flag = self.push('100\n')
                 self.interface.com_whait_ready(float(self.config['connector']['timeout']))
                 if self.interface.com_can_read_line():
@@ -241,6 +241,9 @@ class Connector():
             elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
                 send_flag = True
                 rec_data = ['raspberry pi 5']
+            elif self.board_type == 'elbear_nano':
+                send_flag = True
+                rec_data = ['elbear_nano']
                 # todo: добавить служебную инфу в драйвер
         # режим симулятор
         elif self.cb_type == 'simulator':
