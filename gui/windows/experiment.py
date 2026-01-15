@@ -184,15 +184,13 @@ class ExpSettings(QDialog):
         """
         Движение по списку тикетов
         """
-        exp_index = self.ui.plan_list.currentIndex().row()
-        if exp_index == 0 and direction == -1:
-            pass
-        elif len(self.parent.exp_list)-1 == exp_index and direction == 1:
-            pass
-        else:
+        try:
+            exp_index = self.ui.plan_list.currentIndex().row()
             self.parent.exp_list.insert(exp_index + direction, self.parent.exp_list.pop(exp_index))
             self._refresh_exp_list()
             self.ui.plan_list.setCurrentIndex(self.ui.plan_list.model().index(exp_index + direction,0))
+        except IndexError:
+            show_warning_messagebox("Список пуст!")
 
     def _edit_ticket(self) -> None:
         """

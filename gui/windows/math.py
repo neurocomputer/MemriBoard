@@ -11,7 +11,7 @@ import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QWidget
+from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QDialog
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib.pyplot as plt
 from manager.service import w2r, r2w, v2d, a2v
@@ -65,7 +65,7 @@ def read_csv_to_array(file_path):
     """
     return np.loadtxt(file_path, delimiter=',', dtype=float)
 
-class Math(QWidget):
+class Math(QDialog):
     """
     Окно математики
     """

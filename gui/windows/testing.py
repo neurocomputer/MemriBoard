@@ -14,7 +14,7 @@ import copy
 import matplotlib.pyplot as plt
 from PyQt5.QtCore import Qt
 from PyQt5 import uic
-from PyQt5.QtWidgets import QWidget, QFileDialog
+from PyQt5.QtWidgets import QDialog, QFileDialog
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 import numpy as np
 import numpy.typing as npt
@@ -64,7 +64,7 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     else:
         plt.show()
 
-class Testing(QWidget):
+class Testing(QDialog):
     """
     Тестирование всех ячеек
     """
@@ -618,6 +618,13 @@ class Testing(QWidget):
                                     dpi=100)
         plt.close()
         self.image_thread.setup_image_saved(True)
+
+    def closeEvent(self, event):
+        """
+        Закрытие
+        """
+        self.parent.opener = None
+        event.accept()
 
 class ImageGenerator(QThread):
     """
