@@ -15,12 +15,14 @@ class Settings(QDialog):
     """
 
     GUI_PATH = os.path.join("gui","uies","settings.ui")
+    lang_settings = {}
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.setModal(True)
         # обработка кнопок
@@ -32,6 +34,25 @@ class Settings(QDialog):
         # заполнение параметров
         self.fill_settings()
 
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, lang_pack = self.parent.man.read_language_json("settings")
+        if ok:
+            self.ui.label_3.setText(lang_pack.get("update_from_ini_file"))
+            self.ui.button_update.setText(lang_pack.get("update_button"))
+            self.ui.label.setText(lang_pack.get("capacity"))
+            self.ui.label_6.setText(lang_pack.get("bits"))
+            self.ui.label_2.setText(lang_pack.get("caliber_coef"))
+            self.ui.label_5.setText(lang_pack.get("program_cc"))
+            self.ui.label_7.setText(lang_pack.get("a"))
+            self.ui.label_4.setText(lang_pack.get("db_savepath"))
+            self.ui.label_8.setText(lang_pack.get("working_cells_filepath"))
+            self.ui.label_9.setText(lang_pack.get("language"))
+            self.ui.button_save.setText(lang_pack.get("save"))
+            self.ui.button_cancel.setText(lang_pack.get("cancel"))
+
     def fill_settings(self) -> None:
         """
         Заполнение основных настроек
@@ -41,6 +62,8 @@ class Settings(QDialog):
         self.ui.choose_software_cc.setValue(self.parent.man.soft_cc)
         self.ui.lineedit_backup.setText(self.parent.man.get_meta_info()["backup"])
         self.ui.lineedit_writable_cells.setText(self.parent.man.get_meta_info()["writable_cells"])
+        if self.parent.man.get_meta_info()["language"] in ["English", "Русский"]:
+            self.ui.choose_language.setCurrentText(self.parent.man.get_meta_info()["language"])
 
     def save_settings(self) -> None:
         """
@@ -48,6 +71,7 @@ class Settings(QDialog):
         """
         backup_path = self.ui.lineedit_backup.text()
         writable_cells = self.ui.lineedit_writable_cells.text()
+        language = self.ui.choose_language.currentText()
         if len(backup_path) != 0:
             if platform.system() == "Linux" and backup_path[len(backup_path)-1] != "/":
                 backup_path = backup_path + "/"
@@ -62,7 +86,8 @@ class Settings(QDialog):
                                       gain = str(self.ui.choose_gain.value()),
                                       soft_cc = str(self.ui.choose_software_cc.value()),
                                       backup = backup_path,
-                                      writable_cells = writable_cells)
+                                      writable_cells = writable_cells,
+                                      language = language)
         self.close()
 
     def add_path(self) -> None:
@@ -87,6 +112,10 @@ class Settings(QDialog):
         """
         self.parent.man.read_settings()
         self.fill_settings()
+
+    def showEvent(self, event):
+        event.ignore()
+        self.change_language()
 
     def closeEvent(self, event):
         """

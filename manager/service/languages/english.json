@@ -1,0 +1,17 @@
+{
+    "settings":{
+        "name":"Settings",
+        "update_from_ini_file":"Restore from settings.ini file",
+        "update_button":"Update",
+        "capacity":"ADC capacity",
+        "bits":"bits",
+        "caliber_coef":"Calibration coefficient",
+        "program_cc":"Program CC",
+        "a":"A",
+        "db_savepath":"Database backup path",
+        "working_cells_filepath":"Working cells file path (.csv)",
+        "language":"Language",
+        "save":"Save",
+        "cancel":"Cancel"
+    }
+}
