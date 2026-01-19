@@ -10,6 +10,33 @@
         "working_cells_filepath":"Working cells file path (.csv)",
         "language":"Language",
         "save":"Save",
-        "cancel":"Cancel"
+        "cancel":"Cancel",
+        "pick_backup":"Add a backup path!",
+        "pick_cells":"Choose cells file"
+    },
+    "connect":{
+        "name":"Connect",
+        "crossbar":"Crossbar",
+        "new":"New",
+        "serial":"Serial number",
+        "comm":"Commentary",
+        "bl":"BL",
+        "wl":"WL",
+        "crossbar_type":"Crossbar type",
+        "board":"Board",
+        "com_port":"Choose COM-port",
+        "update":"Update",
+        "or_write":"or write the name",
+        "connect":"Connect",
+        "settings":"Settings",
+        "quit":"Quit",
+        "status":"Pick a crossbar and a board to begin!",
+        "status_1":"Pick a port for connection!",
+        "status_2":"Add a commentary!",
+        "status_3":"An error occured when adding a crossbar! The database may already already have one.",
+        "status_4":"Pick a crossbar!",
+        "status_5":"Can't make a simulator!",
+        "board_error":"No connection to ",
+        "quit_now":"Quit now?"
     }
 }

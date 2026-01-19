@@ -15,7 +15,7 @@ class Settings(QDialog):
     """
 
     GUI_PATH = os.path.join("gui","uies","settings.ui")
-    lang_settings = {}
+    lang_pack = {}
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -38,18 +38,19 @@ class Settings(QDialog):
         """
         Изменение языка интерфейса
         """
-        ok, lang_pack = self.parent.man.read_language_json("settings")
+        ok, self.lang_pack = self.parent.man.read_language_json("settings")
         if ok:
-            self.ui.label_3.setText(lang_pack.get("update_from_ini_file"))
-            self.ui.button_update.setText(lang_pack.get("update_button"))
-            self.ui.label.setText(lang_pack.get("capacity"))
-            self.ui.label_6.setText(lang_pack.get("bits"))
-            self.ui.label_2.setText(lang_pack.get("caliber_coef"))
-            self.ui.label_4.setText(lang_pack.get("db_savepath"))
-            self.ui.label_8.setText(lang_pack.get("working_cells_filepath"))
-            self.ui.label_9.setText(lang_pack.get("language"))
-            self.ui.button_save.setText(lang_pack.get("save"))
-            self.ui.button_cancel.setText(lang_pack.get("cancel"))
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.label_3.setText(self.lang_pack.get("update_from_ini_file"))
+            self.ui.button_update.setText(self.lang_pack.get("update_button"))
+            self.ui.label.setText(self.lang_pack.get("capacity"))
+            self.ui.label_6.setText(self.lang_pack.get("bits"))
+            self.ui.label_2.setText(self.lang_pack.get("caliber_coef"))
+            self.ui.label_4.setText(self.lang_pack.get("db_savepath"))
+            self.ui.label_8.setText(self.lang_pack.get("working_cells_filepath"))
+            self.ui.label_9.setText(self.lang_pack.get("language"))
+            self.ui.button_save.setText(self.lang_pack.get("save"))
+            self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
 
     def fill_settings(self) -> None:
         """
@@ -84,13 +85,15 @@ class Settings(QDialog):
                                       backup = backup_path,
                                       writable_cells = writable_cells,
                                       language = language)
+        if self.parent.connect_dialog:
+            self.parent.connect_dialog.change_language()
         self.close()
 
     def add_path(self) -> None:
         """
         Выбрать папку для бэкапа бд
         """
-        path = QFileDialog.getExistingDirectory(self, "Выберите директорию для резервного копирования")
+        path = QFileDialog.getExistingDirectory(self, self.lang_pack.get("pick_backup"))
         if path[0]:
             self.ui.lineedit_backup.setText(path[0])
 
@@ -98,7 +101,7 @@ class Settings(QDialog):
         """
         Выбор csv с рабочими ячейками
         """
-        path = QFileDialog.getOpenFileName(self, "Выберите файл ячеек", filter="*.csv")
+        path = QFileDialog.getOpenFileName(self, self.lang_pack.get("pick_cells"), filter="*.csv")
         if path[0]:
             self.ui.lineedit_writable_cells.setText(path[0])
 
