@@ -72,6 +72,8 @@ program_ticket=programming.json
 writable_cells=
 ; блокировка платы
 lock_board_type=0
+; локализация
+language=English
 
 ; бэкап датабазы
 [backup]

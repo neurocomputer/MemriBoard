@@ -1,0 +1,15 @@
+{
+    "settings":{
+        "name":"Настройки",
+        "update_from_ini_file":"Восстановить из settings.ini",
+        "update_button":"Восстановить",
+        "capacity":"Разрядность АЦП",
+        "bits":"бит",
+        "caliber_coef":"Коэффициент калибровки",
+        "db_savepath":"Путь сохранения копии базы",
+        "working_cells_filepath":"Путь к файлу рабочих ячеек (.csv)",
+        "language":"Язык",
+        "save":"Сохранить",
+        "cancel":"Отменить"
+    }
+}
