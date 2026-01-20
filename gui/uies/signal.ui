@@ -10,18 +10,6 @@
     <height>530</height>
    </rect>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>1215</width>
-    <height>530</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>1215</width>
-    <height>530</height>
-   </size>
-  </property>
   <property name="windowTitle">
    <string>Сигнал</string>
   </property>
