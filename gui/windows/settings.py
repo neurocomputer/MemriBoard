@@ -91,6 +91,7 @@ class Settings(QDialog):
                                       language = language)
         if self.parent.connect_dialog:
             self.parent.connect_dialog.change_language()
+        self.parent.change_language()
         self.close()
 
     def add_path(self) -> None:

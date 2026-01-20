@@ -55,6 +55,7 @@ class Window(QMainWindow):
     all_resistances: list # все сопротивления для раскраски
     snapshot = None # для кнопки снимок
     close_modal_flag: bool = False # главное окно закрывает модальное окно
+    lang_pack: dict
 
     all_results_progressed = 0
     number_results_wait = 0
@@ -112,6 +113,7 @@ class Window(QMainWindow):
         self.man.blank_type = 'mode_7'
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # параметры кроссбара
         self.ui.crossbar_progress.setVisible(False)
         # параметры таблицы
@@ -122,7 +124,7 @@ class Window(QMainWindow):
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(self.show_math_dialog)
         self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
-        self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
+        self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(self.lang_pack.get("not_done")))
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # хоткей
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
@@ -137,6 +139,20 @@ class Window(QMainWindow):
         shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # диалоговое окно подключения
         self.show_connect_dialog()
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.man.read_language_json("crossbar")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.button_rram.setText(self.lang_pack.get("rram"))
+            self.ui.button_math.setText(self.lang_pack.get("math"))
+            self.ui.button_net.setText(self.lang_pack.get("ann"))
+            self.ui.button_tests.setText(self.lang_pack.get("tests"))
+            self.ui.button_snapshot.setText(self.lang_pack.get("snapshot"))
+            self.ui.button_settings.setText(self.lang_pack.get("settings"))
 
     # методы открытия диалоговых окон
 
@@ -162,7 +178,7 @@ class Window(QMainWindow):
                 if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
                     mode = "normal"
                 else:
-                    show_warning_messagebox("Плата не распознана!")
+                    show_warning_messagebox(self.lang_pack.get("warn"))
             elif self.man.cb_type == "simulator":
                 mode = "normal"
             if mode != '':
@@ -286,7 +302,7 @@ class Window(QMainWindow):
         """
         self.show_map_dialog()
         self.map_dialog.fill_table(mode='weights')
-        self.map_dialog.set_prompt("Веса кроссбара")
+        self.map_dialog.set_prompt(self.lang_pack.get("crossbar_weights"))
 
     def show_cb_info_dialog(self) -> None:
         """
@@ -416,7 +432,7 @@ class Window(QMainWindow):
                     for i in range(len(cells)):
                         writable[int(cells[i][1])][int(cells[i][0])] = 1
                 else:
-                    show_warning_messagebox("Файл с рабочими ячейками некорректно сформирован!")
+                    show_warning_messagebox(self.lang_pack.get("warn_1"))
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
@@ -498,7 +514,7 @@ class Window(QMainWindow):
         """
         Прочитать все
         """
-        answer = show_choose_window(self, 'Прочитать все?')
+        answer = show_choose_window(self, self.lang_pack.get("read_all"))
         if answer:
             self.button_all_set_enabled(False)
             # окно
@@ -520,7 +536,7 @@ class Window(QMainWindow):
         """
         Заглушка
         """
-        show_warning_messagebox("Пока не реализовано")
+        show_warning_messagebox(self.lang_pack.get("not_done"))
 
     def read_ticket_from_disk(self, ticket_name: str) -> dict:
         """
@@ -561,7 +577,7 @@ class Window(QMainWindow):
             self.safe_close()
             event.accept()
         else:
-            answer = show_choose_window(self, 'Выходим?')
+            answer = show_choose_window(self, self.lang_pack.get("quit_now"))
             if answer:
                 self.safe_close()
                 event.accept()
