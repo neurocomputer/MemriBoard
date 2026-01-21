@@ -89,6 +89,7 @@ class Window(QMainWindow):
     opener: str = ''
     extra = []
     coordinate_error = False
+    lang_pack: dict
 
     protected_modes: list = ['blank', # защищенные от удаления и перезаписи файлы
                              'endurance',
@@ -140,11 +141,36 @@ class Window(QMainWindow):
         # диалоговое окно подключения
         self.show_connect_dialog()
 
+    def read_language_json(self, window: str):
+        """
+        Прочитать языковые настройки для окна
+        """
+        match self.man.language.lower():
+            case "english" | "en":
+                filename = "english.json"
+            case "русский" | "russian" | "ru":
+                filename = "russian.json"
+            case _:
+                filename = "english.json"
+        path = os.path.join(os.getcwd(), "manager", "service", "languages", filename)
+        if not os.path.isfile(path):
+            path = os.path.join(os.getcwd(), "manager", "service", "languages", "english.json")
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                localization_data = json.load(f)
+                data = localization_data[window]
+            if data:
+                return True, data
+            else:
+                return False, {}
+        except FileNotFoundError:
+            return False, {}
+
     def change_language(self):
         """
         Изменение языка интерфейса
         """
-        ok, self.lang_pack = self.man.read_language_json("crossbar")
+        ok, self.lang_pack = self.read_language_json("crossbar")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
             self.ui.button_rram.setText(self.lang_pack.get("rram"))

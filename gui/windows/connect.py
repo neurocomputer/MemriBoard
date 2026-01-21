@@ -57,7 +57,7 @@ class ConnectDialog(QDialog):
         """
         Изменение языка интерфейса
         """
-        ok, self.lang_pack = self.parent.man.read_language_json("connect")
+        ok, self.lang_pack = self.parent.read_language_json("connect")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
             self.ui.label.setText(self.lang_pack.get("crossbar"))
