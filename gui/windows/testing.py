@@ -14,7 +14,7 @@ import copy
 import matplotlib.pyplot as plt
 from PyQt5.QtCore import Qt
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QFileDialog
+from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 import numpy as np
 import numpy.typing as npt
@@ -41,7 +41,10 @@ def read_csv(file_path, delimiter):
                 if item.isdigit():
                    data[keys[i]].append(int(item))
                 else:
-                    data[keys[i]].append(float(item))
+                    try:
+                        data[keys[i]].append(float(item))
+                    except:
+                        data[keys[i]].append(item)
         return copy.deepcopy(data)
 
 def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
@@ -61,7 +64,7 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     else:
         plt.show()
 
-class Testing(QDialog):
+class Testing(QWidget):
     """
     Тестирование всех ячеек
     """
@@ -305,7 +308,10 @@ class Testing(QDialog):
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
         plt.clf()
-        plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
+        if len(data_for_plot_x) > 1000:
+            plt.plot(data_for_plot_x[0:1000], data_for_plot_y[0:1000], marker='o', linewidth=0.5)
+        else:
+            plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
         plt.xlabel(self.xlabel_text)
         plt.ylabel(self.ylabel_text)
         plt.grid(True, linestyle='--')
@@ -612,13 +618,6 @@ class Testing(QDialog):
                                     dpi=100)
         plt.close()
         self.image_thread.setup_image_saved(True)
-
-    def closeEvent(self, event):
-        """
-        Закрытие
-        """
-        self.parent.opener = None
-        event.accept()
 
 class ImageGenerator(QThread):
     """
