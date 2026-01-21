@@ -59,7 +59,7 @@ class CellInfo(QDialog):
                         self.parent.man.vol_ref_adc,
                         current_adc)
         if adc_vol > 3.5: # todo: вынести 3.5 в константы
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!', rlj=self.parent.read_language_json)
 
     def fill_info(self) -> None:
         """

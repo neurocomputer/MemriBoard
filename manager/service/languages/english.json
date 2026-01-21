@@ -92,6 +92,16 @@
         "recording_interrupted":"The recording was interrupted!"
     },
     "src":{
-        "confirm":"Confirm"
+        "confirm":"Confirm",
+        "warn":"Warning!",
+        "done":"Done",
+        "interrupted":"Interrupted",
+        "not_done":"Not done",
+        "pick_file":"Choose a file",
+        "wl_bl_order_wrong":"BL and WL order is wrong",
+        "more_than_2_values":"Got more than 2 values",
+        "wl_bl_incorrect":"WL or Bl is incorrect",
+        "string_to_int_error":"Couldn't read string as numeric: ",
+        "error":"Error: "
     }
 }

@@ -136,9 +136,9 @@ class History(QDialog):
                                                 vol_ref_adc,
                                                 res_switches,
                                                 raw_adc[i])).replace('.',',')])
-            show_warning_messagebox(f'Выгружено в файл {fname}')
+            show_warning_messagebox(f'Выгружено в файл {fname}', rlj=self.parent.read_language_json)
         else:
-            show_warning_messagebox('Выберите тикеты!')
+            show_warning_messagebox('Выберите тикеты!', rlj=self.parent.read_language_json)
 
     def load_experiment(self) -> None:
         """
@@ -170,7 +170,7 @@ class History(QDialog):
             self.ui.table_history_experiments.insertRow(row_position)
             self.ui.table_history_experiments.setItem(row_position, 0, QTableWidgetItem(item[1]))
             self.ui.table_history_experiments.setItem(row_position, 1, QTableWidgetItem(item[2]))
-            self.ui.table_history_experiments.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3])))
+            self.ui.table_history_experiments.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3], rlj=self.parent.read_language_json)))
             self.ui.table_history_experiments.setItem(row_position, 3, QTableWidgetItem(str(item[4])))
         self.ui.table_history_experiments.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
@@ -191,7 +191,7 @@ class History(QDialog):
             self.ui.table_history_tickets.insertRow(row_position)
             self.ui.table_history_tickets.setItem(row_position, 0, QTableWidgetItem(item[1]))
             self.ui.table_history_tickets.setItem(row_position, 1, QTableWidgetItem(item[2]))
-            self.ui.table_history_tickets.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3])))
+            self.ui.table_history_tickets.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3], rlj=self.parent.read_language_json)))
         self.ui.table_history_tickets.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         if self.parent.man.board_type != 'offline':
             self.ui.button_load.setDisabled(False)
@@ -243,16 +243,16 @@ class History(QDialog):
                         outfile.write(",\n")
                 outfile.write("}")
                 outfile.close()
-            show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'))
+            show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'), rlj=self.parent.read_language_json)
         else:
             items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
             # проверки на выбор
             ok = True
             if len(items) == 0:
-                show_warning_messagebox('Выберите тикет для экспортирования!')
+                show_warning_messagebox('Выберите тикет для экспортирования!', rlj=self.parent.read_language_json)
                 ok = False
             elif len(items) > 3:
-                show_warning_messagebox('Выберите один тикет!')
+                show_warning_messagebox('Выберите один тикет!', rlj=self.parent.read_language_json)
                 ok = False
             rows = []
             for item in items:
@@ -263,7 +263,7 @@ class History(QDialog):
                         more_than_one = True
                         break
                 if more_than_one:
-                    show_warning_messagebox('Выберите один тикет!')
+                    show_warning_messagebox('Выберите один тикет!', rlj=self.parent.read_language_json)
                     ok = False
                 else:
                     rows.append(cur_row)
@@ -278,7 +278,7 @@ class History(QDialog):
                                     'w', encoding='utf-8') as outfile:
                     json.dump(ticket_info, outfile)
                     outfile.close()
-                show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'))
+                show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'), rlj=self.parent.read_language_json)
 
     def show_ticket(self) -> None:
         """
