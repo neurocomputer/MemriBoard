@@ -143,5 +143,16 @@
         "save_file":"Save file?",
         "save_changes":"Save changes?",
         "file_name_wrong":"File name is wrong!"
+    },
+    "cell_info":{
+        "name":"Cell Info",
+        "bl":"BL = ",
+        "wl":"WL = ",
+        "res":"R = ",
+        "ohm":" Ohm",
+        "update":"Update",
+        "history":"History",
+        "new_exp":"New experiment",
+        "cancel":"Cancel"
     }
 }
