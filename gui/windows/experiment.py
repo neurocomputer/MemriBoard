@@ -35,12 +35,14 @@ class ExpSettings(QDialog):
     list_model: QStandardItemModel
     apply_exp_all_button_clicked: bool = False
     importing_experiment: bool = False
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         self.setModal(True)
         # список сигналов (тикетов)
         self.list_model = QStandardItemModel()
@@ -55,9 +57,9 @@ class ExpSettings(QDialog):
         self.ui.plan_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.plan_list.doubleClicked.connect(self._edit_ticket)
         try:
-            self.ui.exp_name.setText("Эксперимент_" + str(self.parent.man.db.get_last_experiment()[1]+1))
+            self.ui.exp_name.setText("Experiment_" + str(self.parent.man.db.get_last_experiment()[1]+1))
         except TypeError:
-            self.ui.exp_name.setText("Эксперимент_1")
+            self.ui.exp_name.setText("Experiment_1")
         # обработка кнопок
         self.ui.button_new_signal.clicked.connect(lambda: self.parent.show_signal_dialog("blank",
                                                                                          "create"))
@@ -80,6 +82,32 @@ class ExpSettings(QDialog):
             self.ui.button_apply_exp.setEnabled(False)
         else:
             self.ui.button_apply_all.setEnabled(False)
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("experiment")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("signal"))
+            self.ui.groupBox_2.setTitle(self.lang_pack.get("exp_plan"))
+            self.ui.button_new_signal.setText(self.lang_pack.get("new"))
+            self.ui.button_delete.setText(self.lang_pack.get("delete"))
+            self.ui.button_add_exp.setText(self.lang_pack.get("add_to_plan"))
+            self.ui.label.setText(self.lang_pack.get("exp_name"))
+            self.ui.button_load_exp.setText(self.lang_pack.get("upload"))
+            self.ui.button_import.setText(self.lang_pack.get("import"))
+            self.ui.button_edit_ticket.setText(self.lang_pack.get("edit"))
+            self.ui.button_duplicate.setText(self.lang_pack.get("duplicate"))
+            self.ui.button_up_plan.setText(self.lang_pack.get("up"))
+            self.ui.button_down_plan.setText(self.lang_pack.get("down"))
+            self.ui.button_delete_plan.setText(self.lang_pack.get("remove"))
+            self.ui.button_view_requets.setText(self.lang_pack.get("view_req"))
+            self.ui.button_check_exp.setText(self.lang_pack.get("check"))
+            self.ui.button_apply_exp.setText(self.lang_pack.get("apply_cell"))
+            self.ui.button_apply_all.setText(self.lang_pack.get("apply_all"))
+            self.ui.button_cancel_exp.setText(self.lang_pack.get("cancel"))
 
     def set_up_init_values(self):
         """
@@ -113,7 +141,7 @@ class ExpSettings(QDialog):
         # получаем имя файла
         file_name = self.ui.exp_list.currentIndex().data()
         if file_name and not file_name in self.parent.protected_modes: # защита .json
-            answer = show_choose_window(self, 'Удалить файл?', rlj=self.parent.read_language_json)
+            answer = show_choose_window(self, self.lang_pack.get("delete_file"), rlj=self.parent.read_language_json)
             if answer:
                 os.remove(os.path.join(TICKET_PATH,
                           file_name+'.json'))
@@ -124,7 +152,7 @@ class ExpSettings(QDialog):
         Обновляем значение лейблов
         """
         time_done = round(((self.parent.exp_list_params['total_tasks'] * 55) / 1000) / 60, 0) # todo: скорректировать время
-        self.ui.label_count_tasks.setText(f"Всего тикетов: {self.parent.exp_list_params['total_tickets']}   Всего запросов к плате: {str(self.parent.exp_list_params['total_tasks'])}   Примерное время выполнения: {time_done} мин.")
+        self.ui.label_count_tasks.setText(self.lang_pack.get("tickets") + str(self.parent.exp_list_params['total_tickets']) + self.lang_pack.get("board_req") + str(self.parent.exp_list_params['total_tasks']) + self.lang_pack.get("est_time") + str(time_done) + self.lang_pack.get("min"))
 
     def _add_exp_to_list(self, **kwargs) -> None:
         """
@@ -154,7 +182,7 @@ class ExpSettings(QDialog):
             self.import_experiment_json(mode='dblclick')
             if not self.importing_experiment:
                 self.importing_experiment = False
-                show_warning_messagebox("Тикет не возможно прочитать!", rlj=self.parent.read_language_json)
+                show_warning_messagebox(self.lang_pack.get("ticket_unreadable"), rlj=self.parent.read_language_json)
 
     def _refresh_exp_list(self) -> None:
         """
@@ -178,21 +206,19 @@ class ExpSettings(QDialog):
             # обновляем список
             self._refresh_exp_list()
         except IndexError:
-            show_warning_messagebox("Нечего удалять!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("nothing_to_remove"), rlj=self.parent.read_language_json)
 
     def _exp_list_up_exp(self, direction: int) -> None:
         """
         Движение по списку тикетов
         """
-        exp_index = self.ui.plan_list.currentIndex().row()
-        if exp_index == 0 and direction == -1:
-            pass
-        elif len(self.parent.exp_list)-1 == exp_index and direction == 1:
-            pass
-        else:
+        try:
+            exp_index = self.ui.plan_list.currentIndex().row()
             self.parent.exp_list.insert(exp_index + direction, self.parent.exp_list.pop(exp_index))
             self._refresh_exp_list()
             self.ui.plan_list.setCurrentIndex(self.ui.plan_list.model().index(exp_index + direction,0))
+        except IndexError:
+            show_warning_messagebox(self.lang_pack.get("list_empty"), rlj=self.parent.read_language_json)
 
     def _edit_ticket(self) -> None:
         """
@@ -234,9 +260,9 @@ class ExpSettings(QDialog):
                 self.parent.exp_name = exp_name
                 self.parent.show_apply_dialog()
             else:
-                show_warning_messagebox("Введите имя плана эксперимента!", rlj=self.parent.read_language_json)
+                show_warning_messagebox(self.lang_pack.get("exp_name_expected"), rlj=self.parent.read_language_json)
         else:
-            show_warning_messagebox("Заполните план эксперимента!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("fill_plan"), rlj=self.parent.read_language_json)
 
     def apply_exp_all(self) -> None:
         """
@@ -283,7 +309,7 @@ class ExpSettings(QDialog):
         """
         Проверить эксперимент
         """
-        show_warning_messagebox("Пока не реализовано!", rlj=self.parent.read_language_json)
+        show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.parent.read_language_json)
 
     def load_tickets(self, exp_name: str, tickets: list) -> None:
         """
@@ -314,7 +340,7 @@ class ExpSettings(QDialog):
                     self._add_exp_to_list(ticket=tickets.get(str(i)))
                 self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
         except:
-            show_warning_messagebox("Тикет сломан!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("ticket_unreadable"), rlj=self.parent.read_language_json)
 
     def duplicate_ticket(self) -> None:
         """
