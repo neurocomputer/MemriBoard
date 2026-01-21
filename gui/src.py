@@ -8,24 +8,24 @@ import csv
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog
 
-def show_warning_messagebox(message: str) -> None:
+def show_warning_messagebox(message: str, rlj) -> None:
     """
     Оповещение
     """
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Warning)
     msg.setText(message)
-    msg.setWindowTitle("Предупреждение")
+    msg.setWindowTitle(rlj("src")[1].get("warn"))
     msg.setStandardButtons(QMessageBox.Ok)
     _ = msg.exec_()
 
-def show_choose_window(parent: QMainWindow, message: str) -> bool:
+def show_choose_window(parent: QMainWindow, message: str, rlj) -> bool:
     """
     Окно выбора
     """
     answer = 0
     reply = QMessageBox.question(parent,
-                                 'Подтверждение',
+                                 rlj("src")[1].get("confirm"),
                                  message,
                                  QMessageBox.Yes | QMessageBox.No,
                                  QMessageBox.No)
@@ -33,30 +33,30 @@ def show_choose_window(parent: QMainWindow, message: str) -> bool:
         answer = 1
     return answer
 
-def bool_to_label(value):
+def bool_to_label(value, rlj):
     """
     Преобразование логики в текст для вывода в таблице
     """
     answer = None
     if value == 1 or value is True:
-        answer = "Выполнен"
+        answer = rlj("src")[1].get("done")
     elif value == 2:
-        answer = "Прерван"
+        answer = rlj("src")[1].get("interrupted")
     elif value == 0 or value is False:
-        answer = "Не выполнен"
+        answer = rlj("src")[1].get("not_done")
     return answer
 
-def open_file_dialog(parent, file_types="All Files (*);;Text Files (*.txt);;CSV Files (*.csv)"):
+def open_file_dialog(parent, rlj, file_types="All Files (*);;Text Files (*.txt);;CSV Files (*.csv)"):
     """
     Окно выбора файлов
     """
     file_path, _ = QFileDialog.getOpenFileName(parent,
-                                               "Выбрать файл",
+                                               rlj("src")[1].get("pick_file"),
                                                "",
                                                file_types)
     return file_path
 
-def choose_cells(filepath, wl_max, bl_max):
+def choose_cells(filepath, wl_max, bl_max, rlj):
     """
     Выбор ячеек
     """
@@ -67,22 +67,22 @@ def choose_cells(filepath, wl_max, bl_max):
         header = next(reader)  # Пропускаем заголовок
         # Проверяем, что в заголовке есть нужные колонки.
         if header != ['wl', 'bl']:
-            raise ValueError("Файл CSV должен иметь столбцы 'wl' и 'bl' в указанном порядке")
+            raise ValueError(rlj("src")[1].get("wl_bl_order_wrong"))
         for row in reader:
             try:
                 if len(row) > 2:
-                    raise ArithmeticError("В строке больше 2-х значений")
+                    raise ArithmeticError(rlj("src")[1].get("more_than_2_values"))
                 else:
                     wl = int(row[0]) # Преобразуем в число
                     bl = int(row[1])
                     if wl > wl_max or bl > bl_max:
-                        raise ArithmeticError("WL или BL имеют не корректное значение")
+                        raise ArithmeticError(rlj("src")[1].get("wl_bl_incorrect"))
                     if [wl, bl] not in cells: # Без дубликатов
                         cells.append((wl, bl)) # Заполняем список
             except (ValueError, IndexError):
-                message = f"Ошибка при преобразовании строки в числа: {row}"
+                message = rlj("src")[1].get("string_to_int_error") + str(row)
             except ArithmeticError as e:
-                message = f"Ошибка: {e}"
+                message = rlj("src")[1].get("error") + e
             continue # переходим к следующей строке
     return cells, message
 

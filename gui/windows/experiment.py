@@ -113,7 +113,7 @@ class ExpSettings(QDialog):
         # получаем имя файла
         file_name = self.ui.exp_list.currentIndex().data()
         if file_name and not file_name in self.parent.protected_modes: # защита .json
-            answer = show_choose_window(self, 'Удалить файл?')
+            answer = show_choose_window(self, 'Удалить файл?', rlj=self.parent.read_language_json)
             if answer:
                 os.remove(os.path.join(TICKET_PATH,
                           file_name+'.json'))
@@ -154,7 +154,7 @@ class ExpSettings(QDialog):
             self.import_experiment_json(mode='dblclick')
             if not self.importing_experiment:
                 self.importing_experiment = False
-                show_warning_messagebox("Тикет не возможно прочитать!")
+                show_warning_messagebox("Тикет не возможно прочитать!", rlj=self.parent.read_language_json)
 
     def _refresh_exp_list(self) -> None:
         """
@@ -178,7 +178,7 @@ class ExpSettings(QDialog):
             # обновляем список
             self._refresh_exp_list()
         except IndexError:
-            show_warning_messagebox("Нечего удалять!")
+            show_warning_messagebox("Нечего удалять!", rlj=self.parent.read_language_json)
 
     def _exp_list_up_exp(self, direction: int) -> None:
         """
@@ -234,9 +234,9 @@ class ExpSettings(QDialog):
                 self.parent.exp_name = exp_name
                 self.parent.show_apply_dialog()
             else:
-                show_warning_messagebox("Введите имя плана эксперимента!")
+                show_warning_messagebox("Введите имя плана эксперимента!", rlj=self.parent.read_language_json)
         else:
-            show_warning_messagebox("Заполните план эксперимента!")
+            show_warning_messagebox("Заполните план эксперимента!", rlj=self.parent.read_language_json)
 
     def apply_exp_all(self) -> None:
         """
@@ -283,7 +283,7 @@ class ExpSettings(QDialog):
         """
         Проверить эксперимент
         """
-        show_warning_messagebox("Пока не реализовано!")
+        show_warning_messagebox("Пока не реализовано!", rlj=self.parent.read_language_json)
 
     def load_tickets(self, exp_name: str, tickets: list) -> None:
         """
@@ -304,7 +304,7 @@ class ExpSettings(QDialog):
                 self.importing_experiment = True
                 filepath = os.path.join(os.getcwd(), "tickets", self.ui.exp_list.currentIndex().data()) + ".json"
             if not filepath:
-                filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
+                filepath = open_file_dialog(self, file_types="JSON Files (*.json)", rlj=self.parent.read_language_json)
             if filepath:
                 data: str
                 with open (filepath, "r+") as f:
@@ -314,7 +314,7 @@ class ExpSettings(QDialog):
                     self._add_exp_to_list(ticket=tickets.get(str(i)))
                 self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
         except:
-            show_warning_messagebox("Тикет сломан!")
+            show_warning_messagebox("Тикет сломан!", rlj=self.parent.read_language_json)
 
     def duplicate_ticket(self) -> None:
         """

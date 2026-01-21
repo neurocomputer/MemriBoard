@@ -55,9 +55,9 @@ def save_as_array_to_csv(parent, array):
                 if path_check[-1] != 'csv':
                     file_path += '.csv'
                 save_array_to_csv(array, file_path)
-                show_warning_messagebox(f'Сохранено в {file_path}')
+                show_warning_messagebox(f'Сохранено в {file_path}', rlj=parent.read_language_json)
             except Exception: # pylint: disable=W0718
-                show_warning_messagebox('Ошибка сохранения!')
+                show_warning_messagebox('Ошибка сохранения!', rlj=parent.read_language_json)
 
 def read_csv_to_array(file_path):
     """
@@ -401,7 +401,7 @@ class Math(QWidget):
         """
         Загрузить входные данные (массив) с диска
         """
-        file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
+        file_path = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
         if file_path:
             try:
                 # загружаем
@@ -417,14 +417,14 @@ class Math(QWidget):
                             zeros = True
                             break                            
                 if zeros:
-                    show_warning_messagebox('В файле обнаружены отрицательные числа. Они будут загружены по модулю.')
+                    show_warning_messagebox('В файле обнаружены отрицательные числа. Они будут загружены по модулю.', rlj=self.parent.read_language_json)
                     for i in range(len(self.input_array_source)):
                         for j in range(len(self.input_array_source[0])):
                             self.input_array_source[i][j] = abs(self.input_array_source[i][j])
                 self.update_voltages_array()
                 self.update_summary_data() # обновление сводки
             except Exception as ex: # pylint: disable=W0718
-                show_warning_messagebox(f'Файл не соответствует требованиям! {ex}')
+                show_warning_messagebox(f'Файл не соответствует требованиям! {ex}', rlj=self.parent.read_language_json)
 
     def generate_random_input_data(self):
         """
@@ -561,7 +561,7 @@ class Math(QWidget):
                         text += row[0].replace(',','.') + '\n'
                     self.ui.text_input_data.appendPlainText(text)
         except Exception: # pylint: disable=W0718
-            show_warning_messagebox("Некорректный файл!")
+            show_warning_messagebox("Некорректный файл!", rlj=self.parent.read_language_json)
 
     def update_all_data(self):
         """
@@ -640,7 +640,7 @@ class Math(QWidget):
             self.ui.label_input_data_status.setText("Некорректное значение!")
             self.ui.button_apply.setEnabled(False)
         except ZeroDivisionError:
-            show_warning_messagebox("Задайте максимум!")
+            show_warning_messagebox("Задайте максимум!", rlj=self.parent.read_language_json)
             self.ui.button_apply.setEnabled(False)
 
     def update_label_cell_info(self):
@@ -690,7 +690,7 @@ class Math(QWidget):
         if self.parent.man.get_meta_info()["writable_cells"] != '':
             is_correct, cells = self.parent.is_writable_cells_file_correct(None)
         else:   # выбрать файл вручную
-            file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
+            file_path = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
             is_correct, cells = self.parent.is_writable_cells_file_correct(file_path)
         
         if is_correct:

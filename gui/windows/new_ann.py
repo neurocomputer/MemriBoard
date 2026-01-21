@@ -226,17 +226,17 @@ class NewAnn(QDialog):
         """
         Загружены ячейки
         """
-        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)")
+        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
         if filepath:
             try:
                 self.cells_coordinates_choosen = []
                 wl_max = self.parent.man.col_num
                 bl_max = self.parent.man.row_num
-                self.cells_coordinates_choosen, _ = choose_cells(filepath, wl_max, bl_max)
+                self.cells_coordinates_choosen, _ = choose_cells(filepath, wl_max, bl_max, rlj=self.parent.read_language_json)
             except Exception as er: # pylint: disable=W0718
                 self.cells_coordinates_choosen = []
                 print('button_load_good_cells_clicked',er)
-                show_warning_messagebox('Не возможно загрузить ячейки или их нет!')
+                show_warning_messagebox('Не возможно загрузить ячейки или их нет!', rlj=self.parent.read_language_json)
             self.update_good_cels()
 
     def update_good_cels(self): # +
@@ -289,7 +289,7 @@ class NewAnn(QDialog):
         bl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 4)
         wl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 5)
         if bl_item == None or wl_item == None:
-            show_warning_messagebox('Отсутствуют координаты ячеек в таблице "Веса"')
+            show_warning_messagebox('Отсутствуют координаты ячеек в таблице "Веса"', rlj=self.parent.read_language_json)
             self.parent.coordinate_error = True
             self.parent.extra = []
         else:
@@ -311,7 +311,7 @@ class NewAnn(QDialog):
         Выбрать веса
         """
         self.weights_target_all = []
-        filepath = open_file_dialog(self, file_types="Text Files (*.txt)")
+        filepath = open_file_dialog(self, file_types="Text Files (*.txt)", rlj=self.parent.read_language_json)
         if filepath:
             status_open = False
             with open(filepath, 'r', encoding='utf-8') as file:
@@ -319,7 +319,7 @@ class NewAnn(QDialog):
                     self.weights_target_all = file.readlines()
                     status_open = True
                 except Exception as ex: # pylint: disable=W0718
-                    show_warning_messagebox(f'{ex}')
+                    show_warning_messagebox(f'{ex}', rlj=self.parent.read_language_json)
             if status_open:
                 try:
                     self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
@@ -330,7 +330,7 @@ class NewAnn(QDialog):
                             self.weights_target_all.remove(0.)
                     self.fill_table_match()
                 except Exception as ex: # pylint: disable=W0718
-                    show_warning_messagebox(f'{ex}')
+                    show_warning_messagebox(f'{ex}', rlj=self.parent.read_language_json)
 
     def fill_table_match(self): # +
         """
@@ -594,12 +594,12 @@ class NewAnn(QDialog):
                     self.map_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
                     self.map_thread.start()
                 else:
-                    show_warning_messagebox('Дропните не подходящие веса!')
+                    show_warning_messagebox('Дропните не подходящие веса!', rlj=self.parent.read_language_json)
             else:
-                show_warning_messagebox('Весов больше чем ячеек!')
+                show_warning_messagebox('Весов больше чем ячеек!', rlj=self.parent.read_language_json)
                 # todo: двойной клик для удаления
         else:
-            show_warning_messagebox('Нечего записать!')
+            show_warning_messagebox('Нечего записать!', rlj=self.parent.read_language_json)
 
     def on_count_changed(self, value): # +
         '''
@@ -695,13 +695,13 @@ class NewAnn(QDialog):
         flag_soft_cc = int(value[1])
         # блочим запуск
         if exp_status == 1:
-            show_warning_messagebox("Эксперимент выполнен!")
+            show_warning_messagebox("Эксперимент выполнен!", rlj=self.parent.read_language_json)
         elif exp_status == 2:
-            show_warning_messagebox("Эксперимент прерван!")
+            show_warning_messagebox("Эксперимент прерван!", rlj=self.parent.read_language_json)
         elif exp_status == 3:
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!', rlj=self.parent.read_language_json)
         if flag_soft_cc:
-            show_warning_messagebox("Срабатывало программное ограничение!")
+            show_warning_messagebox("Срабатывало программное ограничение!", rlj=self.parent.read_language_json)
         self.application_status = 'stop'
         self.button_after_combination()
         self.ui.progress_bar_mapping.setValue(0)
@@ -749,7 +749,7 @@ class NewAnn(QDialog):
             self.set_up_init_values()
             event.accept()
         elif self.application_status == 'work':
-            show_warning_messagebox('Дождитесь или прервите!')
+            show_warning_messagebox('Дождитесь или прервите!', rlj=self.parent.read_language_json)
             event.ignore()
 
     def button_start_combination(self):

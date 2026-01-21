@@ -221,7 +221,7 @@ class Apply(QWidget):
         """
         Окно настройки графика
         """
-        show_warning_messagebox("Пока не реализовано")
+        show_warning_messagebox("Пока не реализовано", self.parent.read_language_json)
 
     def update_label_total_count(self) -> None:
         """
@@ -258,7 +258,7 @@ class Apply(QWidget):
         Закрытие
         """
         if self.application_status in ["start", "pause"]: # работает
-            answer = show_choose_window(self, 'Останавливаем эксперимент?')
+            answer = show_choose_window(self, 'Останавливаем эксперимент?', rlj=self.parent.read_language_json)
             if answer:
                 self.stop_exp()
                 event.accept()
@@ -297,13 +297,13 @@ class Apply(QWidget):
         flag_soft_cc = int(value[1])
         # блочим запуск
         if exp_status == 1:
-            show_warning_messagebox("Эксперимент выполнен!")
+            show_warning_messagebox("Эксперимент выполнен!", rlj=self.parent.read_language_json)
         elif exp_status == 2:
-            show_warning_messagebox("Эксперимент прерван!")
+            show_warning_messagebox("Эксперимент прерван!", rlj=self.parent.read_language_json)
         elif exp_status == 3:
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!', rlj=self.parent.read_language_json)
         if flag_soft_cc:
-            show_warning_messagebox("Срабатывало программное ограничение!")
+            show_warning_messagebox("Срабатывало программное ограничение!", rlj=self.parent.read_language_json)
         self.application_status = "stop"
         self.stop_exp()
 

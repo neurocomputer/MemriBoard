@@ -58,6 +58,6 @@ class RequestsList(QDialog):
             with open (filepath, "w", encoding='utf-8') as file:
                 file.write(request)
                 file.close()
-            show_warning_messagebox(f'Выгружено в файл {filepath}')
+            show_warning_messagebox(f'Выгружено в файл {filepath}', rlj=self.parent.read_language_json)
         else:
-            show_warning_messagebox('Список команд пуст!')
+            show_warning_messagebox('Список команд пуст!', rlj=self.parent.read_language_json)

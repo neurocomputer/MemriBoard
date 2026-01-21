@@ -292,7 +292,7 @@ class ConnectDialog(QDialog):
             self.parent.show() # показываем родительское окно
             event.accept()
         else:
-            answer = show_choose_window(self, self.lang_pack.get("quit_now"))
+            answer = show_choose_window(self, self.lang_pack.get("quit_now"), rlj=self.parent.read_language_json)
             if answer:
                 self.parent.close_modal_flag = True
                 self.parent.close() # вызывает выход функцией родительского окна

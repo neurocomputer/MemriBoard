@@ -47,6 +47,6 @@ class Terminal(QDialog):
                     else:
                         self.ui.label_answer.setText('Ответ не получен!')
                 else:
-                    show_warning_messagebox("Не корректный запрос!")
+                    show_warning_messagebox("Не корректный запрос!", rlj=self.parent.read_language_json)
             else:
-                show_warning_messagebox("Не корректный запрос!")
+                show_warning_messagebox("Не корректный запрос!", rlj=self.parent.read_language_json)

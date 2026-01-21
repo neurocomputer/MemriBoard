@@ -195,7 +195,7 @@ class SignalMod(QDialog):
 
             status = True
         except ValueError:
-            show_warning_messagebox('Не корректный символ!')
+            show_warning_messagebox('Не корректный символ!', rlj=self.parent.read_language_json)
         return status
 
     def _save_json(self) -> None:
@@ -206,9 +206,9 @@ class SignalMod(QDialog):
         answer = None
         if self._make_json():
             if self.mode == "create":
-                answer = show_choose_window(self, 'Сохранить файл?')
+                answer = show_choose_window(self, 'Сохранить файл?', rlj=self.parent.read_language_json)
             elif self.mode == "edit" or self.mode == "edit_for_programming":
-                answer = show_choose_window(self, 'Сохранить изменения?')
+                answer = show_choose_window(self, 'Сохранить изменения?', rlj=self.parent.read_language_json)
             if answer:
                 try:
                     if self.mode == "create":
@@ -231,7 +231,7 @@ class SignalMod(QDialog):
                         json.dump(self.base_json, outfile)
                     self.file_saved = True
                 except ValueError:
-                    show_warning_messagebox('Имя файла задано не правильно!')
+                    show_warning_messagebox('Имя файла задано не правильно!', rlj=self.parent.read_language_json)
             if self.file_saved:
                 self.close()
 

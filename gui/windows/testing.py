@@ -147,7 +147,7 @@ class Testing(QWidget):
         """
         Выбрать ячейки для эксперимента
         """
-        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)")
+        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
         if filepath:
             # нужно сформировать список кортежей
             cells = []
@@ -155,7 +155,7 @@ class Testing(QWidget):
             wl_max = self.parent.man.col_num
             bl_max = self.parent.man.row_num
             try:
-                cells, message = choose_cells(filepath, wl_max, bl_max)
+                cells, message = choose_cells(filepath, wl_max, bl_max, rlj=self.parent.read_language_json)
             except FileNotFoundError:
                 message = f"Ошибка: Файл не найден: {filepath}"
             except ValueError as e:
@@ -163,16 +163,16 @@ class Testing(QWidget):
             except Exception as e:
                 message = f"Произошла ошибка: {e}"
             if message:
-                show_warning_messagebox(message)
+                show_warning_messagebox(message, rlj=self.parent.read_language_json)
             if cells:
                 self.coordinates = cells
                 self.cell_list_from_file = True
-                show_warning_messagebox(f'Тест выполнится для {len(cells)} ячеек!')
+                show_warning_messagebox(f'Тест выполнится для {len(cells)} ячеек!', rlj=self.parent.read_language_json)
             else:
-                show_warning_messagebox('Тест выполнится для всех ячеек!')
+                show_warning_messagebox('Тест выполнится для всех ячеек!', rlj=self.parent.read_language_json)
                 self.cell_list_from_file = False
         else:
-            show_warning_messagebox('Тест выполнится для всех ячеек!')
+            show_warning_messagebox('Тест выполнится для всех ячеек!', rlj=self.parent.read_language_json)
             self.cell_list_from_file = False
         self.update_label_all_cells_count()
 
@@ -188,7 +188,7 @@ class Testing(QWidget):
         Старт обработки
         """
         message = f'Тест для {len(self.coordinates)} ячеек, примерно займет {self.exp_time_estimated} мин.\nПродолжить?'
-        answer = show_choose_window(self, message)
+        answer = show_choose_window(self, message, rlj=self.parent.read_language_json)
         if answer:
             wl = self.parent.man.col_num
             bl = self.parent.man.row_num
@@ -236,9 +236,9 @@ class Testing(QWidget):
         stop_reason = int(value[0])
         self.ui.progress_all.setValue(0)
         if stop_reason == 1:
-            show_warning_messagebox(f"Все мемристоры протестированы за {round(time.time() - self.start_time,2)} сек.!")
+            show_warning_messagebox(f"Все мемристоры протестированы за {round(time.time() - self.start_time,2)} сек.!", rlj=self.parent.read_language_json)
         elif stop_reason == 2:
-            show_warning_messagebox("Эксперимент прерван!")
+            show_warning_messagebox("Эксперимент прерван!", rlj=self.parent.read_language_json)
         time.sleep(1) # чтобы всё успело сохраниться на диск
         self.application_status = 'stop'
         # сохраняем список результатов
@@ -459,7 +459,7 @@ class Testing(QWidget):
             self.parent.showNormal()        
             event.accept()
         elif self.application_status == 'work':
-            show_warning_messagebox('Дождитесь или прервите!')
+            show_warning_messagebox('Дождитесь или прервите!', rlj=self.parent.read_language_json)
             event.ignore()
 
     def button_result_clicked(self) -> None: # +
@@ -599,7 +599,7 @@ class Testing(QWidget):
         """
         self.ui.progress_images.setValue(0)
         self.ui.button_generate_images.setEnabled(True)
-        show_warning_messagebox('Картинки сгенерированы!')
+        show_warning_messagebox('Картинки сгенерированы!', rlj=self.parent.read_language_json)
 
     def on_need_image(self, value):
         """
