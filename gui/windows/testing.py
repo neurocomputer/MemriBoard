@@ -89,12 +89,14 @@ class Testing(QWidget):
     ylabel_text: str = 'Сопротивление, Ом'
     ticket_image_name: str = "temp.png"
     terminator: dict
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None: # +
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         self.ui.setWindowFlags(Qt.Window)
         # доп настройки
         #self.setModal(True)
@@ -112,6 +114,39 @@ class Testing(QWidget):
         # значения по умолчанию
         self.result_path = os.getcwd()
         self.set_up_init_values()
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("testing")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("results"))
+            self.ui.label.setText(self.lang_pack.get("path"))
+            self.ui.button_choose_folder.setText(self.lang_pack.get("view"))
+            self.ui.tabWidget.setTabText(0, self.lang_pack.get("test_maintenance"))
+            self.ui.tabWidget.setTabText(1, self.lang_pack.get("results_analysis"))
+            self.ui.tabWidget.setTabText(2, self.lang_pack.get("visual"))
+            self.ui.button_choose_exp.setText(self.lang_pack.get("exp"))
+            self.ui.button_choose_cells.setText(self.lang_pack.get("cells"))
+            self.ui.button_start_exp.setText(self.lang_pack.get("run"))
+            self.ui.button_reset_exp.setText(self.lang_pack.get("interrupt"))
+            self.ui.combo_rmin_mode.setItemText(0, self.lang_pack.get("more"))
+            self.ui.combo_rmin_mode.setItemText(1, self.lang_pack.get("less"))
+            self.ui.combo_rmax_mode.setItemText(0, self.lang_pack.get("more"))
+            self.ui.combo_rmax_mode.setItemText(1, self.lang_pack.get("less"))
+            self.ui.label_4.setText(self.lang_pack.get("ohm"))
+            self.ui.label_6.setText(self.lang_pack.get("ohm"))
+            self.ui.label_3.setText(self.lang_pack.get("r_r_more"))
+            self.ui.button_result.setText(self.lang_pack.get("count"))
+            self.ui.label_7.setText(self.lang_pack.get("axisx"))
+            self.ui.label_8.setText(self.lang_pack.get("axisy"))
+            self.ui.combo_xlabel.setItemText(0, self.lang_pack.get("voltage"))
+            self.ui.combo_xlabel.setItemText(1, self.lang_pack.get("counting"))
+            self.ui.combo_ylabel.setItemText(0, self.lang_pack.get("resistance"))
+            self.ui.combo_ylabel.setItemText(1, self.lang_pack.get("amperage"))
+            self.ui.button_generate_images.setText(self.lang_pack.get("make_graphics"))
 
     def set_up_init_values(self) -> None: # +
         """
@@ -135,10 +170,10 @@ class Testing(QWidget):
         self.parent.exp_list_params['total_tickets'] = 0
         self.parent.exp_list_params['total_tasks'] = 0
         self.button_open_combination()
-        self.ui.label_all_cells_count.setText(f"Выбрано ячеек: {len(self.coordinates)}")
-        self.ui.label_time_status.setText("Время выполнения теста: н/д")
-        self.ui.label_start_time.setText("Начало выполнения теста: н/д")
-        self.ui.label_result.setText("Процент годных: н/д")
+        self.ui.label_all_cells_count.setText(self.lang_pack.get("cells_chosen") + str(len(self.coordinates)))
+        self.ui.label_time_status.setText(self.lang_pack.get("exec_start"))
+        self.ui.label_start_time.setText(self.lang_pack.get("exec_time"))
+        self.ui.label_result.setText(self.lang_pack.get("suitable"))
         self.cell_list_from_file = False
         self.exp_time_estimated = 0.
         self.csv_names = []
@@ -157,22 +192,22 @@ class Testing(QWidget):
             try:
                 cells, message = choose_cells(filepath, wl_max, bl_max, rlj=self.parent.read_language_json)
             except FileNotFoundError:
-                message = f"Ошибка: Файл не найден: {filepath}"
+                message = self.lang_pack.get("error_file") + filepath
             except ValueError as e:
-                message = f"Ошибка: {e}"
+                message = self.lang_pack.get("error") + e
             except Exception as e:
-                message = f"Произошла ошибка: {e}"
+                message = self.lang_pack.get("error") + e
             if message:
                 show_warning_messagebox(message, rlj=self.parent.read_language_json)
             if cells:
                 self.coordinates = cells
                 self.cell_list_from_file = True
-                show_warning_messagebox(f'Тест выполнится для {len(cells)} ячеек!', rlj=self.parent.read_language_json)
+                show_warning_messagebox(self.lang_pack.get("tested_cells") + str(len(cells)), rlj=self.parent.read_language_json)
             else:
-                show_warning_messagebox('Тест выполнится для всех ячеек!', rlj=self.parent.read_language_json)
+                show_warning_messagebox(self.lang_pack.get("all_cells"), rlj=self.parent.read_language_json)
                 self.cell_list_from_file = False
         else:
-            show_warning_messagebox('Тест выполнится для всех ячеек!', rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("all_cells"), rlj=self.parent.read_language_json)
             self.cell_list_from_file = False
         self.update_label_all_cells_count()
 
@@ -187,7 +222,7 @@ class Testing(QWidget):
         """
         Старт обработки
         """
-        message = f'Тест для {len(self.coordinates)} ячеек, примерно займет {self.exp_time_estimated} мин.\nПродолжить?'
+        message = str(len(self.coordinates)) + self.lang_pack.get("tested_for") + str(self.exp_time_estimated) + self.lang_pack.get("continue")
         answer = show_choose_window(self, message, rlj=self.parent.read_language_json)
         if answer:
             wl = self.parent.man.col_num
@@ -236,9 +271,9 @@ class Testing(QWidget):
         stop_reason = int(value[0])
         self.ui.progress_all.setValue(0)
         if stop_reason == 1:
-            show_warning_messagebox(f"Все мемристоры протестированы за {round(time.time() - self.start_time,2)} сек.!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("tested") + str(round(time.time() - self.start_time,2)) + self.lang_pack.get("sec"), rlj=self.parent.read_language_json)
         elif stop_reason == 2:
-            show_warning_messagebox("Эксперимент прерван!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("exp_interrupted"), rlj=self.parent.read_language_json)
         time.sleep(1) # чтобы всё успело сохраниться на диск
         self.application_status = 'stop'
         # сохраняем список результатов
@@ -432,19 +467,19 @@ class Testing(QWidget):
         """
         num_cells = len(self.coordinates)
         self.exp_time_estimated = round((((self.parent.exp_list_params['total_tasks'] * num_cells) * 60) / 1000) / 60, 0) # todo: скорректировать время
-        self.ui.label_time_status.setText(f"Время выполнения теста: {self.exp_time_estimated} мин.")
+        self.ui.label_time_status.setText(self.lang_pack.get("exec_time") + str(self.exp_time_estimated))
 
     def update_label_start_time(self) -> None: # +
         """
         Обновить лейбл начала эксперимента
         """
-        self.ui.label_start_time.setText(f"Начало выполнения теста: {time.strftime('%H:%M', time.localtime(self.start_time))}")
+        self.ui.label_start_time.setText(self.lang_pack.get("exec_start") + str(time.strftime('%H:%M', time.localtime(self.start_time))))
 
     def update_label_all_cells_count(self) -> None: # +
         """
         Обновить лейбл с количеством ячеек
         """
-        self.ui.label_all_cells_count.setText(f"Выбрано ячеек: {len(self.coordinates)}")
+        self.ui.label_all_cells_count.setText(self.lang_pack.get("cells_chosen") + str(len(self.coordinates)))
 
     def closeEvent(self, event) -> None: # +
         """
@@ -459,7 +494,7 @@ class Testing(QWidget):
             self.parent.showNormal()        
             event.accept()
         elif self.application_status == 'work':
-            show_warning_messagebox('Дождитесь или прервите!', rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("wait_or_interrupt"), rlj=self.parent.read_language_json)
             event.ignore()
 
     def button_result_clicked(self) -> None: # +
@@ -511,15 +546,15 @@ class Testing(QWidget):
                     # проверяем условия
                     if self.ui.checkbox_rmin.isChecked():
                         mode = self.ui.combo_rmin_mode.currentText()
-                        if mode == 'больше':
+                        if mode is ['More', 'Больше']:
                             case_rmin = min_res > rmin
-                        elif mode == 'меньше':
+                        elif mode is ['Less', 'Меньше']:
                             case_rmin = min_res < rmin
                     if self.ui.checkbox_rmax.isChecked():
                         mode = self.ui.combo_rmax_mode.currentText()
-                        if mode == 'больше':
+                        if mode is ['More', 'Больше']:
                             case_rmax = max_res > rmax
-                        elif mode == 'меньше':
+                        elif mode is ['Less', 'Меньше']:
                             case_rmax = max_res < rmax
                     if self.ui.checkbox_rtresh.isChecked():
                         if max_res/min_res < treshhold: # меньше трешхолда
@@ -540,13 +575,13 @@ class Testing(QWidget):
             os.mkdir(os.path.join(self.result_path, analyses_path))
             # делаем картинку
             all_tested_count = good_mem_count + bad_mem_count
-            serial_label = f'Серийный номер: {self.crossbar_serial}\n'
-            data_label = f'Дата: {formatted_date}\n'
-            status_label = f'Процент годных: {np.round(good_mem_count/all_tested_count*100, 2)}%\n'
-            all_data_label = f'Всего: {all_cells_count}, Тест: {all_tested_count} из них годных: {good_mem_count}, остальных: {bad_mem_count}'
+            serial_label = self.lang_pack.get("serial") + str(self.crossbar_serial) + '\n'
+            data_label = self.lang_pack.get("date") + str(formatted_date) + '\n'
+            status_label = self.lang_pack.get("suitable_cells") + str(np.round(good_mem_count/all_tested_count*100, 2)) + '%\n'
+            all_data_label = self.lang_pack.get("all") + str(all_cells_count) + self.lang_pack.get("tested_cells_1") + str(all_tested_count) + self.lang_pack.get("suitable_cells") + str(good_mem_count) + self.lang_pack.get("other") + str(bad_mem_count)
             title = serial_label + data_label + status_label + all_data_label
             custom_shaphop(copy.deepcopy(heat_map), title, save_flag=True, save_path=os.path.join(self.result_path, analyses_path))
-            self.ui.label_result.setText(f"Процент годных: {np.round(good_mem_count/all_tested_count*100, 2)}%")
+            self.ui.label_result.setText(self.lang_pack.get("suitable_cells") + str(np.round(good_mem_count/all_tested_count*100, 2)) + '%')
             # запись csv годные
             fname = os.path.join(self.result_path, analyses_path, 'good_cells.csv')
             with open(fname,'w', newline='', encoding='utf-8') as file:
@@ -599,7 +634,7 @@ class Testing(QWidget):
         """
         self.ui.progress_images.setValue(0)
         self.ui.button_generate_images.setEnabled(True)
-        show_warning_messagebox('Картинки сгенерированы!', rlj=self.parent.read_language_json)
+        show_warning_messagebox(self.lang_pack.get("pics_done"), rlj=self.parent.read_language_json)
 
     def on_need_image(self, value):
         """
@@ -660,16 +695,16 @@ class ImageGenerator(QThread):
         os.mkdir(os.path.join(self.parent.result_path, self.analyses_path))
         # настраиваем оси
         self.xlabel_type = self.parent.ui.combo_xlabel.currentText()
-        if self.xlabel_type == 'напряжение, В':
+        if self.xlabel_type == self.lang_pack.get("voltage"):
             x_axes_type = 'vol'
-        elif self.xlabel_type == 'отсчеты':
+        elif self.xlabel_type == self.lang_pack.get("counting"):
             x_axes_type = 'count'
         else:
             x_axes_type = 'count'
         self.ylabel_type = self.parent.ui.combo_ylabel.currentText()
-        if self.ylabel_type == 'сопротивление, Ом':
+        if self.ylabel_type == self.lang_pack.get("resistance"):
             y_axes_type = 'res'
-        elif self.ylabel_type == 'ток, мА':
+        elif self.ylabel_type == self.lang_pack.get("amperage"):
             y_axes_type = 'cur'
         else:
             y_axes_type = 'res'
