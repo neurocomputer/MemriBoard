@@ -85,23 +85,25 @@ class Connector():
             if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 from manager.comport import Serial # pylint: disable=C0415
                 self.interface = Serial()
-                self.interface.com_open(portnum, timeout=timeout)
                 # кол-во попыток получить данные
-                portnum = kwargs['com_port']
-                attempts = kwargs['attempts']
+                self.portnum = kwargs['com_port']
+                self.attempts = kwargs['attempts']
                 timeout = kwargs['timeout']
+                self.interface.com_open(self.portnum, timeout=timeout)
                 if self.interface.com_is_open():
-                    not_rec_flag = self._kick_board(attempts)
+                    not_rec_flag = self._kick_board(self.attempts)
                     if not_rec_flag:
-                        self.logger.info('Fail to receive %s', portnum)
+                        self.logger.info('Fail to receive %s', self.portnum)
                     else:
-                        self.logger.info('Opened %s', portnum)
+                        self.logger.info('Opened %s', self.portnum)
                         open_flag = True
                 else:
-                    self.logger.info('Fail to open %s', portnum)
+                    self.logger.info('Fail to open %s', self.portnum)
             # для плат на базе Elbear
             elif self.board_type == 'elbear_nano':
                 try:
+                    self.portnum = kwargs['com_port']
+                    self.attempts = kwargs['attempts']
                     from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
                     self.interface = RPI_modes_ELBEAR(kwargs['com_port'])
                     open_flag = self.interface.check_connection(kwargs['attempts'])
@@ -279,7 +281,35 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
+            elif self.board_type in ['elbear_nano', ]:
+                status = False
+                for _ in range(100):
+                    try:
+                        if task['mode_flag'] == 7: # режим команды 7
+                            task['vol'] = abs(task['vol'])
+                            adc = self.interface.mode_7(task['vol'],
+                                                    task['t_ms'],
+                                                    task['t_us'],
+                                                    task['sign'],
+                                                    task['id'],
+                                                    task['wl'],
+                                                    task['bl']) # vDAC, tms, tus, rev, id, wl, bl
+                            res = (int(adc[0]), int(adc[1]))
+                            status = True
+                    except TimeoutError as ex:
+                        print(ex)
+                        try:
+                            #print('!!!')
+                            self.interface.com_close()
+                            time.sleep(1)
+                            from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
+                            self.interface = RPI_modes_ELBEAR(self.portnum)
+                            _ = self.interface.check_connection(self.attempts)
+                        except ModuleNotFoundError:
+                            pass
+                        pass
+                    if status: break
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
                     adc = self.interface.mode_7(task['vol'],

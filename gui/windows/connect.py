@@ -208,33 +208,36 @@ class ConnectDialog(QDialog):
             self.ui.label_status.setText('Выберете кроссбар!')
             return
         # выбираем чип
-        _, _ = self.parent.man.use_chip(self.cb_serial)
-        combo_board_type = self.ui.combo_board_type.currentText()
-        self.parent.man.board_type = combo_board_type
-        if self.parent.man.cb_type != 'simulator':
-            # попытка подключения
-            if combo_board_type == 'offline':
-                self.parent.ui.button_rram.setEnabled(False)
-                self.parent.ui.button_net.setEnabled(False)
-                self.parent.ui.button_tests.setEnabled(False)
-                self.parent.ui.button_math.setEnabled(False)
-                self.accept_connet()
-            else:
-                if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano']:
-                    connected_flag = self.parent.man.connect(com_port=self.com_port)
+        status, _ = self.parent.man.use_chip(self.cb_serial)
+        if status: # если в базе есть данные по чипу
+            combo_board_type = self.ui.combo_board_type.currentText()
+            self.parent.man.board_type = combo_board_type
+            if self.parent.man.cb_type != 'simulator':
+                # попытка подключения
+                if combo_board_type == 'offline':
+                    self.parent.ui.button_rram.setEnabled(False)
+                    self.parent.ui.button_net.setEnabled(False)
+                    self.parent.ui.button_tests.setEnabled(False)
+                    self.parent.ui.button_math.setEnabled(False)
+                    self.accept_connet()
                 else:
-                    connected_flag = self.parent.man.connect()
+                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano']:
+                        connected_flag = self.parent.man.connect(com_port=self.com_port)
+                    else:
+                        connected_flag = self.parent.man.connect()
+                    if connected_flag:
+                        self.accept_connet()
+                    else:
+                        message = f"К плате \"{combo_board_type}\" нет подключения!"
+                        self.ui.label_status.setText(message)
+            else:
+                connected_flag = self.parent.man.connect()
                 if connected_flag:
                     self.accept_connet()
                 else:
-                    message = f"К плате \"{combo_board_type}\" нет подключения!"
-                    self.ui.label_status.setText(message)
-        else:
-            connected_flag = self.parent.man.connect()
-            if connected_flag:
-                self.accept_connet()
-            else:
-                self.ui.label_status.setText('Не могу создать симулятор!')
+                    self.ui.label_status.setText('Не могу создать симулятор!')
+        else:    
+            self.ui.label_status.setText('Не могу получить данные из БД!')
 
     def accept_connet(self) -> None:
         """
