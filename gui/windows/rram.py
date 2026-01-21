@@ -9,7 +9,7 @@ import pickle
 from copy import deepcopy
 from PyQt5 import uic
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFileDialog, QAbstractItemView, QDialog
+from PyQt5.QtWidgets import QFileDialog, QAbstractItemView, QWidget
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 import matplotlib.pyplot as plt
 from gui.src import show_warning_messagebox, show_choose_window, snapshot
@@ -45,7 +45,7 @@ def ascii_to_binary(text: str) -> str:
         binary_str += binary_char
     return binary_str
 
-class Rram(QDialog):
+class Rram(QWidget):
     """
     Работа с rram
     """
@@ -515,5 +515,6 @@ class Rram(QDialog):
         Закрытие окна
         """
         self.parent.opener = None
+        self.parent.showNormal()
         self.set_up_init_values()
         event.accept()

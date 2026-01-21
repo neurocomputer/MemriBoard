@@ -159,7 +159,7 @@ class Window(QMainWindow):
             if self.man.cb_type == "real":
                 if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c']:
                     mode = "no_crossbar"
-                if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+                if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
                     mode = "normal"
                 else:
                     show_warning_messagebox("Плата не распознана!")
@@ -175,10 +175,8 @@ class Window(QMainWindow):
                     self.current_wl = 0
                 self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
                 self.math_dialog = Math(parent=self, mode=mode)
-                self.hide()
-                self.math_dialog.exec_()
-                self.showNormal()
-                self.activateWindow()
+                self.math_dialog.show()
+                self.showMinimized()
    
     def show_new_ann_dialog(self, mode=None) -> None: 
         """
@@ -267,11 +265,9 @@ class Window(QMainWindow):
         Отобразить окно тестирования
         """
         self.opener = 'testing'
-        self.hide()
         self.testing_dialog = Testing(parent=self)
-        self.testing_dialog.exec_()
-        self.showNormal()
-        self.activateWindow()
+        self.testing_dialog.show()
+        self.showMinimized()
 
     def show_map_dialog(self) -> None:
         """
@@ -300,11 +296,9 @@ class Window(QMainWindow):
         Открытие окна инормации о кроссбаре
         """
         self.opener = 'rram'
-        self.hide()
         self.rram_dialog = Rram(parent=self)
-        self.rram_dialog.exec_()
-        self.showNormal()
-        self.activateWindow()
+        self.rram_dialog.show()
+        self.showMinimized()
 
     def show_wait_dialog(self, opener) -> None:
         """
