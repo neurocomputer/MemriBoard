@@ -38,7 +38,7 @@ class Settings(QDialog):
         """
         Изменение языка интерфейса
         """
-        ok, self.lang_pack = self.parent.man.read_language_json("settings")
+        ok, self.lang_pack = self.parent.read_language_json("settings")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
             self.ui.label_3.setText(self.lang_pack.get("update_from_ini_file"))

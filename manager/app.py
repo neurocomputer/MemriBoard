@@ -40,11 +40,8 @@ class Application():
     status_db_connect: bool
     backup: str
     writable_cells: str
-<<<<<<< HEAD
     language: str
-=======
     lock_board_type: bool
->>>>>>> origin/dev
 
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
@@ -95,11 +92,8 @@ class Application():
         self.sum_gain = int(self.ap_config['board']['sum_gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
         self.writable_cells = self.ap_config['gui']['writable_cells']
-<<<<<<< HEAD
         self.language = self.ap_config['gui']['language']
-=======
         self.lock_board_type = eval(self.ap_config['gui']['lock_board_type'])
->>>>>>> origin/dev
 
     def save_settings(self, **kwargs):
         """
@@ -123,13 +117,10 @@ class Application():
             self.ap_config['backup']['backup_path'] = kwargs["backup"]
         if "writable_cells" in kwargs:
             self.ap_config['gui']['writable_cells'] = kwargs["writable_cells"]
-<<<<<<< HEAD
         if "language" in kwargs:
             self.ap_config['gui']['language'] = kwargs["language"]
-=======
         if "lock_board_type" in kwargs:
             self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
->>>>>>> origin/dev
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
@@ -157,29 +148,3 @@ class Application():
         meta_info['language'] = self.language
         meta_info['lock_board_type'] = self.lock_board_type
         return deepcopy(meta_info)
-    
-    def read_language_json(self, window: str):
-        """
-        Прочитать языковые настройки для окна
-        """
-        match self.language.lower():
-            case "english" | "en":
-                filename = "english.json"
-            case "русский" | "russian" | "ru":
-                filename = "russian.json"
-            case _:
-                filename = "english.json"
-        path = os.path.join(os.getcwd(), "manager", "service", "languages", filename)
-        if not os.path.isfile(path):
-            path = os.path.join(os.getcwd(), "manager", "service", "languages", "english.json")
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                localization_data = json.load(f)
-                data = localization_data[window]
-            if data:
-                return True, data
-            else:
-                return False, {}
-        except FileNotFoundError:
-            return False, {}
-

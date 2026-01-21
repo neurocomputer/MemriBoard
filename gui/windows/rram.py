@@ -107,7 +107,7 @@ class Rram(QWidget):
         """
         Изменение языка интерфейса
         """
-        ok, self.lang_pack = self.parent.man.read_language_json("rram")
+        ok, self.lang_pack = self.parent.read_language_json("rram")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
             self.ui.tabWidget.setTabText(0, self.lang_pack.get("read"))
