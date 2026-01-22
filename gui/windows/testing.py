@@ -85,8 +85,6 @@ class Testing(QWidget):
     cell_list_from_file: bool
     exp_time_estimated: float
     csv_names: list
-    xlabel_text: str = 'Напряжение, В'
-    ylabel_text: str = 'Сопротивление, Ом'
     ticket_image_name: str = "temp.png"
     terminator: dict
     lang_pack: dict
@@ -171,8 +169,8 @@ class Testing(QWidget):
         self.parent.exp_list_params['total_tasks'] = 0
         self.button_open_combination()
         self.ui.label_all_cells_count.setText(self.lang_pack.get("cells_chosen") + str(len(self.coordinates)))
-        self.ui.label_time_status.setText(self.lang_pack.get("exec_start"))
-        self.ui.label_start_time.setText(self.lang_pack.get("exec_time"))
+        self.ui.label_time_status.setText(self.lang_pack.get("exec_time"))
+        self.ui.label_start_time.setText(self.lang_pack.get("exec_start"))
         self.ui.label_result.setText(self.lang_pack.get("suitable"))
         self.cell_list_from_file = False
         self.exp_time_estimated = 0.
@@ -370,8 +368,8 @@ class Testing(QWidget):
             plt.plot(data_for_plot_x[0:1000], data_for_plot_y[0:1000], marker='o', linewidth=0.5)
         else:
             plt.plot(data_for_plot_x, data_for_plot_y, marker='o', linewidth=0.5)
-        plt.xlabel(self.xlabel_text)
-        plt.ylabel(self.ylabel_text)
+        plt.xlabel(self.lang_pack.get("voltage"))
+        plt.ylabel(self.lang_pack.get("resistance"))
         plt.grid(True, linestyle='--')
         plt.tight_layout()
         plt.savefig(self.ticket_image_name, dpi=100)
