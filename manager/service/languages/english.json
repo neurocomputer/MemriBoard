@@ -232,5 +232,30 @@
         "other":" Other cells: ",
         "tested_cells_1":" Tested cells: ",
         "pics_done":"Graphs are generated!"
+    },
+    "history":{
+        "name":"History",
+        "exps":"Experiments:",
+        "load":"Load",
+        "export":"Export",
+        "cancel":"Cancel",
+        "choose":"Choose",
+        "short":"Short",
+        "full":"Full",
+        "quick":"Quick view:",
+        "exp_history":"Experiments history:",
+        "csv":"Export to csv file",
+        "json":"Export to json file",
+        "exported":"Exported to ",
+        "pick_ticket":"Pick a ticket!",
+        "data":"Data: ",
+        "tic_name":"Name: ",
+        "serial":"Crossbar's serial number: ",
+        "pick_one":"Pick only one ticket!",
+        "e_data":"Data",
+        "e_name":"Name",
+        "e_status":"Status",
+        "e_res":"Resistance",
+        "e_tic":"Ticket"
     }
 }
