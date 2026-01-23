@@ -44,6 +44,7 @@ class Apply(QWidget):
     data_for_plot_x: list
     coordinates: list
     ticket_image_name: str = "temp.png"
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None:
         """
@@ -53,6 +54,7 @@ class Apply(QWidget):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.ui.change_language()
         # доп настройки
         self.ui.setWindowFlags(Qt.Window)
         # область графика
@@ -86,6 +88,33 @@ class Apply(QWidget):
         # обновить значение лейбла информации о мемристоре
         self.update_label_mem_id()
 
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("apply")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.groupBox_2.setTitle(self.lang_pack.get("visual"))
+            self.ui.label_2.setText(self.lang_pack.get("axisx"))
+            self.ui.label_3.setText(self.lang_pack.get("axisy"))
+            self.ui.xaxes_combobox.setItemText(0, self.lang_pack.get("counting"))
+            self.ui.xaxes_combobox.setItemText(1, self.lang_pack.get("voltage"))
+            self.ui.yaxes_combobox.setItemText(0, self.lang_pack.get("res_k"))
+            self.ui.yaxes_combobox.setItemText(1, self.lang_pack.get("res"))
+            self.ui.yaxes_combobox.setItemText(2, self.lang_pack.get("adc_c"))
+            self.ui.yaxes_combobox.setItemText(3, self.lang_pack.get("amp_m"))
+            self.ui.yaxes_combobox.setItemText(4, self.lang_pack.get("amp_mc"))
+            self.ui.graph_checkbox.setText(self.lang_pack.get("view"))
+            self.ui.plot_type_combobox.setItemText(0, self.lang_pack.get("line"))
+            self.ui.plot_type_combobox.setItemText(1, self.lang_pack.get("dot"))
+            self.ui.plot_type_combobox.setItemText(2, self.lang_pack.get("star"))
+            self.ui.button_graph_settings.setText(self.lang_pack.get("settings"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("exec_main"))
+            self.ui.button_start.setText(self.lang_pack.get("start"))
+            self.ui.button_stop.setText(self.lang_pack.get("stop"))
+            self.ui.button_pause.setText(self.lang_pack.get("pause"))
+
     def need_plot(self) -> None:
         """
         Поднять флаг рисования
@@ -115,15 +144,15 @@ class Apply(QWidget):
         self.graph_result.getPlotItem().setLabel('bottom', self.xlabel_text)
         self.graph_result.showGrid(x=True, y=True)
         plt_type = self.ui.plot_type_combobox.currentText()
-        if plt_type == 'линия':
+        if plt_type == self.lang_pack.get("line"):
             self.data_line = self.graph_result.plot(self.data_for_plot_x,
                                                     self.data_for_plot_y,
                                                     pen=pg.mkPen(width=3, color = (0, 128, 255)))
-        elif plt_type == 'точки':
+        elif plt_type == self.lang_pack.get("dot"):
             self.data_line = self.graph_result.plot(self.data_for_plot_x,
                                                     self.data_for_plot_y,
                                                     symbol='o')
-        elif plt_type == 'звездочки':
+        elif plt_type == self.lang_pack.get("star"):
             self.data_line = self.graph_result.plot(self.data_for_plot_x,
                                                     self.data_for_plot_y,
                                                     symbol='star')
@@ -135,7 +164,7 @@ class Apply(QWidget):
                                                      self._term_right_for_plot_y,
                                                      pen=pg.mkPen(width=3, color = (255, 0, 0)))
         # задание функции для отрисовки осей
-        if self.ylabel_text == 'сопротивление, кОм':
+        if self.ylabel_text == self.lang_pack.get("res_k"):
             self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
                                                           self.parent.man.res_load,
                                                           self.parent.man.vol_read,
@@ -143,7 +172,7 @@ class Apply(QWidget):
                                                           self.parent.man.vol_ref_adc,
                                                           self.parent.man.res_switches,
                                                           y)/1000
-        elif self.ylabel_text == 'сопротивление, Ом':
+        elif self.ylabel_text == self.lang_pack.get("res"):
             self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
                                                           self.parent.man.res_load,
                                                           self.parent.man.vol_read,
@@ -151,9 +180,9 @@ class Apply(QWidget):
                                                           self.parent.man.vol_ref_adc,
                                                           self.parent.man.res_switches,
                                                           y)
-        elif self.ylabel_text == 'отсчеты АЦП':
+        elif self.ylabel_text == self.lang_pack.get("adc_c"):
             self.y_value_process = lambda y,vol,sign: y
-        elif self.ylabel_text == 'ток, мкА':
+        elif self.ylabel_text == self.lang_pack.get("amp_mc"):
             self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
                                                           self.parent.man.vol_ref_dac,
                                                           self.parent.man.gain,
@@ -165,7 +194,7 @@ class Apply(QWidget):
                                                           y,
                                                           vol,
                                                           sign)*1e6
-        elif self.ylabel_text == 'ток, мА':
+        elif self.ylabel_text == self.lang_pack.get("amp_m"):
             self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
                                                           self.parent.man.vol_ref_dac,
                                                           self.parent.man.gain,
@@ -177,9 +206,9 @@ class Apply(QWidget):
                                                           y,
                                                           vol,
                                                           sign)*1e3
-        if self.xlabel_text == 'напряжение, В':
+        if self.xlabel_text == self.lang_pack.get("voltage"):
             self.x_value_process = lambda vol,sign,count: d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,vol,sign=sign)
-        elif self.xlabel_text == 'отсчеты':
+        elif self.xlabel_text == self.lang_pack.get("counting"):
             self.x_value_process = lambda vol,sign,count: count
         self.update_label_mem_id()
 
@@ -222,20 +251,20 @@ class Apply(QWidget):
         """
         Окно настройки графика
         """
-        show_warning_messagebox("Пока не реализовано", self.parent.read_language_json)
+        show_warning_messagebox(self.lang_pack.get("not_done"), self.parent.read_language_json)
 
     def update_label_total_count(self) -> None:
         """
         Обновление лейбла
         """
-        self.ui.label_total_count.setText(f"Осталось задач: {self.total_impacts}")
+        self.ui.label_total_count.setText(f"{self.lang_pack.get("tasks_left")}{self.total_impacts}")
 
     def update_label_mem_id(self) -> None:
         """
         Обновление лейбла
         """
         mem_id = self.parent.man.db.get_memristor_id(self.parent.current_wl, self.parent.current_bl, self.parent.man.crossbar_id)
-        self.ui.label_mem_id.setText(f"ID мемристора: wl={self.parent.current_wl}, bl={self.parent.current_bl}, id={mem_id[1]}")
+        self.ui.label_mem_id.setText(f"{self.lang_pack.get("mem_id")} wl={self.parent.current_wl}, bl={self.parent.current_bl}, id={mem_id[1]}")
 
     def block_comdo(self, block_type: bool) -> None:
         """
@@ -259,7 +288,7 @@ class Apply(QWidget):
         Закрытие
         """
         if self.application_status in ["start", "pause"]: # работает
-            answer = show_choose_window(self, 'Останавливаем эксперимент?', rlj=self.parent.read_language_json)
+            answer = show_choose_window(self, self.lang_pack.get("stop_exp"), rlj=self.parent.read_language_json)
             if answer:
                 self.stop_exp()
                 event.accept()
@@ -298,13 +327,13 @@ class Apply(QWidget):
         flag_soft_cc = int(value[1])
         # блочим запуск
         if exp_status == 1:
-            show_warning_messagebox("Эксперимент выполнен!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("done"), rlj=self.parent.read_language_json)
         elif exp_status == 2:
-            show_warning_messagebox("Эксперимент прерван!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("stopped"), rlj=self.parent.read_language_json)
         elif exp_status == 3:
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!', rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("voltage_high"), rlj=self.parent.read_language_json)
         if flag_soft_cc:
-            show_warning_messagebox("Срабатывало программное ограничение!", rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("prog_stop"), rlj=self.parent.read_language_json)
         self.application_status = "stop"
         self.stop_exp()
 
@@ -370,7 +399,7 @@ class Apply(QWidget):
         if self._plot_flag:
             # выбор отображения по осям
             y_item = self.y_value_process(value, vol, sign)
-            x_item = self.x_value_process(vol, sign, count)
+            x_item = self.x_value_process(vol=vol, sign=sign, count=count)
             size = 400 # todo: глубина отрисовки, вынести в константы
             data_len = len(self.data_for_plot_y)
             if data_len > size:
@@ -449,19 +478,19 @@ class ApplyExp(QThread):
                                                                               item[1], # bl
                                                                               self.parent.parent.man.crossbar_id)
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно получить id мемристора")
+                self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_mem_id"))
             status, experiment_id = self.parent.parent.man.db.add_experiment(name, memristor_id)
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить эксперимент")
+                self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_add_exp"))
             meta_info = self.parent.parent.man.get_meta_info()
             status, info = self.parent.parent.man.conn.get_tech_info()
             if not status:
-                self.parent.parent.man.ap_logger.warning("Ошибка подключения: не возможно получить метаинформацию")
+                self.parent.parent.man.ap_logger.warning(self.lang_pack.get("err_conn"))
             if isinstance(meta_info, dict):
                 meta_info['board'] = str(info)
             status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить метаинформацию")
+                self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
             # TODO remove: Initializing .csv save file -----------------
             if self.parent.parent.man.apply_save_csv:
                 _, crossbar_serial = self.parent.parent.man.db.get_crossbar_serial_from_id(self.parent.parent.man.crossbar_id)
@@ -497,7 +526,7 @@ class ApplyExp(QThread):
                 # сохраняем в БД
                 status, ticket_id = self.parent.parent.man.db.add_ticket(ticket, experiment_id)
                 if not status:
-                    self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить тикет")
+                    self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_tic"))
                 # временный файл для результата
                 result_file_path = time.strftime("%Y%m%d-%H%M%S")
                 result_file = open(result_file_path, 'wb')
@@ -606,16 +635,16 @@ class ApplyExp(QThread):
                                               result[0]))
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                     if not status:
-                        self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить информацию о сопротивлении")
+                        self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_info"))
                     status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
                     if not status:
-                        self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить сопротивление в эксперименте")
+                        self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_res"))
                 if self.need_stop:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 1)
                 if not status:
-                    self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить тикет")
+                    self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_upd_tic"))
                 # обновляем значения результата и изображения в БД (можно и здесь конечно)
                 #time.sleep(self.PAUSE_TIME)
                 # сохраняем результат выполнения тикета
@@ -636,7 +665,7 @@ class ApplyExp(QThread):
             status = self.parent.parent.man.db.update_experiment_status(experiment_id, stop_reason)
             self.progress_finished.emit(f"{experiment_id},{stop_reason},{self.flag_soft_cc},{item[0]},{item[1]}")
             if not status:
-                self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить статус эксперимента")
+                self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_stat"))
             # сохранить картинку эксперимента
             while not self.image_saved:
                 time.sleep(0.5)
