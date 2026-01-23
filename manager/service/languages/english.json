@@ -351,5 +351,16 @@
         "err_res":"DB error: Couldn't update experiment resistance!",
         "err_upd_tic":"DB error: Couldn't update ticket!",
         "err_stat":"DB error: Couldn't update experiment status!"
+    },
+    "cb_info":{
+        "name":"Crossbar information",
+        "serial":"Crossbar's serial number",
+        "comm":"Commentary",
+        "bl_am":"BL amount",
+        "wl_am":"WL amount",
+        "exp_am":"Experiments",
+        "last":"Last experiment",
+        "data":"Data",
+        "no_exps":"No experiments"
     }
 }
