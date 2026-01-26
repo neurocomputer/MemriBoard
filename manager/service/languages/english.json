@@ -412,5 +412,11 @@
         "empty":"Task list is empty!",
         "ok":"Ok",
         "save":"Save"
+    },
+    "terminal":{
+        "name":"Terminal",
+        "send":"Send",
+        "no_answer":"No answer got!",
+        "req_inc":"Incorrect request!"
     }
 }
