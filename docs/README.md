@@ -1,5 +1,4 @@
 ## Table of contents
-[Русский](https://github.com/neurocomputer/MemriBoard/blob/main/docs/README_rus.md)
 
 - [Product Overview](#Product-Overview)
 - [Cells operating](#Cells-operating)
@@ -80,7 +79,7 @@ For example, to remove the VAC of the cell, the following parameters are indicat
 | Direct | 0.0 | 1.6 | 0.05 |     1    |    +    | 0 | 100 |
 |  Back  | 0.0 | 1.2 | 0.05 |     1    |    +    | 0 | 100 |
 
-* Signaling: straight-back; Repeat: 1 time *
+*Signaling: straight-back; Repeat: 1 time*
 
 ###### Signal setup result:
 ![Signal Setup Window](assets/signal.png)
