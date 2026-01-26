@@ -142,7 +142,9 @@
         "symbol_incorrect":"There is an incorrect symbol!",
         "save_file":"Save file?",
         "save_changes":"Save changes?",
-        "file_name_wrong":"File name is wrong!"
+        "file_name_wrong":"File name is wrong!",
+        "ohm":"Ohm",
+        "hold_path":"hold.png"
     },
     "cell_info":{
         "name":"Cell Info",
