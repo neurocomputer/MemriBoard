@@ -14,6 +14,7 @@ class RequestsList(QDialog):
     """
     Окно запросов
     """
+    lang_pack: dict
 
     GUI_PATH = os.path.join("gui","uies","requests.ui")
 
@@ -22,6 +23,7 @@ class RequestsList(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.setModal(True)
         # обработка кнопок
@@ -30,13 +32,23 @@ class RequestsList(QDialog):
         # заполнение параметров
         self.fill_requests()
 
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("requests")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.button_ok.setText(self.lang_pack.get("ok"))
+            self.ui.button_save.setText(self.lang_pack.get("save"))
+
     def fill_requests(self) -> None:
         """
         Заполнение запросов
         """
         text = ""
         for item in self.parent.exp_list:
-            text += f"Тикет:{item[0]}, задачи:{item[3]}\n"
+            text += f"{self.lang_pack.get('ticket')}{item[0]}{self.lang_pack.get('tasks')}{item[3]}\n"
             for req in item[2]:
                 text += gather(req[0])
         self.text_commands.appendPlainText(text)
@@ -47,7 +59,7 @@ class RequestsList(QDialog):
         """
         request = ""
         for item in self.parent.exp_list:
-            request += f"Тикет:{item[0]}, задачи:{item[3]}\n"
+            request += f"{self.lang_pack.get('ticket')}{item[0]}{self.lang_pack.get('tasks')}{item[3]}\n"
             for req in item[2]:
                 request += gather(req[0])
         if 0 < len(request):
@@ -58,6 +70,6 @@ class RequestsList(QDialog):
             with open (filepath, "w", encoding='utf-8') as file:
                 file.write(request)
                 file.close()
-            show_warning_messagebox(f'Выгружено в файл {filepath}', rlj=self.parent.read_language_json)
+            show_warning_messagebox(f'{self.lang_pack.get("saved_to")}{filepath}', rlj=self.parent.read_language_json)
         else:
-            show_warning_messagebox('Список команд пуст!', rlj=self.parent.read_language_json)
+            show_warning_messagebox(self.lang_pack.get("empty"), rlj=self.parent.read_language_json)

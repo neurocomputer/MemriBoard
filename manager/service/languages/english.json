@@ -403,5 +403,14 @@
         "status":"Status",
         "not_working":"Not working",
         "not_written":"Not written"
+    },
+    "requests":{
+        "name":"Requests",
+        "ticket":"Ticket: ",
+        "tasks":", tasks: ",
+        "saved_to":"Saved to ",
+        "empty":"Task list is empty!",
+        "ok":"Ok",
+        "save":"Save"
     }
 }
