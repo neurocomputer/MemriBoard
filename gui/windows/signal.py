@@ -99,6 +99,7 @@ class SignalMod(QDialog):
             self.ui.label_2.setText(self.lang_pack.get("sending_order"))
             self.ui.label_13.setText(self.lang_pack.get("times"))
             self.ui.label_14.setText(self.lang_pack.get("repeat"))
+            self.ui.terminator_measure_combobox.setItemText(0, self.lang_pack.get("ohm"))
             self.ui.direction_combobox.setItemText(0, self.lang_pack.get("forth-back"))
             self.ui.direction_combobox.setItemText(1, self.lang_pack.get("back-forth"))
             self.ui.shutdown_value_label.setText(self.lang_pack.get("value"))
@@ -114,6 +115,7 @@ class SignalMod(QDialog):
             self.ui.label.setText(self.lang_pack.get("exp_name"))
             self.ui.button_save.setText(self.lang_pack.get("save"))
             self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
+            self.ui.label_png.setPixmap(QPixmap(os.path.join(os.getcwd(),"gui","uies",self.lang_pack.get("hold_path"))))
 
     def set_up_init_values(self) -> None:
         """
