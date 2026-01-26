@@ -264,7 +264,7 @@ class Apply(QWidget):
         Обновление лейбла
         """
         mem_id = self.parent.man.db.get_memristor_id(self.parent.current_wl, self.parent.current_bl, self.parent.man.crossbar_id)
-        self.ui.label_mem_id.setText(f"{self.lang_pack.get("mem_id")} wl={self.parent.current_wl}, bl={self.parent.current_bl}, id={mem_id[1]}")
+        self.ui.label_mem_id.setText(f"{self.lang_pack.get('mem_id')} wl={self.parent.current_wl}, bl={self.parent.current_bl}, id={mem_id[1]}")
 
     def block_comdo(self, block_type: bool) -> None:
         """
