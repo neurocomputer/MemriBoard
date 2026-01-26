@@ -256,7 +256,7 @@ class Apply(QWidget):
         """
         Обновление лейбла
         """
-        self.ui.label_total_count.setText(f"{self.lang_pack.get("tasks_left")}{self.total_impacts}")
+        self.ui.label_total_count.setText(f"{self.lang_pack.get('tasks_left')}{self.total_impacts}")
 
     def update_label_mem_id(self) -> None:
         """
