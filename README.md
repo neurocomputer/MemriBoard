@@ -1,6 +1,5 @@
 # MemriBoard
 Memristors are coming!
-[Русский](https://github.com/neurocomputer/MemriBoard/blob/main/README_rus.md)
 
 This program is designed to work with memristors using the MemArdBoard and MemRaspBoard boards. The program includes the functionality of taking measurements and taking various characteristics of memristors, automatic testing, using memristors as ReRAM memory, performing mathematical operations and working with artificial neural networks. The program also has a memristor simulator, so you can work with it without special boards.
 
