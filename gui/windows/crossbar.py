@@ -145,13 +145,12 @@ class Window(QMainWindow):
         """
         Прочитать языковые настройки для окна
         """
-        match self.man.language.lower():
-            case "english" | "en":
-                filename = "english.json"
-            case "русский" | "russian" | "ru":
-                filename = "russian.json"
-            case _:
-                filename = "english.json"
+        if self.man.language.lower() in ["english", "en"]:
+            filename = "english.json"
+        elif self.man.language.lower() in ["русский", "russian"]:
+            filename = "russian.json"
+        else:
+            filename = "english.json"
         path = os.path.join(os.getcwd(), "manager", "service", "languages", filename)
         if not os.path.isfile(path):
             path = os.path.join(os.getcwd(), "manager", "service", "languages", "english.json")
