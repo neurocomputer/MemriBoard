@@ -93,6 +93,13 @@
      <item row="4" column="1">
       <widget class="QLineEdit" name="lineedit_writable_cells"/>
      </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Путь сохранения копии базы</string>
+       </property>
+      </widget>
+     </item>
      <item row="2" column="1">
       <widget class="QDoubleSpinBox" name="choose_gain">
        <property name="decimals">

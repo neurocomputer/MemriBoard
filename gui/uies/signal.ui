@@ -117,7 +117,7 @@
                 <item row="3" column="1">
                  <widget class="QLineEdit" name="backward_start">
                   <property name="text">
-                   <string>0</string>
+                   <string>Дек.</string>
                   </property>
                  </widget>
                 </item>
@@ -128,10 +128,10 @@
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="4">
-                 <widget class="QLabel" name="label_6">
+                <item row="2" column="6">
+                 <widget class="QLineEdit" name="forward_limiter">
                   <property name="text">
-                   <string>Кол.</string>
+                   <string>0</string>
                   </property>
                  </widget>
                 </item>
@@ -169,9 +169,6 @@
                    <string>Огран. Тока</string>
                   </property>
                  </widget>
-                </item>
-                <item row="3" column="4">
-                 <widget class="QSpinBox" name="backward_count"/>
                 </item>
                </layout>
               </item>
