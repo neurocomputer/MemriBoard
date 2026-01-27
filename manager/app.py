@@ -87,7 +87,6 @@ class Application():
         self.res_switches = float(self.ap_config['board']['res_switches'])
         self.gain = float(self.ap_config['board']['gain'])
         self.sum_gain = int(self.ap_config['board']['sum_gain'])
-        self.soft_cc = float(self.ap_config['board']['soft_cc'])
         self.writable_cells = self.ap_config['gui']['writable_cells']
         self.lock_board_type = eval(self.ap_config['gui']['lock_board_type'])
 
@@ -101,8 +100,6 @@ class Application():
             self.ap_config['board']['gain'] = kwargs["gain"]
         if "sum_gain" in kwargs:
             self.ap_config['board']['sum_gain'] = kwargs["sum_gain"]
-        if "soft_cc" in kwargs:
-            self.ap_config['board']['soft_cc'] = kwargs["soft_cc"]
         if "last_crossbar_serial" in kwargs:
             self.ap_config['gui']['last_crossbar_serial'] = kwargs["last_crossbar_serial"]
         if "com_port" in kwargs:
@@ -130,7 +127,6 @@ class Application():
         meta_info['adc_bit'] = self.adc_bit
         meta_info['gain'] = self.gain
         meta_info['sum_gain'] = self.sum_gain
-        meta_info['soft_cc'] = self.soft_cc
         meta_info['vol_ref_dac'] = self.vol_ref_dac
         meta_info['vol_ref_adc'] = self.vol_ref_adc
         meta_info['vol_read'] = self.vol_read

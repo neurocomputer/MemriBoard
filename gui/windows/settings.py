@@ -38,7 +38,6 @@ class Settings(QDialog):
         """
         self.ui.choose_adc_bit.setCurrentText(str(self.parent.man.adc_bit))
         self.ui.choose_gain.setValue(self.parent.man.gain)
-        self.ui.choose_software_cc.setValue(self.parent.man.soft_cc)
         self.ui.lineedit_backup.setText(self.parent.man.get_meta_info()["backup"])
         self.ui.lineedit_writable_cells.setText(self.parent.man.get_meta_info()["writable_cells"])
 
@@ -60,7 +59,6 @@ class Settings(QDialog):
                 writable_cells = ''
         self.parent.man.save_settings(adc_bit = self.ui.choose_adc_bit.currentText(),
                                       gain = str(self.ui.choose_gain.value()),
-                                      soft_cc = str(self.ui.choose_software_cc.value()),
                                       backup = backup_path,
                                       writable_cells = writable_cells)
         self.close()

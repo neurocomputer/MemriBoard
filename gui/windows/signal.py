@@ -127,6 +127,7 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_dir_msec_dec'] = int(self.ui.forward_ms.text())
                 self.base_json['params']['t_dir_usec_dec'] = int(self.ui.forward_mcs.text())
                 self.base_json['params']['dir_dec_countr'] = int(self.ui.forward_count.value())
+                self.base_json['params']['dir_soft_cc'] = float(self.ui.forward_limiter.text())
             else:
                 self.base_json['params']['v_dir_strt_dec'] = 0
                 self.base_json['params']['v_dir_stop_dec'] = 0
@@ -134,6 +135,7 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_dir_msec_dec'] = 0
                 self.base_json['params']['t_dir_usec_dec'] = 0
                 self.base_json['params']['dir_dec_countr'] = 0
+                self.base_json['params']['dir_soft_cc'] = 0.002
             # rev inc
             self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_start.text()))
             self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_stop.text()))
@@ -149,6 +151,7 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_rev_msec_dec'] = int(self.ui.backward_ms.text())
                 self.base_json['params']['t_rev_usec_dec'] = int(self.ui.backward_mcs.text())
                 self.base_json['params']['rev_dec_countr'] = int(self.ui.backward_count.value())
+                self.base_json['params']['rev_soft_cc'] = float(self.ui.backward_limiter.text())
             else:
                 self.base_json['params']['v_rev_strt_dec'] = 0
                 self.base_json['params']['v_rev_stop_dec'] = 0
@@ -156,6 +159,7 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_rev_msec_dec'] = 0
                 self.base_json['params']['t_rev_usec_dec'] = 0
                 self.base_json['params']['rev_dec_countr'] = 0
+                self.base_json['params']['rev_soft_cc'] = 0.002
 
             self.base_json['params']['reverse'] = int(self.ui.direction_combobox.currentIndex())
             self.base_json['params']['count'] = int(self.ui.repeat_count.text())
@@ -251,6 +255,7 @@ class SignalMod(QDialog):
         self.ui.forward_ms.setText(str(self.base_json['params']['t_dir_msec_inc']))
         self.ui.forward_mcs.setText(str(self.base_json['params']['t_dir_usec_inc']))
         self.ui.forward_count.setValue(self.base_json['params']['dir_inc_countr'])
+        self.ui.forward_limiter.setText(str(self.base_json['params']['dir_soft_cc']))
 
         if self.base_json['params']['dir_dec_countr'] != 0:
             self.ui.forward_dec.setCheckState(2)
@@ -263,6 +268,7 @@ class SignalMod(QDialog):
         self.ui.backward_ms.setText(str(self.base_json['params']['t_rev_msec_inc']))
         self.ui.backward_mcs.setText(str(self.base_json['params']['t_rev_usec_inc']))
         self.ui.backward_count.setValue(self.base_json['params']['rev_inc_countr'])
+        self.ui.backward_limiter.setText(str(self.base_json['params']['rev_soft_cc']))
 
         if self.base_json['params']['rev_dec_countr'] != 0:
             self.ui.backward_dec.setCheckState(2)
