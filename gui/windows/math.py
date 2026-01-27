@@ -441,7 +441,6 @@ class Math(QWidget):
         """
         if (not self.input_array_source is None) and (not self.goal_weights is None):
             self.matmul_etalon_results = self.input_array_source @ self.goal_weights
-            print(self.matmul_etalon_results)
             self.fill_table(self.ui.etalon_output_table,
                             self.matmul_etalon_results,
                             self.matmul_etalon_results.shape[0],
@@ -1100,7 +1099,6 @@ class MatMul(QThread):
                     # маскирование v_adc
                     v_dac_current = deepcopy(v_dac)
                     # наложение на v dac 8-ми разных масок
-                    print(v_dac_current)
                     for z in range(self.parent.parent.man.row_num):
                         if self.mask[j][z] == 0:
                             v_dac_current[z] = 0

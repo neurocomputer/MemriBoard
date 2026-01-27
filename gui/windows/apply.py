@@ -510,7 +510,6 @@ class ApplyExp(QThread):
                     if resistance_previous == 0:
                         resistance_previous = 0.00000001 # чтобы исключить деление на 0
                     current_predict = d2v(self.parent.parent.man.dac_bit, self.parent.parent.man.vol_ref_dac, task[0]['vol']) / resistance_previous
-                    print(task)
                     if (task[0]['sign'] == 0 and current_predict <= ticket['params']['dir_soft_cc']) or (task[0]['sign'] == 1 and current_predict <= ticket['params']['rev_soft_cc']):
                         #print(task[1])
                         result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id)
