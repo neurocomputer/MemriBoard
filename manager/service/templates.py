@@ -68,6 +68,8 @@ measure_ticket=measure.json
 program_ticket=programming.json
 ; ячейки для записи
 writable_cells=
+; блокировка платы
+lock_board_type=0
 
 ; бэкап датабазы
 [backup]
