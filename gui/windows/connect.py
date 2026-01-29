@@ -10,7 +10,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
-from gui.src import show_choose_window
+from gui.src import show_choose_window, show_warning_messagebox
 
 class ConnectDialog(QDialog):
     """
@@ -34,11 +34,15 @@ class ConnectDialog(QDialog):
         self.ui.button_quit.clicked.connect(self.close)
         self.ui.button_settings.clicked.connect(self._settings)
         self.ui.button_new_crossbar.clicked.connect(lambda: self.show_new_cb_layout(True))
+        self.ui.button_conn_1.clicked.connect(lambda: self.check_VISA_connection(1))
+        self.ui.button_conn_2.clicked.connect(lambda: self.check_VISA_connection(2))
+        self.ui.button_conn_3.clicked.connect(lambda: self.check_VISA_connection(3))
         # обработка комбо
         self.ui.combo_com_name.currentIndexChanged.connect(self.on_com_name_changed)
         self.ui.edit_com_name.textChanged.connect(self.on_com_name_changed)
         self.ui.combo_board_type.currentIndexChanged.connect(self.on_combo_board_type_changed)
         # обновление отображения
+        self.show_VISA_layout(False)
         self.show_new_cb_layout(False)
         self.update_crossbar_list()
         self.update_board_list()
@@ -58,6 +62,19 @@ class ConnectDialog(QDialog):
         else: # адрес в списке
             self.com_port = combo_com_name
 
+    def show_VISA_layout(self, state) -> None:
+        """
+        Показать устройства VISA
+        """
+        for i in range(self.gridLayout_2.count()):
+            item = self.gridLayout_2.itemAt(i)
+            widget = item.widget()
+            if widget:
+                widget.setVisible(state)
+        self.ui.combo_visa_1.setVisible(state)
+        self.ui.combo_visa_2.setVisible(state)
+        self.ui.combo_visa_3.setVisible(state)
+        
     def show_new_cb_layout(self, state) -> None:
         """
         Показать настройки нового кроссбара
@@ -138,7 +155,8 @@ class ConnectDialog(QDialog):
                       'rp5_fpga_c',
                       'elbear_nano',
                       'rp5_rram_python',
-                      'rp5_rram_c']
+                      'rp5_rram_c',
+                      'VISA']
         try:
             last_board = self.parent.man.ap_config["board"]["board_type"]
             if last_board:
@@ -169,7 +187,10 @@ class ConnectDialog(QDialog):
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText('Выберете порт для подключения!')
+        elif combo_board_type == 'VISA':
+            self.show_VISA_layout(True)
         else:
+            self.show_VISA_layout(False)
             self.show_com_settings_layout(False)
             self.ui.label_status.setText('Выберете кроссбар и плату для работы!')
         self.update_window_size()
@@ -238,6 +259,29 @@ class ConnectDialog(QDialog):
                     self.ui.label_status.setText('Не могу создать симулятор!')
         else:    
             self.ui.label_status.setText('Не могу получить данные из БД!')
+    
+    def check_VISA_connection(self, visa_addr: int):
+        """
+        Проверка ВИЗА-адреса
+        """
+        if visa_addr == 1:
+            address = self.ui.combo_visa_1.currentText()
+            if address == "":
+                show_warning_messagebox("Адрес пуст!")
+            else:
+                self.ui.label_11.setText("Подключено")
+        elif visa_addr == 2:
+            address = self.ui.combo_visa_2.currentText()
+            if address == "":
+                show_warning_messagebox("Адрес пуст!")
+            else:
+                self.ui.label_12.setText("Подключено")
+        elif visa_addr == 3:
+            address = self.ui.combo_visa_3.currentText()
+            if address == "":
+                show_warning_messagebox("Адрес пуст!")
+            else:
+                self.ui.label_13.setText("Подключено")
 
     def accept_connet(self) -> None:
         """
