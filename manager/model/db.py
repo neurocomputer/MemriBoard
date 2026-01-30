@@ -117,7 +117,6 @@ class DBOperate():
             with self.engine.connect() as db:
                 result = db.execute(sqla.text(f"SELECT id FROM Memristors WHERE wl={wl} AND bl={bl} AND crossbar_id={crossbar_id}"))
                 memristor_id = result.fetchone()[0]
-                print(memristor_id)
         except sqla.OperationalError as e:
             print(f"Ошибка подключения: {e}")
         return status, memristor_id
@@ -274,57 +273,45 @@ class DBOperate():
         """
         Список кроссбаров
         """
-        self.db_connect('get_cb_list')
         status = False
         cb_list = []
-        if self.db_connection:
-            try:
-                QUERY = "SELECT serial FROM Crossbars"
-                self.db_cursor.execute(QUERY)
-                for item in self.db_cursor.fetchall():
-                    cb_list.append(item[0])
+        try:
+            with self.engine.connect() as db:
+                result = db.execute(sqla.text(f"SELECT serial FROM Crossbars"))
+                cb_list = list(result.fetchall()[0])
                 status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в get_cb_list:{er}')
-        self.db_disconnect('get_cb_list')
+        except sqla.OperationalError as e:
+            print(f"Ошибка подключения: {e}")
         return status, cb_list
 
     def get_cb_list_cb_type(self, cb_type):
         """
         Список кроссбаров по типу
         """
-        self.db_connect('get_cb_list_cb_type')
         status = False
         cb_list = []
-        if self.db_connection:
-            try:
-                QUERY = f"""SELECT serial FROM Crossbars WHERE cb_type='{cb_type}'"""
-                self.db_cursor.execute(QUERY)
-                for item in self.db_cursor.fetchall():
-                    cb_list.append(item[0])
+        try:
+            with self.engine.connect() as db:
+                result = db.execute(sqla.text(f"SELECT serial FROM Crossbars WHERE cb_type='{cb_type}'"))
+                cb_list = list(result.fetchall()[0])
                 status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в get_cb_list_cb_type:{er}')
-        self.db_disconnect('get_cb_list_cb_type')
+        except sqla.OperationalError as e:
+            print(f"Ошибка подключения: {e}")
         return status, cb_list
 
     def get_exp_name(self, experiment_id):
         """
         Имя эксперимента
         """
-        self.db_connect('get_exp_name')
         status = False
         exp_name = ''
-        if self.db_connection:
-            try:
-                QUERY = f"""SELECT name FROM Experiments
-                WHERE id={experiment_id}"""
-                self.db_cursor.execute(QUERY)
-                exp_name = self.db_cursor.fetchone()[0]
+        try:
+            with self.engine.connect() as db:
+                result = db.execute(sqla.text(f"SELECT name FROM Experiments WHERE id={experiment_id}"))
+                exp_name = result.fetchone()[0]
                 status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в get_exp_name:{er}')
-        self.db_disconnect('get_exp_name')
+        except sqla.OperationalError as e:
+            print(f"Ошибка подключения: {e}")
         return status, exp_name
 
     def get_experiment_tickets(self, experiment_id):
