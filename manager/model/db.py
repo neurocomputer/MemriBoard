@@ -5,11 +5,52 @@
 import pickle
 import datetime
 import sqlite3
+import sqlalchemy as sqla
+from sqlalchemy.orm import sessionmaker, declarative_base, Mapped, mapped_column
 from manager.service.global_settings import DB_PATH
 
 # pylint: disable=C0103,W0718
 
 # todo: добавить логгер базы
+
+Base = declarative_base()
+class Crossbars(Base):
+    __tablename__ = 'crossbars'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    serial: Mapped[str] = mapped_column(sqla.String)
+    comment: Mapped[str] = mapped_column(sqla.String)
+    bl: Mapped[int] = mapped_column(sqla.Integer)
+    wl: Mapped[int] = mapped_column(sqla.Integer)
+    cb_type: Mapped[str] = mapped_column(sqla.String)
+    
+class Experiments(Base):
+    __tablename__ = 'experiments'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    datestamp: Mapped[str] = mapped_column(sqla.String)
+    name: Mapped[str] = mapped_column(sqla.String)
+    image = sqla.Column(sqla.LargeBinary)
+    status: Mapped[int] = mapped_column(sqla.Integer)
+    memristor_id: Mapped[int] = mapped_column(sqla.Integer)
+    last_resistance: Mapped[int] = mapped_column(sqla.Integer)
+    meta_info = sqla.Column(sqla.LargeBinary)
+    
+class Memristors(Base):
+    __tablename__ = 'memristors'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bl: Mapped[int] = mapped_column(sqla.Integer)
+    wl: Mapped[int] = mapped_column(sqla.Integer)
+    last_resistance: Mapped[int] = mapped_column(sqla.Integer)
+    crossbar_id: Mapped[int] = mapped_column(sqla.Integer)
+    
+class Tickets(Base):
+    __tablename__ = 'Tickets'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    datestamp: Mapped[str] = mapped_column(sqla.String)
+    ticket_name: Mapped[str] = mapped_column(sqla.String)
+    ticket = sqla.Column(sqla.LargeBinary)
+    result: Mapped[str] = mapped_column(sqla.String)
+    status: Mapped[int] = mapped_column(sqla.Integer)
+    experiment_id: Mapped[int] = mapped_column(sqla.Integer)
 
 class DBOperate():
     """
@@ -23,6 +64,10 @@ class DBOperate():
         Инициализация
         """
         self.parent = parent
+        engine = sqla.create_engine(f'sqlite:///{DB_PATH}')
+        session = sessionmaker(autoflush=False, bind=engine)
+        with session(autoflush=False, bind=engine) as db:
+            pass
 
     def check_connect(self):
         try:
