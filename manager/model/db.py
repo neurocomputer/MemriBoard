@@ -58,16 +58,17 @@ class DBOperate():
     """
     db_cursor = None
     db_connection = None
+    
+    engine = None
+    session = None
 
     def __init__(self, parent):
         """
         Инициализация
         """
         self.parent = parent
-        engine = sqla.create_engine(f'sqlite:///{DB_PATH}')
-        session = sessionmaker(autoflush=False, bind=engine)
-        with session(autoflush=False, bind=engine) as db:
-            pass
+        self.engine = sqla.create_engine(f'sqlite:///{DB_PATH}')
+        self.session = sessionmaker(autoflush=False, bind=self.engine)
 
     def check_connect(self):
         try:
@@ -110,19 +111,15 @@ class DBOperate():
         """
         Получить id мемристора
         """
-        self.db_connect('get_memristor_id')
         memristor_id = 0
         status = False
-        if self.db_connection:
-            try:
-                QUERY = f"""SELECT id FROM Memristors
-                    WHERE wl={wl} AND bl={bl} AND crossbar_id={crossbar_id}"""
-                self.db_cursor.execute(QUERY)
-                memristor_id = self.db_cursor.fetchone()[0]
-                status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в get_memristor_id:{er}')
-        self.db_disconnect('get_memristor_id')
+        try:
+            with self.engine.connect() as db:
+                result = db.execute(sqla.text(f"SELECT id FROM Memristors WHERE wl={wl} AND bl={bl} AND crossbar_id={crossbar_id}"))
+                memristor_id = result.fetchone()[0]
+                print(memristor_id)
+        except sqla.OperationalError as e:
+            print(f"Ошибка подключения: {e}")
         return status, memristor_id
 
     def add_experiment(self, name, memristor_id):
@@ -264,16 +261,13 @@ class DBOperate():
         self.db_connect('get_chip_data')
         status = False
         chip_data = []
-        if self.db_connection:
-            try:
-                QUERY = f"""SELECT id, bl, wl, cb_type FROM Crossbars
-                WHERE serial='{serial}'"""
-                self.db_cursor.execute(QUERY)
-                chip_data = self.db_cursor.fetchall()[0]
+        try:
+            with self.engine.connect() as db:
+                result = db.execute(sqla.text(f"SELECT id, bl, wl, cb_type FROM Crossbars WHERE serial='{serial}'"))
+                chip_data = list(result.fetchall()[0])
                 status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в get_chip_data:{er}')
-        self.db_disconnect('get_chip_data')
+        except sqla.OperationalError as e:
+            print(f"Ошибка подключения: {e}")
         return status, chip_data
 
     def get_cb_list(self):
