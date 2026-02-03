@@ -1,0 +1,42 @@
+[debug]
+fastest = 0
+
+[logging]
+filemode = w
+
+[connector]
+silent = 0
+com_port = 
+timeout = 0.075
+attempts_to_kick = 20
+
+[queues]
+resmax = 3000
+
+[board]
+board_type = memardboard_crossbar
+dac_bit = 12
+vol_ref_dac = 5
+res_load = 3000
+vol_read = 0.3
+adc_bit = 14
+vol_ref_adc = 5
+res_switches = 10
+gain = 11.0
+sum_gain = 330
+read_time = 1200
+blank_time = 5
+blank_time_between = 55000
+soft_cc = 0.002
+
+[gui]
+last_crossbar_serial = mathtest
+measure_ticket = measure.json
+program_ticket = programming.json
+writable_cells = 
+lock_board_type = 0
+language = English
+
+[backup]
+backup_path = /home/qazyae/Yandex.Disk/Python projects/MemriBoard/
+
