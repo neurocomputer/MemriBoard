@@ -443,6 +443,7 @@ class ApplyExp(QThread):
     _mutex = QMutex()
     flag_soft_cc = 0
     PAUSE_TIME = 0.2
+    lang_pack: dict
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
@@ -451,6 +452,7 @@ class ApplyExp(QThread):
         self.need_pause = False # нужна пауза
         self.need_stop = False # нужна остановка
         self.image_saved = False # рисунок создан и сохранен на диск
+        _, self.lang_pack = self.parent.parent.read_language_json("apply")
 
     def setup_image_saved(self, status):
         """
