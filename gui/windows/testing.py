@@ -668,11 +668,13 @@ class ImageGenerator(QThread):
     analyses_path: str
     wl: int
     bl: int
+    lang_pack: dict
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.parent = parent
         self.image_saved = False # рисунок создан и сохранен на диск
+        _, self.lang_pack = self.parent.parent.read_language_json("testing")
 
     def setup_image_saved(self, status):
         """
