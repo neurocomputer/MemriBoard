@@ -30,7 +30,14 @@
              <layout class="QVBoxLayout" name="verticalLayout_8">
               <item>
                <layout class="QGridLayout" name="gridLayout">
-                <item row="1" column="4">
+                <item row="1" column="3">
+                 <widget class="QLabel" name="label_4">
+                  <property name="text">
+                   <string>Стоп</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="7">
                  <widget class="QLabel" name="label_6">
                   <property name="text">
                    <string>Кол.</string>
@@ -44,14 +51,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="2">
-                 <widget class="QLabel" name="label_4">
-                  <property name="text">
-                   <string>Стоп</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
+                <item row="1" column="5">
                  <widget class="QLabel" name="label_5">
                   <property name="text">
                    <string>Шаг</string>
@@ -65,23 +65,13 @@
                   </property>
                  </widget>
                 </item>
+                <item row="2" column="7">
+                 <widget class="QSpinBox" name="forward_count"/>
+                </item>
                 <item row="3" column="0">
                  <widget class="QLabel" name="label_11">
                   <property name="text">
                    <string>Обратно</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="4">
-                 <widget class="QSpinBox" name="forward_count"/>
-                </item>
-                <item row="3" column="4">
-                 <widget class="QSpinBox" name="backward_count"/>
-                </item>
-                <item row="2" column="1">
-                 <widget class="QLineEdit" name="forward_start">
-                  <property name="text">
-                   <string>0</string>
                   </property>
                  </widget>
                 </item>
@@ -92,52 +82,227 @@
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="2">
+                <item row="2" column="1">
+                 <widget class="QLineEdit" name="forward_start">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="7">
+                 <widget class="QSpinBox" name="backward_count"/>
+                </item>
+                <item row="2" column="3">
                  <widget class="QLineEdit" name="forward_stop">
                   <property name="text">
                    <string>0</string>
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="2">
+                <item row="3" column="3">
                  <widget class="QLineEdit" name="backward_stop">
                   <property name="text">
                    <string>0</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="3">
+                <item row="2" column="5">
                  <widget class="QLineEdit" name="forward_step">
                   <property name="text">
                    <string>0</string>
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="3">
-                 <widget class="QLineEdit" name="backward_step">
+                <item row="1" column="8">
+                 <widget class="QLabel" name="label_7">
                   <property name="text">
-                   <string>0</string>
+                   <string>Дек.</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="5">
+                <item row="2" column="8">
                  <widget class="QCheckBox" name="forward_dec">
                   <property name="text">
                    <string/>
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="5">
+                <item row="3" column="8">
                  <widget class="QCheckBox" name="backward_dec">
                   <property name="text">
                    <string/>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="5">
-                 <widget class="QLabel" name="label_7">
+                <item row="3" column="5">
+                 <widget class="QLineEdit" name="backward_step">
                   <property name="text">
-                   <string>Дек.</string>
+                   <string>0</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="2">
+                 <widget class="QComboBox" name="combo_forward_start">
+                  <item>
+                   <property name="text">
+                    <string>В</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>кВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мкВ</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="3" column="2">
+                 <widget class="QComboBox" name="combo_backward_start">
+                  <item>
+                   <property name="text">
+                    <string>В</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>кВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мкВ</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="3" column="4">
+                 <widget class="QComboBox" name="combo_backward_stop">
+                  <item>
+                   <property name="text">
+                    <string>В</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>кВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мкВ</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="2" column="4">
+                 <widget class="QComboBox" name="combo_forward_stop">
+                  <item>
+                   <property name="text">
+                    <string>В</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>кВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мкВ</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="2" column="6">
+                 <widget class="QComboBox" name="combo_forward_step">
+                  <item>
+                   <property name="text">
+                    <string>В</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>кВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мкВ</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="3" column="6">
+                 <widget class="QComboBox" name="combo_backward_step">
+                  <item>
+                   <property name="text">
+                    <string>В</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>кВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мВ</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>мкВ</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QLabel" name="label_18">
+                  <property name="text">
+                   <string>ед. изм.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="4">
+                 <widget class="QLabel" name="label_19">
+                  <property name="text">
+                   <string>ед. изм.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="6">
+                 <widget class="QLabel" name="label_20">
+                  <property name="text">
+                   <string>ед. изм.</string>
                   </property>
                  </widget>
                 </item>
