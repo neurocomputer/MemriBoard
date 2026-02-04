@@ -79,7 +79,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="2">
+                <item row="2" column="3">
                  <widget class="QLineEdit" name="forward_stop">
                   <property name="text">
                    <string>0</string>
@@ -110,7 +110,7 @@
                 <item row="3" column="2">
                  <widget class="QLineEdit" name="backward_stop">
                   <property name="text">
-                   <string>0</string>
+                   <string>Дек.</string>
                   </property>
                  </widget>
                 </item>
@@ -121,7 +121,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="5">
+                <item row="3" column="8">
                  <widget class="QCheckBox" name="backward_dec">
                   <property name="text">
                    <string/>
