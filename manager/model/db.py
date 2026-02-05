@@ -6,52 +6,97 @@ import pickle
 import datetime
 import sqlite3
 import sqlalchemy as sqla
-from sqlalchemy.orm import sessionmaker, declarative_base, Mapped, mapped_column
+from sqlalchemy import ForeignKey, LargeBinary, DateTime, String, Integer, select, update, insert
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
+from datetime import datetime
+from typing import Optional
 from manager.service.global_settings import DB_PATH
 
 # pylint: disable=C0103,W0718
 
 # todo: добавить логгер базы
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
+
 class Crossbars(Base):
     __tablename__ = 'crossbars'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    serial: Mapped[str] = mapped_column(sqla.String)
-    comment: Mapped[str] = mapped_column(sqla.String)
-    bl: Mapped[int] = mapped_column(sqla.Integer)
-    wl: Mapped[int] = mapped_column(sqla.Integer)
-    cb_type: Mapped[str] = mapped_column(sqla.String)
     
-class Experiments(Base):
-    __tablename__ = 'experiments'
     id: Mapped[int] = mapped_column(primary_key=True)
-    datestamp: Mapped[str] = mapped_column(sqla.String)
-    name: Mapped[str] = mapped_column(sqla.String)
-    image = sqla.Column(sqla.LargeBinary)
-    status: Mapped[int] = mapped_column(sqla.Integer)
-    memristor_id: Mapped[int] = mapped_column(sqla.Integer)
-    last_resistance: Mapped[int] = mapped_column(sqla.Integer)
-    meta_info = sqla.Column(sqla.LargeBinary)
-    
+    serial: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    comment: Mapped[str] = mapped_column(String, nullable=False)
+    bl: Mapped[int] = mapped_column(Integer, nullable=False)
+    wl: Mapped[int] = mapped_column(Integer, nullable=False)
+    cb_type: Mapped[str] = mapped_column(String, nullable=False)
+
+    # для удобства отладки
+    def __repr__(self):
+        return f"<Crossbar(id={self.id}, serial='{self.serial}', {self.bl}x{self.wl})>"
+
 class Memristors(Base):
     __tablename__ = 'memristors'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    bl: Mapped[int] = mapped_column(sqla.Integer)
-    wl: Mapped[int] = mapped_column(sqla.Integer)
-    last_resistance: Mapped[int] = mapped_column(sqla.Integer)
-    crossbar_id: Mapped[int] = mapped_column(sqla.Integer)
     
-class Tickets(Base):
-    __tablename__ = 'Tickets'
     id: Mapped[int] = mapped_column(primary_key=True)
-    datestamp: Mapped[str] = mapped_column(sqla.String)
-    ticket_name: Mapped[str] = mapped_column(sqla.String)
-    ticket = sqla.Column(sqla.LargeBinary)
-    result: Mapped[str] = mapped_column(sqla.String)
-    status: Mapped[int] = mapped_column(sqla.Integer)
-    experiment_id: Mapped[int] = mapped_column(sqla.Integer)
+    bl: Mapped[int] = mapped_column(Integer, nullable=False)
+    wl: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_resistance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    
+    # внешний ключ
+    crossbar_id: Mapped[int] = mapped_column(
+        Integer, 
+        ForeignKey('crossbars.id', ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    # для удобства отладки
+    def __repr__(self):
+        return f"<Memristor(id={self.id}, bl={self.bl}, wl={self.wl})>"
 
+class Experiments(Base):
+    __tablename__ = 'experiments'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    datestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
+    status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_resistance: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    # внешний ключ
+    memristor_id: Mapped[int] = mapped_column(
+        Integer, 
+        ForeignKey('memristors.id', ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    # для удобства отладки
+    def __repr__(self):
+        return f"<Experiment(id={self.id}, name='{self.name}')>"
+
+class Tickets(Base):
+    __tablename__ = 'tickets'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    datestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    ticket_name: Mapped[str] = mapped_column(String, nullable=False)
+    ticket: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    result: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    
+    # внешний ключ
+    experiment_id: Mapped[int] = mapped_column(
+        Integer, 
+        ForeignKey('experiments.id', ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
+    # для удобства отладки
+    def __repr__(self):
+        return f"<Ticket(id={self.id}, name='{self.ticket_name}', status={self.status})>"
+    
 class DBOperate():
     """
     Методы работы с базой
@@ -60,7 +105,6 @@ class DBOperate():
     db_connection = None
     
     engine = None
-    session = None
 
     def __init__(self, parent):
         """
@@ -69,10 +113,10 @@ class DBOperate():
         self.parent = parent
         try:
             self.engine = sqla.create_engine(f'sqlite:///{DB_PATH}')
-            self.session = sessionmaker(autoflush=False, bind=self.engine)
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в подключении к базе: {e}")
 
+    # БОЛЬШЕ НЕ НУЖНО
     def check_connect(self):
         try:
             self.db_connection.cursor()
@@ -80,6 +124,7 @@ class DBOperate():
         except Exception as ex:
             return False
 
+    # БОЛЬШЕ НЕ НУЖНО
     def db_connect(self, func_name):
         """
         Подключиться к БД
@@ -97,6 +142,7 @@ class DBOperate():
             self.parent.db_logger.critical(f"Ошибка при подключении к БД: {ex}! ({func_name})")
         return status
 
+    # БОЛЬШЕ НЕ НУЖНО
     def db_disconnect(self, func_name):
         """
         Отключение от БД
@@ -109,19 +155,36 @@ class DBOperate():
             status = False
             self.parent.db_logger.warning(f"Закрыть не удалось! ({func_name})")
         return status
+    
+    # ФУНКЦИОНАЛ РАБОТЫ С БАЗОЙ
 
-    def get_memristor_id(self, wl, bl, crossbar_id):
+    def get_memristor_id(self, wl: int, bl: int, crossbar_id: int):
         """
         Получить id мемристора
         """
         memristor_id = 0
         status = False
+        
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT id FROM Memristors WHERE wl={wl} AND bl={bl} AND crossbar_id={crossbar_id}"))
-                memristor_id = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(Memristors.id).where(
+                    Memristors.wl == wl,
+                    Memristors.bl == bl,
+                    Memristors.crossbar_id == crossbar_id
+                )
+                result = session.scalars(output).one()
+                memristor_id = result
+                status = True
+            
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Мемристор не найден: wl={wl}, bl={bl}, crossbar={crossbar_id}")
+            return False, 0
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Найдено несколько мемристоров: wl={wl}, bl={bl}, crossbar={crossbar_id}")
+            return False, 0
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_memristor_id: {e}")
+        
         return status, memristor_id
 
     def add_experiment(self, name, memristor_id):
@@ -255,21 +318,33 @@ class DBOperate():
         self.db_disconnect('update_last_resistance')
         return status
 
-    def get_chip_data(self, serial):
+    def get_chip_data(self, serial: str):
         """
-        Получить id кроссбара по серийному номеру
+        Получить данные кроссбара по серийному номеру
         """
-        status = False
-        chip_data = []
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT id, bl, wl, cb_type FROM Crossbars WHERE serial='{serial}'"))
-                chip_data = list(result.fetchall()[0])
-                status = True
+            with Session(self.engine) as session:
+                output = select(
+                    Crossbars.id, 
+                    Crossbars.bl, 
+                    Crossbars.wl, 
+                    Crossbars.cb_type
+                ).where(Crossbars.serial == serial)
+                
+                row = session.execute(output).one()
+                chip_data = list(row)
+                return True, chip_data
+                
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Кроссбар не найден: serial='{serial}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько кроссбаров с serial='{serial}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_chip_data: {e}")
-        return status, chip_data
-
+            return False, []
+    
     def get_cb_list(self):
         """
         Список кроссбаров
