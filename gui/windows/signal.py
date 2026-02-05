@@ -6,6 +6,7 @@
 
 import os
 import json
+import numpy as np
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtGui import QPixmap
@@ -103,6 +104,25 @@ class SignalMod(QDialog):
         pixmap = QPixmap(self.IMG_PATH)
         self.ui.label_png.setPixmap(pixmap)
 
+    def _get_scaling_unit(self, text:str, unit:str):
+        """
+        Изменить число в соответствии с единицей измерения
+        """
+        result = 0
+        status = False
+        try:
+            result = float(text)
+            if unit == 'кВ':
+                result = result * 1000
+            elif unit == 'мВ':
+                result = result / 1000
+            elif unit == 'мкВ':
+                result = result / 1000000
+            status = True
+        except ValueError as e:
+            show_warning_messagebox('Некорректный символ!')
+        return status, result
+
     def _make_json(self) -> bool:
         """
         Создание json без сохранения
@@ -112,18 +132,32 @@ class SignalMod(QDialog):
         """
         status = False
         try:
+            ok, f_start = self._get_scaling_unit(self.ui.forward_start.text(), self.ui.combo_forward_start.currentText())
+            if ok:
+                ok, b_start = self._get_scaling_unit(self.ui.backward_start.text(), self.ui.combo_backward_start.currentText())
+            if ok:
+                ok, f_stop = self._get_scaling_unit(self.ui.forward_stop.text(), self.ui.combo_forward_stop.currentText())
+            if ok:
+                ok, b_stop = self._get_scaling_unit(self.ui.backward_stop.text(), self.ui.combo_backward_stop.currentText())
+            if ok:
+                ok, f_step = self._get_scaling_unit(self.ui.forward_step.text(), self.ui.combo_forward_step.currentText())
+            if ok:
+                ok, b_step = self._get_scaling_unit(self.ui.backward_step.text(), self.ui.combo_backward_step.currentText())
+            if not ok:
+                return status
+
             # dir inc
-            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_start.text()))
-            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_stop.text()))
-            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_step.text()))
+            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_start)
+            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_stop)
+            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_step)
             self.base_json['params']['t_dir_msec_inc'] = int(self.ui.forward_ms.text())
             self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
             self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
             # чекбокс dir dec
             if self.ui.forward_dec.isChecked():
-                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_stop.text()))
-                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_start.text()))
-                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_step.text()))
+                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_stop)
+                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_start)
+                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_step)
                 self.base_json['params']['t_dir_msec_dec'] = int(self.ui.forward_ms.text())
                 self.base_json['params']['t_dir_usec_dec'] = int(self.ui.forward_mcs.text())
                 self.base_json['params']['dir_dec_countr'] = int(self.ui.forward_count.value())
@@ -135,17 +169,17 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_dir_usec_dec'] = 0
                 self.base_json['params']['dir_dec_countr'] = 0
             # rev inc
-            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_start.text()))
-            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_stop.text()))
-            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_step.text()))
+            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_start)
+            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_stop)
+            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_step)
             self.base_json['params']['t_rev_msec_inc'] = int(self.ui.backward_ms.text())
             self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
             self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
             # чекбокс rev dec
             if self.ui.backward_dec.isChecked():
-                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_stop.text()))
-                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_start.text()))
-                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_step.text()))
+                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_stop)
+                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_start)
+                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_step)
                 self.base_json['params']['t_rev_msec_dec'] = int(self.ui.backward_ms.text())
                 self.base_json['params']['t_rev_usec_dec'] = int(self.ui.backward_mcs.text())
                 self.base_json['params']['rev_dec_countr'] = int(self.ui.backward_count.value())
