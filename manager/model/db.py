@@ -6,7 +6,7 @@ import pickle
 import datetime
 import sqlite3
 import sqlalchemy as sqla
-from sqlalchemy import ForeignKey, LargeBinary, DateTime, String, Integer, select, update, insert
+from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 from datetime import datetime
 from typing import Optional
@@ -57,11 +57,12 @@ class Experiments(Base):
     __tablename__ = 'experiments'
     
     id: Mapped[int] = mapped_column(primary_key=True)
-    datestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    datestamp: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
     image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_resistance: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    meta_info: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     
     # внешний ключ
     memristor_id: Mapped[int] = mapped_column(
@@ -79,7 +80,7 @@ class Tickets(Base):
     __tablename__ = 'tickets'
     
     id: Mapped[int] = mapped_column(primary_key=True)
-    datestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    datestamp: Mapped[str] = mapped_column(String, nullable=False)
     ticket_name: Mapped[str] = mapped_column(String, nullable=False)
     ticket: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     result: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -172,10 +173,9 @@ class DBOperate():
                     Memristors.bl == bl,
                     Memristors.crossbar_id == crossbar_id
                 )
-                result = session.scalars(output).one()
-                memristor_id = result
+                memristor_id = session.scalars(output).one()
                 status = True
-            
+                return status, memristor_id
         except sqla.exc.NoResultFound:
             self.parent.db_logger.warning(f"Мемристор не найден: wl={wl}, bl={bl}, crossbar={crossbar_id}")
             return False, 0
@@ -184,119 +184,115 @@ class DBOperate():
             return False, 0
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_memristor_id: {e}")
-        
-        return status, memristor_id
 
     def add_experiment(self, name, memristor_id):
         """
         Добавить эксперимент
         """
-        self.db_connect('add_experiment')
         status = False
         experiment_id = 0
-        if self.db_connection:
-            try:
-                QUERY = """INSERT INTO Experiments
-                (datestamp, name, status, memristor_id)
-                VALUES (?,?,?,?);"""
+        try:
+            with Session(self.engine) as session:
                 datestamp = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
-                self.db_cursor.execute(QUERY, (datestamp,
-                                               name,
-                                               0,
-                                               memristor_id))
-                self.db_connection.commit() # сохранить изменение
-                experiment_id = self.db_cursor.lastrowid
+                new_experiment = Experiments(
+                    datestamp=datestamp,
+                    name=name,
+                    status=0,
+                    memristor_id=memristor_id
+                )
+                session.add(new_experiment)
+                session.commit()
+                experiment_id = new_experiment.id
                 status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в add_experiment:{er}')
-        self.db_disconnect('add_experiment')
+        except Exception as e:
+            self.parent.db_logger.critical(f'Ошибка в add_experiment:{e}')
         return status, experiment_id
-
+    
     def update_experiment_status(self, experiment_id, experiment_status):
         """
         Обновить статус эксперимента
         """
-        self.db_connect('update_experiment_status')
         status = False
-        if self.db_connection:
-            try:
-                QUERY = f"""UPDATE Experiments
-                SET status=(?)
-                WHERE id={experiment_id}"""
-                self.db_cursor.execute(QUERY, (experiment_status,))
-                self.db_connection.commit() # сохранить изменение
-                status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в update_experiment_status:{er}')
-        self.db_disconnect('update_experiment_status')
+        try:
+            with Session(self.engine) as session:
+                experiment = session.get(Experiments, experiment_id)
+                if experiment:
+                    experiment.status = experiment_status
+                    session.commit()
+                    status = True
+                else:
+                    self.parent.db_logger.warning(f"Эксперимент не найден: id={experiment_id}")
+        except Exception as e:
+            self.parent.db_logger.critical(f'Ошибка в update_experiment_status:{e}')
+            
         return status
 
     def add_ticket(self, ticket, experiment_id):
         """
         Добавляем пустой тикет при примке в работу админом
-        memristor_id <- wl, bl, crossbar_id
         """
-        self.db_connect('add_ticket')
         ticket_id = 0
         status = False
-        if self.db_connection:
-            try:
-                QUERY = """INSERT INTO Tickets
-                (datestamp, ticket_name, ticket, status, experiment_id)
-                VALUES (?,?,?,?,?);"""
+        try:
+            with Session(self.engine) as session:
                 datestamp = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
                 ticket_name = ticket['name']
-                ticket = pickle.dumps(ticket)
-                status = False
-                self.db_cursor.execute(QUERY, (datestamp,
-                                               ticket_name,
-                                               ticket,
-                                               status,
-                                               experiment_id))
-                self.db_connection.commit() # сохранить изменение
-                ticket_id = self.db_cursor.lastrowid
+                ticket_data = pickle.dumps(ticket)
+                new_ticket = Tickets(
+                    datestamp=datestamp,
+                    ticket_name=ticket_name,
+                    ticket=ticket_data,
+                    status=False,
+                    experiment_id=experiment_id
+                )
+                session.add(new_ticket)
+                session.commit()
+                ticket_id = new_ticket.id
                 status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в add_ticket:{er}')
-        self.db_disconnect('add_ticket')
+        except Exception as e:
+            self.parent.db_logger.critical(f'Ошибка в add_ticket:{e}')
         return status, ticket_id
 
     def update_ticket(self, ticket_id, name, value):
         """
         Обновить тикет
         """
-        self.db_connect('update_ticket')
         status = False
-        if self.db_connection:
-            try:
-                QUERY = f"""UPDATE Tickets
-                SET {name}=(?)
-                WHERE id={ticket_id}"""
-                self.db_cursor.execute(QUERY, (value,))
-                self.db_connection.commit() # сохранить изменение
-                status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в update_ticket:{er}')
-        self.db_disconnect('update_ticket')
+        try:
+            with Session(self.engine) as session:
+                ticket = session.get(Tickets, ticket_id)
+                if ticket:
+                    if hasattr(ticket, name):
+                        setattr(ticket, name, value)
+                        session.commit()
+                        status = True
+                    else:
+                        self.parent.db_logger.error(f"Поле '{name}' не найдено в таблице Tickets")
+                else:
+                    self.parent.db_logger.warning(f"Тикет не найден: id={ticket_id}")
+        except Exception as e:
+            self.parent.db_logger.critical(f'Ошибка в update_ticket:{e}')
         return status
 
     def update_experiment(self, experiment_id, name, value):
         """
         Обновить тикет
         """
-        self.db_connect('update_experiment')
         status = False
-        if self.db_connection:
-            try:
-                QUERY = f"""UPDATE Experiments
-                SET {name}=(?)
-                WHERE id={experiment_id}"""
-                self.db_cursor.execute(QUERY, (value,))
-                self.db_connection.commit() # сохранить изменение
-                status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в update_experiment:{er}')
-        self.db_disconnect('update_experiment')
+        try:
+            with Session(self.engine) as session:
+                experiment = session.get(Experiments, experiment_id)
+                if experiment:
+                    if hasattr(experiment, name):
+                        setattr(experiment, name, value)
+                        session.commit()
+                        status = True
+                    else:
+                        self.parent.db_logger.error(f"Поле '{name}' не найдено в таблице Experiments")
+                else:
+                    self.parent.db_logger.warning(f"Эксперимент не найден: id={experiment_id}")
+        except Exception as e:
+            self.parent.db_logger.critical(f'Ошибка в update_experiment:{e}')
         return status
 
     def update_last_resistance(self, memristor_id, last_resistance):
@@ -304,37 +300,36 @@ class DBOperate():
         Обновить значение сопротивления
         """
         status = False
-        if self.db_connection:
-            try:
-                QUERY = f"""UPDATE Memristors
-                SET last_resistance={last_resistance}
-                WHERE id={memristor_id}
-                """
-                self.db_cursor.execute(QUERY)
-                self.db_connection.commit() # сохранить изменение
-                status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в update_last_resistance:{er}')
-        self.db_disconnect('update_last_resistance')
+        try:
+            with Session(self.engine) as session:
+                memristor = session.get(Memristors, memristor_id)
+                if memristor:
+                    memristor.last_resistance = last_resistance
+                    session.commit()
+                    status = True
+                else:
+                    self.parent.db_logger.warning(f"Мемристор не найден: id={memristor_id}")
+        except Exception as e:
+            self.parent.db_logger.critical(f'Ошибка в update_last_resistance:{e}')
         return status
 
     def get_chip_data(self, serial: str):
         """
         Получить данные кроссбара по серийному номеру
         """
+        chip_data = []
+        status = False
         try:
             with Session(self.engine) as session:
                 output = select(
-                    Crossbars.id, 
-                    Crossbars.bl, 
-                    Crossbars.wl, 
+                    Crossbars.id,
+                    Crossbars.bl,
+                    Crossbars.wl,
                     Crossbars.cb_type
                 ).where(Crossbars.serial == serial)
-                
-                row = session.execute(output).one()
-                chip_data = list(row)
-                return True, chip_data
-                
+                chip_data = session.execute(output).all()[0]
+                status = True
+                return status, chip_data
         except sqla.exc.NoResultFound:
             self.parent.db_logger.warning(f"Кроссбар не найден: serial='{serial}'")
             return False, []
@@ -349,342 +344,516 @@ class DBOperate():
         """
         Список кроссбаров
         """
+        cb_list = ''
         status = False
-        cb_list = []
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT serial FROM Crossbars"))
-                cb_list = [item[0] for item in result.fetchall()]
+            with Session(self.engine) as session:
+                output = select(Crossbars.serial)
+                cb_list = session.scalars(output).all()
                 status = True
+                return status, cb_list
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_cb_list: {e}")
-        return status, cb_list
 
     def get_cb_list_cb_type(self, cb_type):
         """
         Список кроссбаров по типу
-        """
-        status = False
+        """        
         cb_list = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT serial FROM Crossbars WHERE cb_type='{cb_type}'"))
-                cb_list = result.fetchall()
+            with Session(self.engine) as session:
+                output = select(Crossbars.serial).where(Crossbars.cb_type == cb_type)
+                cb_list = session.execute(output).all()
                 status = True
+                return status, cb_list
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Кроссбар не найден: cb_type='{cb_type}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько кроссбаров с cb_type='{cb_type}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_cb_list_cb_type: {e}")
-        return status, cb_list
 
     def get_exp_name(self, experiment_id):
         """
         Имя эксперимента
         """
-        status = False
         exp_name = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT name FROM Experiments WHERE id={experiment_id}"))
-                exp_name = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Experiments.name
+                ).where(Experiments.id == experiment_id)
+                exp_name = session.scalars(output).one()
                 status = True
+                return status, exp_name
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Имя эксперимента не найдено: experiment_id='{experiment_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько экспериментов с experiment_id='{experiment_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_exp_name: {e}")
-        return status, exp_name
+            return False, []
 
     def get_experiment_tickets(self, experiment_id):
         """
         Тикеты эксперимента
         """
-        status = False
         history = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT id, datestamp, ticket_name, status FROM Tickets WHERE experiment_id={experiment_id}"))
-                history = result.fetchall()
-                status = True
+            with Session(self.engine) as session:
+                output = select(
+                    Tickets.id,
+                    Tickets.datestamp,
+                    Tickets.ticket_name,
+                    Tickets.status
+                ).where(Tickets.experiment_id == experiment_id)
+                history = session.execute(output).fetchall()
+            status = True
+            return status, history
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Эксперимент не найден: id='{experiment_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_experiment_tickets: {e}")
-        return status, history
+            return False, []
 
     def get_memristor_experiments(self, memristor_id):
         """
         История всех экспериментов с мемристором
         """
-        status = False
         history = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT id, datestamp, name, status, last_resistance FROM Experiments WHERE memristor_id={memristor_id} ORDER BY id DESC"))
-                history = result.fetchall()
-                status = True
+            with Session(self.engine) as session:
+                output = select(
+                    Experiments.id,
+                    Experiments.datestamp,
+                    Experiments.name,
+                    Experiments.status,
+                    Experiments.last_resistance
+                ).where(Experiments.memristor_id == memristor_id)
+                history = session.execute(output).fetchall()
+            status = True
+            return status, history
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Эксперимент не найден: memristor_id='{memristor_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_memristor_experiments: {e}")
-        return status, history
+            return False, []
 
     def get_experiments(self, crossbar_id):
         """
         История всех экспериментов с кроссбаром
         Можно переделать для всех экспериментов в базе
         """
-        status = False
         history = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT e.id, e.datestamp, e.name, e.status, e.last_resistance FROM Crossbars AS c JOIN Memristors AS m ON m.crossbar_id=c.id JOIN Experiments AS e ON e.memristor_id=m.id WHERE m.crossbar_id={crossbar_id} ORDER BY e.datestamp DESC"))
-                history = result.fetchall()
-                status = True
+            with Session(self.engine) as session:
+                output = (
+                    session.query(
+                        Experiments.id,
+                        Experiments.datestamp,
+                        Experiments.name,
+                        Experiments.status,
+                        Experiments.last_resistance
+                    )
+                    .select_from(Crossbars)
+                    .join(Memristors, Memristors.crossbar_id == Crossbars.id)
+                    .join(Experiments, Experiments.memristor_id == Memristors.id)
+                    .filter(Crossbars.id == crossbar_id)
+                    .order_by(Experiments.datestamp.desc())
+                )
+                history = session.execute(output).fetchall()
+            status = True
+            return status, history
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Кроссбар не найден: crossbar_id='{crossbar_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_experiments: {e}")
-        return status, history
+            return False, []
 
     def get_last_resistance(self, memristor_id):
         """
         Последнее сопротивление
         """
+        resistance = ''
         status = False
-        resistance = 0
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT last_resistance FROM Memristors WHERE id={memristor_id}"))
-                resistance = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Memristors.last_resistance
+                ).where(Memristors.id == memristor_id)
+                resistance = session.scalars(output).one()
                 status = True
+                return status, resistance
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_last_resistance: {e}")
-        return status, resistance
+            return False, []
 
     def get_all_resistances(self, crossbar_id):
         """
         Последнее сопротивление
         """
-        status = False
         resistances = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT bl, wl, last_resistance from Memristors WHERE crossbar_id={crossbar_id};"))
-                resistances = result.fetchall()
-                status = True
+            with Session(self.engine) as session:
+                output = select(
+                    Memristors.wl,
+                    Memristors.bl,
+                    Memristors.last_resistance
+                ).where(Memristors.crossbar_id == crossbar_id)
+                resistances = session.execute(output).fetchall()
+            status = True
+            return status, resistances
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Кроссбар не найден: crossbar_id='{crossbar_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_all_resistances: {e}")
-        return status, resistances
+            return False, []
 
     def get_img_experiment(self, experiment_id):
         """
         Получить рисунок эксперимента из базы
         """
-        status = False
         img = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT image from Experiments WHERE id={experiment_id};"))
-                img = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Experiments.image
+                ).where(Experiments.id == experiment_id)
+                img = session.scalars(output).one()
                 status = True
+                return status, img
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Рисунок не найден: experiment_id='{experiment_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько рисунков с experiment_id='{experiment_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_img_experiment: {e}")
-        return status, img
+            return False, []
 
     def get_tickets(self, experiment_id):
         """
         Получить тикеты одного эксперимента
         """
+        ticket = []
         status = False
-        tickets = []
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT ticket FROM Tickets WHERE experiment_id={experiment_id}"))
-                tickets = result.fetchall()
-                status = True
+            with Session(self.engine) as session:
+                output = select(
+                    Tickets.ticket
+                ).where(Tickets.experiment_id == experiment_id)
+                ticket = session.execute(output).fetchall()
+            status = True
+            return status, ticket
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Тикет не найден: experiment_id='{experiment_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_tickets: {e}")
-        return status, tickets
+            return False, []
 
     def get_ticket_from_id(self, ticket_id):
         """
         Получить тикет по id
         """
-        status = False
         ticket = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT result FROM Tickets WHERE id={ticket_id}"))
-                ticket = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Tickets.result
+                ).where(Tickets.id == ticket_id)
+                ticket = session.scalars(output).one()
                 status = True
+                return status, ticket
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Тикет не найден: ticket_id='{ticket_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько тикетов с ticket_id='{ticket_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_ticket_from_id: {e}")
-        return status, ticket
+            return False, []
 
     def get_crossbar_serial_from_id(self, crossbar_id):
         """
         Получить серийный номер кроссбара по id
         """
-        status = False
         serial = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT serial FROM Crossbars WHERE id={crossbar_id}"))
-                serial = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Crossbars.serial
+                ).where(Crossbars.id == crossbar_id)
+                serial = session.scalars(output).one()
                 status = True
+                return status, serial
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Кроссбар не найден: crossbar_id='{crossbar_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько кроссбаров с crossbar_id='{crossbar_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_crossbar_serial_from_id: {e}")
-        return status, serial
+            return False, []
 
     def get_memristor_id_from_experiment_id(self, experiment_id):
         """
         Получить id мемрезистора из эксперимента
         """
-        status = False
         mem_id = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT memristor_id FROM Experiments WHERE id={experiment_id}"))
-                mem_id = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Experiments.memristor_id
+                ).where(Experiments.id == experiment_id)
+                mem_id = session.scalars(output).one()
                 status = True
+                return status, mem_id
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Эксперимент не найден: experiment_id='{experiment_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько экспериментов с experiment_id='{experiment_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_memristor_id_from_experiment_id: {e}")
-        return status, mem_id
+            return False, []
 
     def get_crossbar_id_from_memristor_id(self, memristor_id):
         """
         Получить id кроссбара из мемрезистора
         """
-        status = False
         crb_id = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT crossbar_id FROM Memristors WHERE id={memristor_id}"))
-                crb_id = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Memristors.crossbar_id
+                ).where(Memristors.id == memristor_id)
+                crb_id = session.scalars(output).one()
                 status = True
+                return status, crb_id
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_crossbar_id_from_memristor_id: {e}")
-        return status, crb_id
+            return False, []
 
     def get_wl_from_memristor_id(self, memristor_id):
         """
         Получить WL из мемрезистора
         """
-        status = False
         wl = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT wl FROM Memristors WHERE id={memristor_id}"))
-                wl = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Memristors.wl
+                ).where(Memristors.id == memristor_id)
+                wl = session.scalars(output).one()
                 status = True
+                return status, wl
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_wl_from_memristor_id: {e}")
-        return status, wl
+            return False, []
 
     def get_bl_from_memristor_id(self, memristor_id):
         """
         Получить BL из мемрезистора
         """
-        status = False
         bl = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT bl FROM Memristors WHERE id={memristor_id}"))
-                bl = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Memristors.bl
+                ).where(Memristors.id == memristor_id)
+                bl = session.scalars(output).one()
                 status = True
+                return status, bl
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_bl_from_memristor_id: {e}")
-        return status, bl
+            return False, []
 
     def get_cb_info(self, cb_id):
         """
         Получить полную информацию о кроссбаре
         """
-        status = False
         info = []
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT * FROM Crossbars WHERE id={cb_id}"))
-                info = result.fetchall()
-                status = True
+            with Session(self.engine) as session:
+                # Получаем все столбцы
+                all_columns = [getattr(Crossbars, col.name) 
+                            for col in Crossbars.__table__.columns]
+                output = select(*all_columns).where(Crossbars.id == cb_id)
+                result = session.execute(output).all()
+                if not result:  # Если результат пустой
+                    self.parent.db_logger.warning(f"Кроссбар не найден: cb_id='{cb_id}'")
+                    return False, []
+                info = [tuple(row) for row in result]
+            status = True
+            return status, info
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_cb_info: {e}")
-        return status, info
+            return False, []
 
     def add_column_if_not_exist(self, table_name, column_name, column_type):
         """
         Добавить столбец если не существует
         """
-        self.db_connect('add_column_if_not_exist')
-        status = False
-        if self.db_connection:
-            try:
-                QUERY = f'PRAGMA table_info({table_name})'
-                self.db_cursor.execute(QUERY)
-                info = self.db_cursor.fetchall()
-                column_names = []
-                for item in info:
-                    column_names.append(item[1])
-                if column_name not in column_names:
-                    # добавление столбца
-                    ADD_COLUMN_LAST_RES = f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'
-                    self.db_cursor.execute(ADD_COLUMN_LAST_RES)
-                    status = True
-            except Exception as er:
-                self.parent.db_logger.critical(f'Ошибка в add_column_if_not_exist:{er}')
-        self.db_disconnect('add_column_if_not_exist')
-        return status
-
+        try:
+            with Session(self.engine) as session:
+                inspector = sqla.inspect(self.engine)
+                for column in inspector.get_columns(table_name):
+                    if column['name'] == column_name:
+                        return False
+                # если не существует
+                session.execute(
+                    sqla.text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}')
+                )
+                session.commit()
+                return True
+        except Exception as e:
+            self.parent.db_logger.critical(f'Ошибка в add_column_if_not_exist:{e}')
+            return False
+        
     def get_last_experiment(self):
         """
-        Получить id последнего запроса
+        Получить id последнего эксперимента
         """
         status = False
         last = ''
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT MAX(id) FROM Experiments"))
-                last = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(sqla.func.max(Experiments.id))
+                last = session.execute(output).scalar()
                 status = True
+                return status, last
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning("Эксперимент не найден")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error("Найдено несколько экмпериментов")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_last_experiment: {e}")
-        return status, last
+            return False, []
 
     def get_BLOB_from_ticket_id(self, ticket_id):
         """
         Получить BLOB тикета
         """
-        status = False
         blob = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT ticket FROM Tickets WHERE id = {ticket_id}"))
-                blob = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Tickets.ticket
+                ).where(Tickets.id == ticket_id)
+                blob = session.scalars(output).one()
                 status = True
+                return status, blob
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Тикет не найден: ticket_id='{ticket_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько тикетов с ticket_id='{ticket_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_BLOB_from_ticket_id: {e}")
-        return status, blob
+            return False, []
 
     def get_meta_info_from_experiment_id(self, experiment_id):
         """
         Получить метаинформацию об эксперименте по experiment_id
         """
-        status = False
         meta_info = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT meta_info FROM Experiments WHERE id={experiment_id}"))
-                meta_info = result.fetchone()[0]
-                meta_info = pickle.loads(meta_info)
+            with Session(self.engine) as session:
+                output = select(
+                    Experiments.meta_info
+                ).where(Experiments.id == experiment_id)
+                meta_info = session.scalars(output).one()
                 status = True
+                return status, meta_info
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Эксперимент не найден: experiment_id='{experiment_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько экспериментов с experiment_id='{experiment_id}'")
+            return False, []
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_meta_info_from_experiment_id: {e}")
-        return status, meta_info
+            return False, []
 
     def get_experiment_id_from_ticket_id(self, ticket_id):
         """
         Получить experiment_id по ticket_id
         """
-        status = False
         experiment_id = ''
+        status = False
         try:
-            with self.engine.connect() as db:
-                result = db.execute(sqla.text(f"SELECT experiment_id FROM Tickets WHERE id = {ticket_id}"))
-                experiment_id = result.fetchone()[0]
+            with Session(self.engine) as session:
+                output = select(
+                    Tickets.experiment_id
+                ).where(Tickets.id == ticket_id)
+                experiment_id = session.scalars(output).one()
                 status = True
+                return status, experiment_id
+        except sqla.exc.NoResultFound:
+            self.parent.db_logger.warning(f"Тикет не найден: ticket_id='{ticket_id}'")
+            return False, []
+        except sqla.exc.MultipleResultsFound:
+            self.parent.db_logger.error(f"Несколько тикетов с ticket_id='{ticket_id}'")
+            return False, []
         except Exception as e:
-            self.parent.db_logger.critical(f"Ошибка в get_experiment_id_from_ticket_id: {e}")
-        return status, experiment_id
+            self.parent.db_logger.critical(f"Ошибка в ticket_id: {e}")
+            return False, []
     
     def db_backup(self, backup_path) -> None:
         """
