@@ -25,8 +25,6 @@ from manager.service.saves import save_list_to_bytearray, init_csv_apply
 import csv
 from gui.src import show_choose_window, show_warning_messagebox
 
-BETWEEN_TIME = 10/1000
-
 class Apply(QWidget):
     """
     Окно выполнения эксперимента
