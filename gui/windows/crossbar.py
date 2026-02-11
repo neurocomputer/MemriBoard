@@ -447,7 +447,6 @@ class Window(QMainWindow):
                                 colors[i][j] = QColor(0, 0, 0)
                         else:
                             colors[i][j] = QColor(color_value, color_value, color_value)
-                        self.snapshot[i][j] = color_value
         except ValueError:
             #show_warning_messagebox("Не возможно корректно задать цвета!")
             pass
