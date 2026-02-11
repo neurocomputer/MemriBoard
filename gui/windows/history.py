@@ -27,6 +27,8 @@ class History(QDialog):
     experiments: list # эксперименты из базы
     tickets: list # тикеты из базы
     mode: str # режим открытия
+    export_to_json_mode: bool # режим экспорта
+    tickets_ids: list    # id тикетов выбранного эксперимента
 
     def __init__(self, parent=None, mode=None) -> None:
         super().__init__(parent)
@@ -59,11 +61,15 @@ class History(QDialog):
         self.ui.button_load_from_db.setDisabled(True)
         self.ui.button_export_to_json.setDisabled(True)
         self.ui.button_choose_exp.setDisabled(True)
+        self.ui.button_export.clicked.connect(self.export_experiment)
         # варианты отображения
         if self.parent.opener == 'rram':
             self.ui.button_load.hide()
         else:
             self.ui.button_choose_exp.hide()
+        # прочее
+        self.export_to_json_mode = False
+        self.tickets_ids = []
 
     def export_ticket_from_db(self) -> None:
         """
@@ -218,40 +224,61 @@ class History(QDialog):
         """
         Экспортировать тикет в json
         """
-        items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
-        # проверки на выбор
-        ok = True
-        if len(items) == 0:
-            show_warning_messagebox('Выберите тикет для экспортирования!')
-            ok = False
-        elif len(items) > 3:
-            show_warning_messagebox('Выберите один тикет!')
-            ok = False
-        rows = []
-        for item in items:
-            cur_row = self.ui.table_history_tickets.row(item)
-            more_than_one = False
-            for row in rows:
-                if row != cur_row:
-                    more_than_one = True
-                    break
-            if more_than_one:
-                show_warning_messagebox('Выберите один тикет!')
-                ok = False
-            else:
-                rows.append(cur_row)
-        # экспорт тикета
-        if ok:
-            ticket_id = self.tickets[cur_row][0]
-            blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
-            ticket_info = pickle.loads(blob)
-            fname = ticket_info["name"] + "_" + str(ticket_id)
+        if self.export_to_json_mode:
+            # экспорт тикетов
+            fname = self.tickets_ids[len(self.tickets_ids)-1]
+            self.tickets_ids.pop()
+            ticket_info_list = []
+            for ticket_id in self.tickets_ids:
+                blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
+                ticket_info_list.append(pickle.loads(blob))
             with open(os.path.join(TICKET_PATH,
                                 fname+'.json'),
-                                'w', encoding='utf-8') as outfile:
-                json.dump(ticket_info, outfile)
+                                'w+', encoding='utf-8') as outfile:
+                outfile.write("{")
+                for i in range(len(ticket_info_list)):
+                    outfile.write('"' + str(i) + '":')
+                    json.dump(ticket_info_list[i], outfile)
+                    if i < len(ticket_info_list)-1:
+                        outfile.write(",\n")
+                outfile.write("}")
                 outfile.close()
-            show_warning_messagebox("Тикет экспортирован в " + str(TICKET_PATH) + "/" + fname + ".json")
+            show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'))
+        else:
+            items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
+            # проверки на выбор
+            ok = True
+            if len(items) == 0:
+                show_warning_messagebox('Выберите тикет для экспортирования!')
+                ok = False
+            elif len(items) > 3:
+                show_warning_messagebox('Выберите один тикет!')
+                ok = False
+            rows = []
+            for item in items:
+                cur_row = self.ui.table_history_tickets.row(item)
+                more_than_one = False
+                for row in rows:
+                    if row != cur_row:
+                        more_than_one = True
+                        break
+                if more_than_one:
+                    show_warning_messagebox('Выберите один тикет!')
+                    ok = False
+                else:
+                    rows.append(cur_row)
+            # экспорт тикета
+            if ok:
+                ticket_id = self.tickets[cur_row][0]
+                blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
+                ticket_info = pickle.loads(blob)
+                fname = ticket_info["name"] + "_" + str(ticket_id)
+                with open(os.path.join(TICKET_PATH,
+                                    fname+'.json'),
+                                    'w', encoding='utf-8') as outfile:
+                    json.dump(ticket_info, outfile)
+                    outfile.close()
+                show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'))
 
     def show_ticket(self) -> None:
         """
@@ -259,6 +286,22 @@ class History(QDialog):
         """
         blob = self.parent.man.db.get_BLOB_from_ticket_id(self.tickets[self.ui.table_history_tickets.currentRow()][0])[1]
         self.parent.show_signal_dialog(pickle.loads(blob), "view")
+
+    def export_experiment(self) -> None:
+        """
+        Экспорт всех тикетов эксперимента
+        """
+        # определить experiment_id
+        current_row = self.ui.table_history_experiments.currentRow()
+        experiment_id = self.experiments[current_row][0]
+        _, tickets = self.parent.man.db.get_experiment_tickets(experiment_id)
+        if len(tickets) > 0:
+            self.export_to_json_mode = True
+            for i in range(len(tickets)):
+                self.tickets_ids.append(tickets[i][0])
+            self.tickets_ids.append(self.experiments[current_row][2])
+            self.export_ticket_to_json()
+            self.tickets_ids = []
 
     def set_up_init_values(self) -> None:
         """

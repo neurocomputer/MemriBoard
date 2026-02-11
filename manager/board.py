@@ -4,7 +4,6 @@
 
 # pylint: disable=no-name-in-module
 
-import random
 import time
 from logging import Logger
 from configparser import ConfigParser
@@ -85,40 +84,64 @@ class Connector():
             # для плат на базе Arduino
             if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 from manager.comport import Serial # pylint: disable=C0415
-                self.serial = Serial()
+                self.interface = Serial()
                 # кол-во попыток получить данные
-                portnum = kwargs['com_port']
-                attempts = kwargs['attempts']
+                self.portnum = kwargs['com_port']
+                self.attempts = kwargs['attempts']
                 timeout = kwargs['timeout']
-                self.serial.com_open(portnum, timeout=timeout)
-                if self.serial.com_is_open():
-                    not_rec_flag = self._kick_board(attempts)
+                self.interface.com_open(self.portnum, timeout=timeout)
+                if self.interface.com_is_open():
+                    not_rec_flag = self._kick_board(self.attempts)
                     if not_rec_flag:
-                        self.logger.info('Fail to receive %s', portnum)
+                        self.logger.info('Fail to receive %s', self.portnum)
                     else:
-                        self.logger.info('Opened %s', portnum)
+                        self.logger.info('Opened %s', self.portnum)
                         open_flag = True
                 else:
-                    self.logger.info('Fail to open %s', portnum)
+                    self.logger.info('Fail to open %s', self.portnum)
+            # для плат на базе Elbear
+            elif self.board_type == 'elbear_nano':
+                try:
+                    self.portnum = kwargs['com_port']
+                    self.attempts = kwargs['attempts']
+                    from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
+                    self.interface = RPI_modes_ELBEAR(kwargs['com_port'])
+                    open_flag = self.interface.check_connection(kwargs['attempts'])
+                except ModuleNotFoundError:
+                    pass
             # для плат на базе Raspberry Pi 5
             elif self.board_type == 'rp5_python':
                 try:
-                    from MemriCORE.rpi_modes import RPI_modes # pylint: disable=C0415
-                    self.rasp_driver = RPI_modes()
+                    from MemriCORE.rp5_python.rpi_modes import RPI_modes # pylint: disable=C0415
+                    self.interface = RPI_modes()
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
             elif self.board_type == 'rp5_c':
                 try:
-                    import MemriDriverC.mvmdriver_wrapper as driver # pylint: disable=C0415,E0401
-                    self.rasp_driver = driver.MVMDriver()
+                    import MemriCORE.rp5_c.mvmdriver_wrapper as driver # pylint: disable=C0415,E0401
+                    self.interface = driver.MVMDriver()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
+            elif self.board_type == 'rp5_fpga_python':
+                try:
+                    from MemriCORE.rp5_fpga_python.rpi_FPGAed import RPI_modes_FPGAed # pylint: disable=C0415
+                    self.interface = RPI_modes_FPGAed()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
+            elif self.board_type == 'rp5_fpga_c':
+                try:
+                    from MemriCORE.rp5_fpga_c.fpga_wrapper import create_mode_controller # pylint: disable=C0415,E0401
+                    self.interface = create_mode_controller()
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
             elif self.board_type == 'rp5_rram_python':
                 try:
                     import RRAMPiDriver.ReRAMPiDrv as driver
-                    self.rasp_driver = driver.RPI_modes_RRAM()
+                    self.interface = driver.RPI_modes_RRAM()
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
@@ -136,15 +159,15 @@ class Connector():
             close_flag = True
         elif self.cb_type == 'real':
             # для плат на базе Arduino
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
-                self.serial.com_close()
-                if self.serial.com_is_open():
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano']:
+                self.interface.com_close()
+                if self.interface.com_is_open():
                     self.logger.info('Fail to close')
                 else:
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_rram_python']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -161,10 +184,10 @@ class Connector():
         """
         #start_time = time.time()
         send_flag = False
-        if self.serial.com_is_open():
+        if self.interface.com_is_open():
             if not self.silent:
                 self.logger.info('Send %s', send_data.rstrip())
-            check = self.serial.com_write(send_data.encode())
+            check = self.interface.com_write(send_data.encode())
             if check == -1:
                 if not self.silent:
                     self.logger.warning('Fail to send data')
@@ -189,9 +212,9 @@ class Connector():
         """
         #start_time = time.time()
         rec_data = []
-        self.serial.com_whait_ready(float(self.config['connector']['timeout']))
-        if self.serial.com_can_read_line():
-            rx = self.serial.com_read_line()
+        self.interface.com_whait_ready(float(self.config['connector']['timeout']))
+        if self.interface.com_can_read_line():
+            rx = self.interface.com_read_line()
             # print("rx",rx)
             # порезать и разбить по запятым
             try:
@@ -216,16 +239,19 @@ class Connector():
         if self.cb_type == 'real':
             if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
                 send_flag = self.push('100\n')
-                self.serial.com_whait_ready(float(self.config['connector']['timeout']))
-                if self.serial.com_can_read_line():
-                    rx = self.serial.com_read_line()
+                self.interface.com_whait_ready(float(self.config['connector']['timeout']))
+                if self.interface.com_can_read_line():
+                    rx = self.interface.com_read_line()
                     try:
                         rec_data = str(rx, 'utf-8').strip().split(',')
                     except ValueError:
                         pass
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_rram_python']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 send_flag = True
                 rec_data = ['raspberry pi 5']
+            elif self.board_type == 'elbear_nano':
+                send_flag = True
+                rec_data = ['elbear_nano']
                 # todo: добавить служебную инфу в драйвер
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -262,10 +288,38 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_rram_python']:
+            elif self.board_type in ['elbear_nano', ]:
+                status = False
+                for _ in range(100):
+                    try:
+                        if task['mode_flag'] == 7: # режим команды 7
+                            task['vol'] = abs(task['vol'])
+                            adc = self.interface.mode_7(task['vol'],
+                                                    task['t_ms'],
+                                                    task['t_us'],
+                                                    task['sign'],
+                                                    task['id'],
+                                                    task['wl'],
+                                                    task['bl']) # vDAC, tms, tus, rev, id, wl, bl
+                            res = (int(adc[0]), int(adc[1]))
+                            status = True
+                    except TimeoutError as ex:
+                        print(ex)
+                        try:
+                            #print('!!!')
+                            self.interface.com_close()
+                            time.sleep(1)
+                            from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
+                            self.interface = RPI_modes_ELBEAR(self.portnum)
+                            _ = self.interface.check_connection(self.attempts)
+                        except ModuleNotFoundError:
+                            pass
+                        pass
+                    if status: break
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
-                    adc = self.rasp_driver.mode_7(task['vol'],
+                    adc = self.interface.mode_7(task['vol'],
                                             task['t_ms'],
                                             task['t_us'],
                                             task['sign'],
@@ -274,11 +328,11 @@ class Connector():
                                             task['bl']) # vDAC, tms, tus, rev, id, wl, bl
                     res = (int(adc[0]), int(adc[1]))
                 elif task['mode_flag'] == 9: # режим команды 9
-                    adc = self.rasp_driver.mode_9(task['vol'], 0, task['wl'], task['bl'])
+                    adc = self.interface.mode_9(task['vol'], 0, task['wl'], task['bl'])
                     res = (int(adc[0]), int(adc[1]))
                 elif task['mode_flag'] == 10: # режим команды 10
                     #print(task['vol'])
-                    adc = self.rasp_driver.mode_mvm(task['vol'],
+                    adc = self.interface.mode_mvm(task['vol'],
                                                     0,
                                                     0,
                                                     0,
@@ -382,7 +436,7 @@ class Connector():
                     attempts -= 1
                     if attempts == 0:
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_rram_python']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)

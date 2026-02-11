@@ -8,6 +8,7 @@ check_exp
 
 import os
 import pickle
+import json
 from copy import deepcopy
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
@@ -16,7 +17,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
 from manager.service.global_settings import TICKET_PATH
 from manager.service.plots import calculate_counts_for_ticket
-from gui.src import show_warning_messagebox, show_choose_window
+from gui.src import show_warning_messagebox, show_choose_window, open_file_dialog
 
 class ExpSettings(QDialog):
     """
@@ -33,6 +34,7 @@ class ExpSettings(QDialog):
     list_experiments: QStandardItemModel
     list_model: QStandardItemModel
     apply_exp_all_button_clicked: bool = False
+    importing_experiment: bool = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -72,6 +74,7 @@ class ExpSettings(QDialog):
         self.ui.button_load_exp.clicked.connect(lambda: self.parent.show_history_dialog(mode="all"))
         self.ui.button_apply_all.clicked.connect(self.apply_exp_all)
         self.ui.button_duplicate.clicked.connect(self.duplicate_ticket)
+        self.ui.button_import.clicked.connect(self.import_experiment_json)
         # блок кнопок
         if parent.opener == 'testing':
             self.ui.button_apply_exp.setEnabled(False)
@@ -148,7 +151,10 @@ class ExpSettings(QDialog):
             # 6 обновляем значение лейблов
             self.label_total_update()
         except KeyError:
-            show_warning_messagebox("Тикет не возможно прочитать!")
+            self.import_experiment_json(mode='dblclick')
+            if not self.importing_experiment:
+                self.importing_experiment = False
+                show_warning_messagebox("Тикет не возможно прочитать!")
 
     def _refresh_exp_list(self) -> None:
         """
@@ -287,6 +293,28 @@ class ExpSettings(QDialog):
         for ticket in tickets:
             tick = pickle.loads(ticket[0])
             self._add_exp_to_list(ticket=tick)
+
+    def import_experiment_json(self, mode='') -> None:
+        """
+        Импорт json с экспериментом
+        """
+        try:
+            filepath = ''
+            if mode == 'dblclick':
+                self.importing_experiment = True
+                filepath = os.path.join(os.getcwd(), "tickets", self.ui.exp_list.currentIndex().data()) + ".json"
+            if not filepath:
+                filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
+            if filepath:
+                data: str
+                with open (filepath, "r+") as f:
+                    data = f.read()
+                tickets = json.loads(data)
+                for i in range(len(tickets)):
+                    self._add_exp_to_list(ticket=tickets.get(str(i)))
+                self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
+        except:
+            show_warning_messagebox("Тикет сломан!")
 
     def duplicate_ticket(self) -> None:
         """

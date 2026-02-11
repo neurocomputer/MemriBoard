@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from PyQt5.QtCore import Qt
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView, QFileDialog
+from PyQt5.QtGui import QColor
 
 from manager.service import r2a, r2w, w2r, a2r, v2d, d2v
 from manager.service.plots import calculate_counts_for_ticket
@@ -121,6 +122,17 @@ class NewAnn(QDialog):
         # привязываем к кнопке
         self.ui.button_signal_parameters.clicked.connect(self.change_signal_parameters)
         self.ui.button_random_weights.clicked.connect(self.generate_random_weights)
+        self.ui.table_match.itemDoubleClicked.connect(self.cell_info)
+
+    def color_table_match(self):
+        """
+        окрашивание ячеек таблицы
+        """
+        for row in range(self.ui.table_match.rowCount()):
+            if self.ui.table_match.item(row, 6).text() == "записано" or self.ui.table_match.item(row, 6).text() == "подходит":
+                self.ui.table_match.item(row, 6).setBackground(QColor(0,255,0))
+            else:
+                self.ui.table_match.item(row, 6).setBackground(QColor(255,0,0))
 
     def generate_random_weights(self):
         """
@@ -137,6 +149,8 @@ class NewAnn(QDialog):
         self.weights_target_all = list(random_weights)
         #print(self.weights_target_all)
         self.fill_table_match()
+        # красим ячейки
+        self.ui.color_table_match()
 
     def change_signal_parameters(self):
         """
@@ -268,6 +282,28 @@ class NewAnn(QDialog):
             self.fill_table_weights()
             self.update_good_cels()
 
+    def cell_info(self):
+        """
+        Отображение информации о ячейке
+        """
+        bl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 4)
+        wl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 5)
+        if bl_item == None or wl_item == None:
+            show_warning_messagebox('Отсутствуют координаты ячеек в таблице "Веса"')
+            self.parent.coordinate_error = True
+            self.parent.extra = []
+        else:
+            self.parent.coordinate_error = False
+            self.parent.extra = [bl_item.text(), wl_item.text()]
+            self.parent.show_cell_info_dialog()
+            status, resistances = self.parent.man.db.get_all_resistances(self.parent.man.crossbar_id)
+            if status:
+                resistance = None
+                for item in resistances:
+                    if item[0] == int(bl_item.text()) and item[1] == int(wl_item.text()):
+                        resistance = item[2]
+                if resistance is not None:
+                    self.ui.table_match.item(self.ui.table_match.currentRow(), 3).setText(str(resistance))
     # методы для таблицы с весами
 
     def button_choose_weights_clicked(self): # +
@@ -365,6 +401,8 @@ class NewAnn(QDialog):
                 self.weights_status[i] = 'не подходит'
                 self.ui.table_match.setItem(row, 6, QTableWidgetItem('не подходит'))
         self.update_weights_table_weights()
+        # красим ячейки
+        self.ui.color_table_match()
 
     def button_drop_weights_clicked(self): # +
         """
@@ -449,6 +487,22 @@ class NewAnn(QDialog):
                     if self.mode == 'matmul':
                         self.target_cells_resistances = {}
                         row_position = 0
+                        # если есть рабочие ячейки
+                        cells = []
+                        if type(self.parent.math_dialog.mask_weights) is list:
+                            is_correct = False
+                        else:
+                            is_correct = True
+                            mask = copy.deepcopy(self.parent.math_dialog.mask_weights)
+                            for i in range(len(mask)):
+                                for j in range(len(mask[i])):
+                                    if mask[i][j] == 1:
+                                        cells.append([str(j), str(i)])
+                        writable = []
+                        if is_correct:
+                            writable = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
+                            for i in range(len(cells)):
+                                writable[int(cells[i][1])][int(cells[i][0])] = 1
                         for _ in range(self.parent.man.col_num):
                             for _ in range(self.parent.man.row_num):
                                 # вытаскиваем сопротивление
@@ -469,8 +523,15 @@ class NewAnn(QDialog):
                                 qtable_item = QTableWidgetItem()
                                 qtable_item.setData(0, current_resistance)
                                 self.ui.table_match.setItem(row_position, 3, qtable_item)
-                                self.target_cells_resistances[(wl,bl)] = target_resistance
                                 row_position += 1
+                                if len(writable) > 0:
+                                    if writable[bl][wl] == 0:
+                                        self.ui.table_match.item(row_position-1, 6).setText("не рабочая")
+                                        self.ui.table_match.item(row_position-1, 6).setBackground(QColor(255,0,0))
+                                    else:
+                                        self.target_cells_resistances[(wl,bl)] = target_resistance
+                                else:
+                                    self.target_cells_resistances[(wl,bl)] = target_resistance
                     else:
                         # ищем похожие
                         self.target_cells_resistances = {}
@@ -492,7 +553,7 @@ class NewAnn(QDialog):
                             qtable_item = QTableWidgetItem()
                             qtable_item.setData(0, closest_resistance)
                             self.ui.table_match.setItem(row_position, 3, qtable_item)
-                            self.target_cells_resistances[closest_key] = target_resistance
+                            self.target_cells_resistances[(wl,bl)] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
                     self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))
                     self.written_cells = []
@@ -575,6 +636,8 @@ class NewAnn(QDialog):
             self.not_written_weights.remove(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
         else:
             self.ui.table_match.setItem(row, 6, QTableWidgetItem('не записано'))
+        # красим ячейки
+        self.ui.color_table_match()
         # подменяем значение
         self.counter += 1
         if self.counter < len(self.target_resistances):
@@ -592,6 +655,16 @@ class NewAnn(QDialog):
         self.map_thread.setup_image_saved(True)
         # прогрессбар
         self.ui.progress_bar_mapping.setValue(self.counter)
+
+    def set_up_parent_init_values(self):
+        """
+        Задать начальные значения родителя после работы потока
+        """
+        self.parent.exp_list = []
+        self.parent.exp_name = ''
+        self.parent.exp_list_params = {}
+        self.parent.exp_list_params['total_tickets'] = 0
+        self.parent.exp_list_params['total_tasks'] = 0
 
     def on_value_got(self, value):
         """
@@ -632,6 +705,8 @@ class NewAnn(QDialog):
         self.application_status = 'stop'
         self.button_after_combination()
         self.ui.progress_bar_mapping.setValue(0)
+
+        self.set_up_parent_init_values()
 
     def button_cancel_map_weights_clicked(self):
         """

@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QWidget
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib.pyplot as plt
 from manager.service import w2r, r2w, v2d, a2v
+from manager.service.converters import quantization
 from gui.src import show_warning_messagebox, open_file_dialog
 from gui.windows.snapshot import Snapshot
 
@@ -74,7 +75,16 @@ class Math(QWidget):
     result: list
     voltages: list
     empty_table: list
+    mode: str
 
+    temp_current_weights = None
+    temp_current_weights_scaled = None
+    temp_goal_weights = None
+    temp_input_array_source = None
+    temp_matmul_crossbar_results = None
+    temp_matmul_crossbar_results_scaled = None
+
+    mask_weights = None
     current_weights = None
     current_weights_scaled = None
     goal_weights = None
@@ -87,17 +97,22 @@ class Math(QWidget):
     input_array_scaled = None
     input_array_source = None
     vol_comp: int # ограничитель напряжения
+    is_quintisation_on = False
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, mode=str) -> None:
         super().__init__(parent)
         self.parent = parent
+        self.mode = mode
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
         self.ui.setWindowFlags(Qt.Window)
+        if self.mode == "no_crossbar":
+            self.ui.tabwidget_mode.setTabEnabled(1, False)
         # self.setModal(True)
         self.ui.text_voltage.setEnabled(False)
         self.ui.button_apply.setEnabled(False)
+        self.ui.button_undo_quantisation.setEnabled(False)
         self.result = [] # результат умножения
         self.voltages = [] # напряжения
         # обработка кнопок
@@ -115,7 +130,8 @@ class Math(QWidget):
         self.ui.spinbox_max_input.setEnabled(False)
         self.ui.spinbox_max_weight.setEnabled(False)
         self.ui.spinbox_new_weight.valueChanged.connect(self.update_label_target_resistance)
-        self.ui.spinbox_correction.valueChanged.connect(self.update_output_with_correction)
+        self.ui.spinbox_correction_a.valueChanged.connect(self.update_output_with_correction)
+        self.ui.spinbox_correction_b.valueChanged.connect(self.update_output_with_correction)
         self.ui.checkbox_correction.stateChanged.connect(self.update_output_with_correction)
         # обновление лейблов
         self.update_label_cell_info()
@@ -139,6 +155,7 @@ class Math(QWidget):
         self.ui.button_save_error_weights.clicked.connect(lambda: save_as_array_to_csv(self, self.error_weights))
         self.ui.button_heatmap_error_weights.clicked.connect(lambda: self.show_snapshot(self.error_weights))
         self.ui.button_histogram_error_weights_matrix.clicked.connect(lambda: self.array_to_vector(self.error_weights))
+        self.ui.button_heatmap_mask_weights_matrix.clicked.connect(lambda: snapshot(self.mask_weights))
         # кнопки работы с данными
         self.ui.input_data_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.input_data_voltage_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -162,7 +179,12 @@ class Math(QWidget):
         self.ui.button_goal_weights_from_current.clicked.connect(self.copy_goal_weights_from_current)
         self.ui.button_histogram_numbers.clicked.connect(lambda: self.array_to_vector(self.input_array_source))
         self.ui.button_histogram_voltage.clicked.connect(lambda: self.array_to_vector(self.input_array_scaled))
+        self.ui.button_masking.clicked.connect(self.apply_mask)
+        self.ui.button_reset_mask.clicked.connect(self.reset_mask)
+        self.ui.button_do_quantisation.clicked.connect(self.do_quantize)
+        self.ui.button_undo_quantisation.clicked.connect(self.undo_quantize)
         self.read_current_weights_matrix()
+        self.fill_table_mask_with_ones()
 
     def update_label_weight_info(self):
         """
@@ -177,6 +199,16 @@ class Math(QWidget):
         self.predict_output_data()
         self.update_output_mvm_result()
         self.calculate_matmul_error()
+
+    def fill_table_mask_with_ones(self):
+        """
+        Заполнение маски единицами
+        """
+        self.mask_weights = np.ones_like(self.current_weights, dtype=int)
+        self.fill_table(self.ui.table_mask,
+                        self.mask_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
 
     def copy_goal_weights_from_current(self):
         """
@@ -211,6 +243,8 @@ class Math(QWidget):
         self.activate_spinboxes()
         # Обновить входы и расчетные веса
         self.update_all_data()
+        if type(self.mask_weights) is list:
+            self.masking()
 
 ## кнопки работы с весами
 
@@ -398,6 +432,7 @@ class Math(QWidget):
         Сгенерировать случайные входные данные
         """
         self.input_array_source = np.random.uniform(0, self.ui.spinbox_max.value(), size=(self.ui.spinbox_amount.value(), self.parent.man.row_num))
+        #self.input_array_source[:,16:] = 0
         self.update_voltages_array()
         self.update_summary_data() # обновление сводки
 
@@ -407,6 +442,7 @@ class Math(QWidget):
         """
         if (not self.input_array_source is None) and (not self.goal_weights is None):
             self.matmul_etalon_results = self.input_array_source @ self.goal_weights
+            print(self.matmul_etalon_results)
             self.fill_table(self.ui.etalon_output_table,
                             self.matmul_etalon_results,
                             self.matmul_etalon_results.shape[0],
@@ -431,15 +467,17 @@ class Math(QWidget):
         """
         if (not self.matmul_etalon_results is None) and (not self.matmul_crossbar_results is None):
             plt.clf()
-            correction = 1
-            if self.ui.checkbox_correction.isChecked():
-                correction = self.ui.spinbox_correction.value()
+            # correction_a = 1
+            # correction_b = 0
+            # if self.ui.checkbox_correction.isChecked():
+            #     correction_a = self.ui.spinbox_correction_a.value()
+            #     correction_b = self.ui.spinbox_correction_b.value()
             source_flatten = self.matmul_etalon_results.flatten()
-            if self.ui.combo_postprocess.currentText() == 'scaling':
-                target_flatten = self.matmul_crossbar_results.flatten() * correction * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
-            elif self.ui.combo_postprocess.currentText() == 'нет':
-                target_flatten = self.matmul_crossbar_results.flatten() * correction
-            
+            # if self.ui.combo_postprocess.currentText() == 'scaling':
+            #     target_flatten = self.matmul_crossbar_results.flatten() * correction * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
+            # elif self.ui.combo_postprocess.currentText() == 'нет':
+            #     target_flatten = self.matmul_crossbar_results.flatten() * correction
+            target_flatten = self.matmul_crossbar_results_scaled.flatten()
             indices = np.argsort(source_flatten)
             
             plt.plot(source_flatten[indices], target_flatten[indices], 'o', label='real')
@@ -459,10 +497,12 @@ class Math(QWidget):
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled
             elif self.ui.combo_postprocess.currentText() == 'нет':
-                correction = 1
-                if self.ui.checkbox_correction.isChecked():
-                    correction = self.ui.spinbox_correction.value()
-                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results * correction
+                # correction_a = 1
+                # correction_b = 0
+                # if self.ui.checkbox_correction.isChecked():
+                #     correction_a = self.ui.spinbox_correction_a.value()
+                #     correction_b = self.ui.spinbox_correction_b.value()
+                self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled # (self.matmul_crossbar_results * correction_a + correction_b)
             self.fill_table(self.ui.error_output_table,
                             self.matmul_error_results,
                             self.matmul_error_results.shape[0],
@@ -477,7 +517,7 @@ class Math(QWidget):
         # заполнение данными
         for i in range(row_count):
             for j in range(column_count):
-                table.setItem(i,j, QTableWidgetItem(str(round(data[i][j],4))))
+                table.setItem(i,j, QTableWidgetItem(str(round(data[i][j],8))))
         table.setHorizontalHeaderLabels([str(i) for i in range(column_count)])
         table.setVerticalHeaderLabels([str(i) for i in range(row_count)])
 
@@ -544,6 +584,8 @@ class Math(QWidget):
             self.predict_output_data()
             self.update_output_mvm_result()
             self.calculate_matmul_error()
+            if type(self.mask_weights) is list:
+                self.masking()
 
     def update_voltages_array(self):
         """
@@ -633,6 +675,215 @@ class Math(QWidget):
         except ZeroDivisionError:
             pass
 
+    def apply_mask(self):
+        """
+        Применение маски с выбором
+        """
+        self.get_mask_file()
+        self.masking()
+
+    def get_mask_file(self):
+        """
+        Получить маску из файла
+        """
+        # если есть файл в настройках
+        is_correct = False
+        if self.parent.man.get_meta_info()["writable_cells"] != '':
+            is_correct, cells = self.parent.is_writable_cells_file_correct(None)
+        else:   # выбрать файл вручную
+            file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
+            is_correct, cells = self.parent.is_writable_cells_file_correct(file_path)
+        
+        if is_correct:
+            self.mask_weights = [[0 for j in range(self.parent.man.col_num)] for i in range(self.parent.man.row_num)]
+            for i in range(len(cells)):
+                self.mask_weights[int(cells[i][1])][int(cells[i][0])] = 1
+
+    def masking(self):
+        """
+        Маскировать
+        """
+        # применение маски
+        # заполнение таблицы маски
+        self.fill_table(self.ui.table_mask,
+                        self.mask_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        # бэкапы весов
+        self.temp_current_weights = deepcopy(self.current_weights)
+        self.temp_current_weights_scaled = deepcopy(self.current_weights_scaled)
+        self.temp_goal_weights = deepcopy(self.goal_weights)
+
+        # маскировка весов
+        for i in range(len(self.mask_weights)):
+            for j in range(len(self.mask_weights[0])):
+                if len(self.current_weights) != 0:
+                    self.current_weights[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
+                if len(self.current_weights_scaled) != 0:
+                    self.current_weights_scaled[i][j] = self.current_weights_scaled[i][j] * self.mask_weights[i][j]
+                if np.any(self.goal_weights):
+                    self.goal_weights[i][j] = self.current_weights[i][j] * self.mask_weights[i][j]
+
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights_scaled,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        elif self.ui.combo_preprocess.currentText() == 'нет':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if np.any(self.goal_weights):
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        # обновление сводки
+        self.update_summary_weights()
+            
+    def reset_mask(self):
+        """
+        Сбросить маску
+        """
+
+        self.fill_table_mask_with_ones()
+        if np.any(self.temp_current_weights):
+            self.current_weights = deepcopy(self.temp_current_weights)
+            self.current_weights_scaled = deepcopy(self.temp_current_weights_scaled)
+            self.goal_weights = deepcopy(self.temp_goal_weights)
+            self.temp_current_weights = None
+            self.temp_current_weights_scaled = None
+            self.temp_goal_weights = None
+
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights_scaled,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        elif self.ui.combo_preprocess.currentText() == 'нет':
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if np.any(self.goal_weights):
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        # обновление сводки
+        self.update_summary_weights()
+
+    def do_quantize(self):
+        """
+        Квантизация
+        """
+        # получение значений из спинбоксов
+        weights_int = int(self.ui.spinbox_weights.value())
+        data_int = int(self.ui.spinbox_data.value())
+
+        # сохранение матриц
+        self.temp_current_weights = deepcopy(self.current_weights)
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.temp_current_weights_scaled = deepcopy(self.current_weights_scaled)
+        if self.goal_weights is not None:
+            self.temp_goal_weights = deepcopy(self.goal_weights)
+        if self.input_array_source is not None:
+            self.temp_input_appay_source = deepcopy(self.input_array_source)
+
+        # применение квантизации
+        self.current_weights = quantization(data = self.current_weights, bit_depth = weights_int, states = 4)
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.current_weights_scaled = quantization(data = self.current_weights_scaled, bit_depth = weights_int, states = 4)
+        if self.goal_weights is not None:
+            self.goal_weights = quantization(data = self.goal_weights, bit_depth = weights_int, states = 4)
+        if self.input_array_source is not None:
+            self.input_array_source = quantization(data = self.input_array_source, bit_depth = data_int, states = 8)
+
+        # запись в таблицы
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                            self.current_weights_scaled,
+                            self.parent.man.row_num,
+                            self.parent.man.col_num)
+        else:
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if self.goal_weights is not None:
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        if self.input_array_source is not None:
+            self.fill_table(self.ui.input_data_table,
+                                self.input_array_source,
+                                self.input_array_source.shape[0],
+                                self.input_array_source.shape[1])
+
+        self.is_quintisation_on = True
+        self.ui.button_do_quantisation.setEnabled(False)
+        self.ui.button_undo_quantisation.setEnabled(True)
+
+    def undo_quantize(self):
+        """
+        Деквантизация
+        """
+        # восстановление матриц
+        self.current_weights = deepcopy(self.temp_current_weights)
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.current_weights_scaled = deepcopy(self.temp_current_weights_scaled)
+        if self.temp_goal_weights is not None:
+            self.goal_weights = deepcopy(self.temp_goal_weights)
+        if self.temp_input_array_source is not None:
+            self.input_appay_source = deepcopy(self.temp_input_array_source)
+        if self.is_quintisation_on:
+            if self.ui.combo_postprocess.currentText() == 'scaling' and self.temp_matmul_crossbar_results_scaled is not None:
+                    self.matmul_crossbar_results_scaled = deepcopy(self.temp_matmul_crossbar_results_scaled)
+            else:
+                if self.temp_matmul_crossbar_results is not None:
+                    self.matmul_crossbar_results = deepcopy(self.temp_matmul_crossbar_results)
+
+        # запись в таблицы
+        if self.ui.combo_preprocess.currentText() == 'scaling':
+            self.fill_table(self.table_real_weights,
+                            self.current_weights_scaled,
+                            self.parent.man.row_num,
+                            self.parent.man.col_num)
+        else:
+            self.fill_table(self.table_real_weights,
+                        self.current_weights,
+                        self.parent.man.row_num,
+                        self.parent.man.col_num)
+        if self.goal_weights is not None:
+            self.fill_table(self.ui.table_goal_weights,
+                                self.goal_weights,
+                                self.parent.man.row_num,
+                                self.parent.man.col_num)
+        if self.input_array_source is not None:
+            self.fill_table(self.ui.input_data_table,
+                                self.input_array_source,
+                                self.input_array_source.shape[0],
+                                self.input_array_source.shape[1])
+        
+        if self.is_quintisation_on:
+            if self.ui.combo_postprocess.currentText() == 'scaling'  and self.matmul_crossbar_results_scaled is not None:
+                self.fill_table(self.ui.result_output_table,
+                                self.matmul_crossbar_results_scaled,
+                                self.matmul_crossbar_results_scaled.shape[0],
+                                self.matmul_crossbar_results_scaled.shape[1])
+            else:
+                if self.matmul_crossbar_results is not None:
+                    self.fill_table(self.ui.result_output_table,
+                                    self.matmul_crossbar_results,
+                                    self.matmul_crossbar_results.shape[0],
+                                    self.matmul_crossbar_results.shape[1])
+        
+        self.is_quintisation_on = False
+        self.ui.button_do_quantisation.setEnabled(True)
+        self.ui.button_undo_quantisation.setEnabled(False)
+
     def set_up_init_values(self):
         """
         Init values
@@ -665,6 +916,7 @@ class Math(QWidget):
             self.parent.snapshot_dialog.plot_matrix()
         self.set_up_init_values()
         self.parent.showNormal()
+        self.parent.math_dialog = Math
         event.accept()
 
     def apply_math(self):
@@ -694,7 +946,7 @@ class Math(QWidget):
             self.ui.progress_bar.setMaximum(self.matmul_predicted_results.shape[0]*self.matmul_predicted_results.shape[1])
             self.vol_comp = 3.3
             if self.ui.checkbox_correction.isChecked():
-                self.vol_comp *= self.ui.spinbox_correction.value()
+                self.vol_comp *= self.ui.spinbox_correction_a.value() #todo: ??????? ЧТО ЗА!
             mult_thread = MatMul(parent=self)
             mult_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             mult_thread.value_got.connect(self.on_value_got) # после выполнения
@@ -711,7 +963,7 @@ class Math(QWidget):
             elif self.ui.combo_postprocess.currentText() == 'нет':
                 self.matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results)
             if self.ui.checkbox_correction.isChecked():
-                self.matmul_crossbar_results_scaled *= self.ui.spinbox_correction.value()
+                self.matmul_crossbar_results_scaled = self.matmul_crossbar_results_scaled * self.ui.spinbox_correction_a.value() + self.ui.spinbox_correction_b.value()
             self.fill_table(self.ui.result_output_table,
                             self.matmul_crossbar_results_scaled,
                             self.matmul_crossbar_results_scaled.shape[0],
@@ -751,7 +1003,7 @@ class Math(QWidget):
         self.ui.text_output_data.clear()
         text = ''
         for value in result_for_show:
-            text += str(round(value,4)).replace('.',',') + '\n'
+            text += str(round(value,8)).replace('.',',') + '\n'
         self.ui.text_output_data.appendPlainText(text)
 
     def on_progress_finished(self, _: int) -> None:
@@ -762,6 +1014,22 @@ class Math(QWidget):
             self.fill_output_data()
         if self.tabwidget_mode.currentIndex() == 1:
             self.update_output_mvm_result()
+        if self.is_quintisation_on:
+            result_int = int(self.ui.spinbox_result.value())
+            if self.ui.combo_postprocess.currentText() == 'scaling':
+                self.temp_matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results_scaled)
+                self.matmul_crossbar_results_scaled = quantization(data = self.matmul_crossbar_results_scaled, bit_depth = result_int, states = 8)
+                self.fill_table(self.ui.result_output_table,
+                                self.matmul_crossbar_results_scaled,
+                                self.matmul_crossbar_results_scaled.shape[0],
+                                self.matmul_crossbar_results_scaled.shape[1])
+            else:
+                self.temp_matmul_crossbar_results = deepcopy(self.matmul_crossbar_results)
+                self.matmul_crossbar_results = quantization(data = self.matmul_crossbar_results, bit_depth = result_int, states = 8)
+                self.fill_table(self.ui.result_output_table,
+                                self.matmul_crossbar_results,
+                                self.matmul_crossbar_results.shape[0],
+                                self.matmul_crossbar_results.shape[1])
         self.ui.progress_bar.setValue(0)
         
     def show_snapshot(self, data: list) -> None:
@@ -817,20 +1085,23 @@ class MatMul(QThread):
     count_changed = pyqtSignal(int)
     value_got = pyqtSignal(int)
     progress_finished = pyqtSignal(int)
+    mask: list
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.parent = parent
+        self.mask = np.array(self.parent.mask_weights).T
 
     def run(self):
         """
         Запуск потока умножения
         """
+        #print(self.mask)
         counter = 0
-        for i in range(self.parent.input_array_scaled.shape[0]):
+        for i in range(self.parent.input_array_scaled.shape[0]): #100
             # подготавливаем семпл
-            v_dac = [0 for i in range(32)] # todo: перенести в драйвер
-            # v_dac = [0 for i in range(self.input_array_scaled.shape[1])]
+            # v_dac = [0 for i in range(32)] # todo: перенести в драйвер
+            v_dac = [0 for i in range(self.parent.input_array_scaled.shape[1])]
             for h in range(self.parent.input_array_scaled.shape[1]):
                 if self.parent.input_array_scaled[i][h] > 0.3:
                     v_dac[h] = v2d(self.parent.parent.man.dac_bit,
@@ -841,13 +1112,21 @@ class MatMul(QThread):
                                 self.parent.parent.man.vol_ref_dac,
                                 self.parent.input_array_scaled[i][h])
             # проходим по всем строкам кроссбара
-            for j in range(self.parent.parent.man.col_num):
+            for j in range(self.parent.parent.man.col_num): #8
                 if self.parent.matmul_predicted_results[i][j] < self.parent.vol_comp:
+                    # маскирование v_adc
+                    v_dac_current = deepcopy(v_dac)
+                    # наложение на v dac 8-ми разных масок
+                    print(v_dac_current)
+                    for z in range(self.parent.parent.man.row_num):
+                        if self.mask[j][z] == 0:
+                            v_dac_current[z] = 0
                     task = {'mode_flag': 10,
-                            'vol': v_dac,
+                            'vol': v_dac_current,
                             'id': 0,
                             'wl': j}
                     v_adc, _ = self.parent.parent.man.conn.impact(task)
+                    #print(v_adc)
                 else:
                     v_adc = 0
                 self.parent.matmul_crossbar_results[i][j] = a2v(self.parent.parent.man.gain,
