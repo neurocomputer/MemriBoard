@@ -468,6 +468,10 @@ class ApplyExp(QThread):
         """
         Запуск потока посылки тикета
         """
+        if self.parent.parent.man.conn.board_type in ['VISA',]:
+            on_VISA = True
+        else:
+            on_VISA = False  # Flag for VISA instruments
         for item in self.parent.coordinates:
             # todo: подобный функционал должен быть в manager
             if self.parent.parent.man.ap_config['board']['cc_type'] == 'soft':
@@ -626,15 +630,12 @@ class ApplyExp(QThread):
                 #print("Весь цикл:", time.time()-start_time_loop)
                 # закрываем файл результата
                 result_file.close()
+                # Пытаемся остановить эксперимент на VISA-устройстве 
+                if on_VISA and self.need_stop:
+                    self.parent.parent.man.conn.impact({'mode_flag': 'panic', 'wl': item[0], 'bl': item[1], 'id': 0})     
                 # сохраняем в БД статус завершения
                 if result:
-                    last_resistance = int(a2r(self.parent.parent.man.gain,
-                                              self.parent.parent.man.res_load,
-                                              self.parent.parent.man.vol_read,
-                                              self.parent.parent.man.adc_bit,
-                                              self.parent.parent.man.vol_ref_adc,
-                                              self.parent.parent.man.res_switches,
-                                              result[0]))
+                    last_resistance = int(resistance_previous)  # Если результат есть, то сопротивление уже посчитали на последнем шаге цикла
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_info"))
@@ -681,5 +682,7 @@ class ApplyExp(QThread):
             if self.need_stop:
                 break
             #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
+        if on_VISA:  # Отключаем все ячейки в кроссбаре от источника
+            self.parent.parent.man.conn.impact({'mode_flag': 'standby', 'wl': item[0], 'bl': item[1], 'id': 0})          
         self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
         #time.sleep(self.PAUSE_TIME)
