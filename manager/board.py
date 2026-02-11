@@ -138,6 +138,14 @@ class Connector():
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
+            # Для VISA-инструментов
+            elif self.board_type == 'CID_1T1R_32x8':
+                try:
+                    from MemriCORE.RRAM_VISA_Drivers.CID_1T1R_32x8 import CID_1T1R_32x8_driver # pylint: disable=C0415
+                    self.interface = CID_1T1R_32x8_driver()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
         return open_flag
 
     def close_port(self) -> bool:

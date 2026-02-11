@@ -558,7 +558,7 @@ class ApplyExp(QThread):
                 result_file.close()
                 # Пытаемся остановить эксперимент на VISA-устройстве 
                 if on_VISA and self.need_stop:
-                    self.parent.parent.man.conn.impact({'mode_flag': 'panic', 'wl': item[0], 'bl': item[1], 'id': 0})     
+                    self.parent.parent.man.conn.impact({'mode_flag': 'panic', 'id': 0})     
                 # сохраняем в БД статус завершения
                 if result:
                     last_resistance = int(resistance_previous)  # Если результат есть, то сопротивление уже посчитали на последнем шаге цикла
@@ -609,6 +609,6 @@ class ApplyExp(QThread):
                 break
             #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
         if on_VISA:  # Отключаем все ячейки в кроссбаре от источника
-            self.parent.parent.man.conn.impact({'mode_flag': 'standby', 'wl': item[0], 'bl': item[1], 'id': 0})          
+            self.parent.parent.man.conn.impact({'mode_flag': 'standby', 'id': 0})          
         self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
         #time.sleep(self.PAUSE_TIME)
