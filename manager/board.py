@@ -396,6 +396,8 @@ class Connector():
                                                 adc_bit = int(self.config['board']['adc_bit']),
                                                 vol_ref_adc = float(self.config['board']['vol_ref_adc'])
                                                 ), task_id)
+            else: 
+                res = None
             if not self.silent:
                 self.logger.info('Send %s', str(task['mode_flag']))
             time.sleep(1/1000)
