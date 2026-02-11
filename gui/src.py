@@ -5,7 +5,8 @@
 # pylint: disable=E0611
 
 import csv
-import matplotlib.pyplot as plt
+import pandas as pd  # TODO: add to requirements + xlsxwriter for save_xlsx
+import json
 from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog
 
 def show_warning_messagebox(message: str) -> None:
@@ -95,12 +96,56 @@ def write_csv_data(fpath, header, coordinates):
         file_wr.writerow(header)
         for item in coordinates:
             file_wr.writerow(item)
+    
+    
+# Methods for saving matrix in different formats
 
-def snapshot(data) -> None:
-    """
-    Картинка с кнопки снимок
-    """
-    plt.clf()
-    if data is not None:
-        plt.imshow(data)
-        plt.show()
+def save_matrix_text_format(filename: str, data: list, sep: int = '\t') -> None:
+    """Save matrix in a text document where sep is the column separator"""
+    with open(filename, 'w') as file:
+        file.write(f'   {sep}' + sep.join([f'WL{i}' for  i in range(len(data[0]))]) + '\n')
+        for j, row in enumerate(data):
+            file.write(f'BL{j}{sep}' + sep.join(map(str, row)) + '\n')
+  
+
+def save_matrix_txt(filename: str, data: list) -> None:
+    """Save matrix as txt"""
+    save_matrix_text_format(filename, data, sep='\t')  
+  
+    
+def save_matrix_csv(filename: str, data: list) -> None:
+    """Save matrix as csv"""
+    save_matrix_text_format(filename, data, sep=',')
+    
+    
+def save_matrix_json(filename: str, data: list) -> None:
+    """Save matrix as json"""
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4)
+    
+    
+def save_matrix_xlsx(filename: str, data: list) -> None:
+    """Save matrix as csv"""
+    n_rows = len(data)  # bl
+    n_cols = len(data[0])  # wl
+    d = [[None] * n_cols] * n_rows
+    df = pd.DataFrame(data=d, index = [str(i + 1) for i in range(n_rows)], 
+                    columns = [str(i + 1) for i in range(n_cols)])
+    writer = pd.ExcelWriter(filename, engine='xlsxwriter')
+    df.to_excel(writer, sheet_name='Sheet1')
+    workbook  = writer.book
+    worksheet = writer.sheets['Sheet1']
+    centered_format = workbook.add_format({'valign': "center", 
+                                            'align': "center"})
+    for i in range(n_rows + 1):
+        worksheet.set_row(i, 20)
+        if i != 0:
+            worksheet.write(i, 0, f'BL {i - 1}', centered_format)
+    worksheet.set_column(0, n_cols, 7)
+    for i in range(1, n_cols + 1):
+        worksheet.write(0, i, f'WL {i - 1}', centered_format)
+    
+    for i, row in enumerate(data):
+            for j, col in enumerate(row):
+                 worksheet.write(i + 1, j + 1, col, centered_format)
+    writer.close()

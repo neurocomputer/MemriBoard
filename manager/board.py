@@ -138,6 +138,13 @@ class Connector():
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
+            elif self.board_type == 'rp5_rram_python':
+                try:
+                    import RRAMPiDriver.ReRAMPiDrv as driver
+                    self.interface = driver.RPI_modes_RRAM()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
         return open_flag
 
     def close_port(self) -> bool:
@@ -160,7 +167,7 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -239,7 +246,7 @@ class Connector():
                         rec_data = str(rx, 'utf-8').strip().split(',')
                     except ValueError:
                         pass
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 send_flag = True
                 rec_data = ['raspberry pi 5']
             elif self.board_type == 'elbear_nano':
@@ -309,7 +316,7 @@ class Connector():
                             pass
                         pass
                     if status: break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
                     adc = self.interface.mode_7(task['vol'],
@@ -334,6 +341,7 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             # можно добавить работу с другими платами
+            # time.sleep(55/1000)
         # режим симулятор
         elif self.cb_type == 'simulator':
             task_id = task["id"]
@@ -428,7 +436,7 @@ class Connector():
                     attempts -= 1
                     if attempts == 0:
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
