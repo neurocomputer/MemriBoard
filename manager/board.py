@@ -654,6 +654,10 @@ class Connector():
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
+            elif self.board_type in ['VISA']:
+                # todo: пока не реализован
+                time.sleep(timeout)
+                res = (0, 0)
         # режим симулятор
         elif self.cb_type == 'simulator':
             time.sleep(timeout)
