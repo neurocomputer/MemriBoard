@@ -8,7 +8,6 @@ import logging
 from copy import deepcopy
 from configparser import ConfigParser
 from logging import Logger
-from manager.menu import menu
 from manager.model.db import DBOperate
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
@@ -31,7 +30,6 @@ class Application():
     res_switches: float # сопротивление переключателей
     gain: int # усиление
     sum_gain: int # сопротивление ОС
-    menu: dict # меню режимов
     board_type: str # тип платы
     connected_port: str # com порт
     db: DBOperate
@@ -62,7 +60,6 @@ class Application():
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки
-        self.menu = menu
         self.db = DBOperate(parent=self)
         status_db_connect = self.db.db_connect('app.__init__()')
         if not status_db_connect:

@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
 from gui.src import show_choose_window, show_warning_messagebox
+from manager.menu import get_menu
 
 class ConnectDialog(QDialog):
     """
@@ -156,7 +157,8 @@ class ConnectDialog(QDialog):
                       'elbear_nano',
                       'rp5_rram_python',
                       'rp5_rram_c',
-                      'VISA']
+                      'VISA',
+                      'VISA_test']
         try:
             last_board = self.parent.man.ap_config["board"]["board_type"]
             if last_board:
@@ -233,6 +235,7 @@ class ConnectDialog(QDialog):
         if status: # если в базе есть данные по чипу
             combo_board_type = self.ui.combo_board_type.currentText()
             self.parent.man.board_type = combo_board_type
+            self.parent.man.menu = get_menu(combo_board_type) # todo: просится отдельная функция в manager
             if self.parent.man.cb_type != 'simulator':
                 # попытка подключения
                 if combo_board_type == 'offline':

@@ -5,6 +5,7 @@
 # pylint: disable=no-name-in-module
 
 import time
+import random
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
@@ -138,6 +139,13 @@ class Connector():
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
+            elif self.board_type == 'VISA_test':
+                try:
+                    from visa_driver import VISA_driver
+                    self.interface = VISA_driver()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
         return open_flag
 
     def close_port(self) -> bool:
@@ -160,7 +168,7 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'VISA_test']:
                 # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -333,6 +341,9 @@ class Connector():
                                                     task['wl'],
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
+            elif self.board_type in ['VISA_test', ]:
+                print(task)
+                res = (random.randint(20, 10000), 0)
             # можно добавить работу с другими платами
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -396,6 +407,8 @@ class Connector():
                                                 adc_bit = int(self.config['board']['adc_bit']),
                                                 vol_ref_adc = float(self.config['board']['vol_ref_adc'])
                                                 ), task_id)
+            else:
+                res = (1, task_id) # для других запросов
             if not self.silent:
                 self.logger.info('Send %s', str(task['mode_flag']))
             time.sleep(1/1000)
