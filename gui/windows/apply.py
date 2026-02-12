@@ -50,6 +50,11 @@ class Apply(QWidget):
         """
         super().__init__(parent)
         self.parent = parent
+        # Флаг для VISA-инструментов
+        if self.parent.man.conn.board_type in ['VISA',]:
+            self.on_VISA = True
+        else:
+            self.on_VISA = False
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
@@ -248,6 +253,8 @@ class Apply(QWidget):
         """
         Блокировка кнопок
         """
+        if self.on_VISA:
+            flags[2] = True  # Блокировка кнопки Пауза для VISA-инструментов
         self.ui.button_start.setDisabled(flags[0])
         self.ui.button_graph_settings.setDisabled(flags[1])
         self.ui.button_pause.setDisabled(flags[2])
@@ -435,13 +442,9 @@ class ApplyExp(QThread):
         """
         Запуск потока посылки тикета
         """
-        if self.parent.parent.man.conn.board_type in ['VISA',]:
-            on_VISA = True
-        else:
-            on_VISA = False  # Flag for VISA instruments
         for item in self.parent.coordinates:
             # todo: подобный функционал должен быть в manager
-            if on_VISA:
+            if self.parent.on_VISA:
                 # Подключаем нужную ячейку
                 self.parent.parent.man.conn.impact({'mode_flag': 'connect_cell', 'wl': item[0], 'bl': item[1], 'id': 0})
             else:
@@ -514,7 +517,7 @@ class ApplyExp(QThread):
                             break
                     # посылаем задачу в плату
                     # start_time_iter = time.time()
-                    if on_VISA:
+                    if self.parent.on_VISA:
                         soft_cc_reached = False  # Soft cc flag for current task
                     else:
                         # прогнозируем ток
@@ -545,7 +548,7 @@ class ApplyExp(QThread):
                             # проверка прерывания тикета
                             interrupt = task[1](result)
                             if interrupt:
-                                if on_VISA:  # Прерываем эксперимент на инструменте
+                                if self.parent.on_VISA:  # Прерываем эксперимент на инструменте
                                     self.parent.parent.man.conn.impact({'mode_flag': 'interrupt', 'wl': item[0], 'bl': item[1], 'id': 0})
                                 break
                     else:
@@ -557,7 +560,7 @@ class ApplyExp(QThread):
                 # закрываем файл результата
                 result_file.close()
                 # Пытаемся остановить эксперимент на VISA-устройстве 
-                if on_VISA and self.need_stop:
+                if self.parent.on_VISA and self.need_stop:
                     self.parent.parent.man.conn.impact({'mode_flag': 'panic', 'id': 0})     
                 # сохраняем в БД статус завершения
                 if result:
@@ -608,7 +611,7 @@ class ApplyExp(QThread):
             if self.need_stop:
                 break
             #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
-        if on_VISA:  # Отключаем все ячейки в кроссбаре от источника
+        if self.parent.on_VISA:  # Отключаем все ячейки в кроссбаре от источника
             self.parent.parent.man.conn.impact({'mode_flag': 'standby', 'id': 0})          
         self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
         #time.sleep(self.PAUSE_TIME)

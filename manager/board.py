@@ -384,7 +384,8 @@ class Connector():
                     res = 0
                 elif task['mode_flag'] in ['ticket_end', 'interrupt']:  
                     # Сброс SMU в конце тикета или при срабатывании терминатора
-                    flag = self.interface.clear_instruments()
+                    flag = self.interface.clear_instruments()  
+                    # TODO Проработать, чтобы не прерывал если не получили все данные
                     if not flag:
                         self.logger.critical('Could not clear instruments!')
                     res = 0
