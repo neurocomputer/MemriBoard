@@ -139,10 +139,15 @@ class Connector():
                 except ModuleNotFoundError:
                     pass
             # Для VISA-инструментов
-            elif self.board_type == 'CID_1T1R_32x8':
+            elif self.board_type == 'VISA':
                 try:
                     from MemriCORE.RRAM_VISA_Drivers.CID_1T1R_32x8 import CID_1T1R_32x8_driver # pylint: disable=C0415
-                    self.interface = CID_1T1R_32x8_driver()
+                    self.interface = CID_1T1R_32x8_driver(  # TODO fix addresses
+                        B2902B_1_address = None, 
+                        B2902B_2_address = None, 
+                        Switch_address = None,
+                        VISA_library_path = ''
+                    )
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
@@ -171,6 +176,15 @@ class Connector():
             elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
                 # todo: может нужно что-то еще
                 close_flag = True
+            # Для VISA-инструментов
+            elif self.board_type in ['VISA']:
+                flag, response = self.interface.disconnect()
+                if flag:
+                    self.logger.info('VISA-instruments disconnected')
+                    close_flag = False
+                else:
+                    self.logger.critical(f'Failed to disconnect VISA-instruments: {response}')
+                    close_flag = True
         return close_flag
 
     def push(self, send_data: str) -> bool:
@@ -254,6 +268,9 @@ class Connector():
                 send_flag = True
                 rec_data = ['elbear_nano']
                 # todo: добавить служебную инфу в драйвер
+            elif self.board_type in ['VISA']:
+                send_flag = True
+                rec_data = self.interface.get_tech_data()
         # режим симулятор
         elif self.cb_type == 'simulator':
             send_flag = True
@@ -341,6 +358,48 @@ class Connector():
                                                     task['wl'],
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
+            elif self.board_type in ['VISA']:  # Работа с VISA-инструментами
+                if not isinstance(task['mode_flag'], str):
+                    self.logger.critical('Wrong task for VISA-driver!')
+                    res = 0
+                elif task['mode_flag'] == 'panic':
+                    # Что-то пошло не так, пытаемся всё выключить
+                    self.logger.critical('VISA instruments: Panic!')
+                    flag, response = self.interface.panic()
+                    if flag:
+                        self.logger.info('Panic resolved')
+                    else:
+                        self.logger.critical(f'Panic was not resolved!: {response}')
+                elif task['mode_flag'].startswith('config'):
+                    # Отправка конфигурации на инструменты
+                    response = self.interface.config(task)
+                    if not self.silent:
+                        self.logger.info(response)
+                    res = 0
+                    # TODO сброс количества полученных сопротивлений (это не точно)
+                elif task['mode_flag'] == 'sense':
+                    # Читаем данные в процессе эксперимента
+                    r_array = self.interface.sense()
+                    # TODO получение res на основании массива
+                    res = 0
+                elif task['mode_flag'] in ['ticket_end', 'interrupt']:  
+                    # Сброс SMU в конце тикета или при срабатывании терминатора
+                    flag = self.interface.clear_instruments()
+                    if not flag:
+                        self.logger.critical('Could not clear instruments!')
+                    res = 0
+                elif task['mode_flag'] == 'connect_cell':
+                    # Подлкючение ячейки кроссбара, нумерация wl и bl начинается с 0
+                    response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
+                    if not self.silent:
+                        self.logger.info(response)
+                    res = 0
+                elif task['mode_flag'] == 'standby':
+                    # Переход в режим ожидания эксперимента
+                    response = self.interface.standby()
+                    if not self.silent:
+                        self.logger.info(response)
+                    res = 0  
             # можно добавить работу с другими платами
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -439,6 +498,10 @@ class Connector():
                     if attempts == 0:
                         break
             elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+                # todo: пока не реализован
+                time.sleep(timeout)
+                res = (0, 0)
+            elif self.board_type in ['VISA']:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
