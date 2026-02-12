@@ -97,8 +97,6 @@ class Manager(Application):
             self.cb_type = chip_data[3]
             # внесения изменений в БД в новых версиях
             # добавление поля last_resistance в таблицу Experiments
-            _ = self.db.add_column_if_not_exist('Experiments', 'last_resistance', 'INTEGER')
-            _ = self.db.add_column_if_not_exist('Experiments', 'meta_info', 'BLOB')
         return status, chip_data
 
     def add_chip(self,

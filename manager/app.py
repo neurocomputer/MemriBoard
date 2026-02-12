@@ -35,7 +35,6 @@ class Application():
     board_type: str # тип платы
     connected_port: str # com порт
     db: DBOperate
-    status_db_connect: bool
     backup: str
     writable_cells: str
     lock_board_type: bool
@@ -64,10 +63,6 @@ class Application():
         # другие нужные подготовки
         self.menu = menu
         self.db = DBOperate(parent=self)
-        status_db_connect = self.db.db_connect('app.__init__()')
-        if not status_db_connect:
-            assert 0 # нет подключения к БД
-        self.db.db_disconnect('app.__init__()')
 
     def read_settings(self) -> None:
         """

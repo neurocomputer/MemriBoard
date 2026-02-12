@@ -117,46 +117,6 @@ class DBOperate():
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в подключении к базе: {e}")
 
-    # БОЛЬШЕ НЕ НУЖНО
-    def check_connect(self):
-        try:
-            self.db_connection.cursor()
-            return True
-        except Exception as ex:
-            return False
-
-    # БОЛЬШЕ НЕ НУЖНО
-    def db_connect(self, func_name):
-        """
-        Подключиться к БД
-        """
-        status = False
-        try:
-            self.db_connection = sqlite3.connect(DB_PATH) # выполняется подключение к базе данных
-            #self.db_connection.execute("PRAGMA journal_mode = WAL")
-            #self.db_connection.execute("PRAGMA busy_timeout = 5000")
-            #self.db_connection.execute("PRAGMA synchronous = NORMAL")
-            self.db_cursor = self.db_connection.cursor() # позволяет выполнять SQLite-запросы
-            self.parent.db_logger.info(f"Cоединение с базой открыто! ({func_name})")
-            status = True
-        except Exception as ex:
-            self.parent.db_logger.critical(f"Ошибка при подключении к БД: {ex}! ({func_name})")
-        return status
-
-    # БОЛЬШЕ НЕ НУЖНО
-    def db_disconnect(self, func_name):
-        """
-        Отключение от БД
-        """
-        if self.check_connect():
-            self.db_connection.close() # закрываем соединение
-            status = True
-            self.parent.db_logger.info(f"Соединение с базой закрыто! ({func_name})")
-        else:
-            status = False
-            self.parent.db_logger.warning(f"Закрыть не удалось! ({func_name})")
-        return status
-    
     # ФУНКЦИОНАЛ РАБОТЫ С БАЗОЙ
 
     def get_memristor_id(self, wl: int, bl: int, crossbar_id: int):
@@ -193,7 +153,7 @@ class DBOperate():
         experiment_id = 0
         try:
             with Session(self.engine) as session:
-                datestamp = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+                datestamp = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
                 new_experiment = Experiments(
                     datestamp=datestamp,
                     name=name,
@@ -235,7 +195,7 @@ class DBOperate():
         status = False
         try:
             with Session(self.engine) as session:
-                datestamp = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+                datestamp = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
                 ticket_name = ticket['name']
                 ticket_data = pickle.dumps(ticket)
                 new_ticket = Tickets(
@@ -515,8 +475,8 @@ class DBOperate():
         try:
             with Session(self.engine) as session:
                 output = select(
-                    Memristors.wl,
                     Memristors.bl,
+                    Memristors.wl,
                     Memristors.last_resistance
                 ).where(Memristors.crossbar_id == crossbar_id)
                 resistances = session.execute(output).fetchall()
@@ -740,26 +700,6 @@ class DBOperate():
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_cb_info: {e}")
             return False, []
-
-    def add_column_if_not_exist(self, table_name, column_name, column_type):
-        """
-        Добавить столбец если не существует
-        """
-        try:
-            with Session(self.engine) as session:
-                inspector = sqla.inspect(self.engine)
-                for column in inspector.get_columns(table_name):
-                    if column['name'] == column_name:
-                        return False
-                # если не существует
-                session.execute(
-                    sqla.text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}')
-                )
-                session.commit()
-                return True
-        except Exception as e:
-            self.parent.db_logger.critical(f'Ошибка в add_column_if_not_exist:{e}')
-            return False
         
     def get_last_experiment(self):
         """
