@@ -533,6 +533,10 @@ class ApplyExp(QThread):
                         # Для VISA impact может вернуть лист [result1, result2, ...]. Для других res = result = (resistance, id)
                         # Учитываем, что с оборудования может прийти сразу несколько точек.
                         if res: # Если данные пришли
+                            if isinstance(res, str):   
+                                if res == 'bad_config':  # Прерываем эксперимент, если не удалось послать конфигурацию
+                                    self.need_stop = True
+                                    break
                             if not isinstance(res, list):
                                 res = [res]
                             for result in res:

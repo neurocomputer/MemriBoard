@@ -141,7 +141,7 @@ class Connector():
             # Для VISA-инструментов
             elif self.board_type == 'VISA':
                 try:
-                    from MemriCORE.RRAM_VISA_Drivers.CID_1T1R_32x8 import CID_1T1R_32x8_driver # pylint: disable=C0415
+                    from RRAM_VISA_Drivers import CID_1T1R_32x8_driver # pylint: disable=C0415
                     self.interface = CID_1T1R_32x8_driver(  # TODO fix addresses
                         B2902B_1_address = None, 
                         B2902B_2_address = None, 
@@ -370,18 +370,34 @@ class Connector():
                         self.logger.info('Panic resolved')
                     else:
                         self.logger.critical(f'Panic was not resolved!: {response}')
-                elif task['mode_flag'].startswith('config'):
-                    # Отправка конфигурации на инструменты
-                    response = self.interface.config(task)
-                    if not self.silent:
-                        self.logger.info(response)
-                    res = 0
-                    # TODO сброс количества полученных сопротивлений (это не точно)
                 elif task['mode_flag'] == 'sense':
                     # Читаем данные в процессе эксперимента
                     r_array = self.interface.sense()
                     # TODO получение res на основании массива
                     res = 0
+                elif task['mode_flag'] == 'config_iv_dc':
+                    # Отправка конфигурации на инструменты
+                    sweep_side = 'BL' if task['sign'] else 'NL'
+                    flag, response = self.interface.config_iv_dc(
+                        trigger_interval = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
+                        v_start = d2v(int(self.config['board']['dac_bit']), 
+                                      float(self.config['board']['vol_ref_dac']), task['v_start']), 
+                        v_stop = d2v(int(self.config['board']['dac_bit']), 
+                                     float(self.config['board']['vol_ref_dac']), task['v_stop']),
+                        n_points = task['n_points'],
+                        double = task['double'],
+                        current_compliance = task['current_compliance'],
+                        sweep_side = sweep_side
+                    )
+                    if flag:
+                        if not self.silent:
+                            self.logger.info(response)
+                        res = 0
+                    else:
+                        # Останавливаем эксперимент
+                        self.logger.critical(f'Could not configure instruments: {response}')
+                        res = 'bad_config'
+                    # TODO сброс количества полученных сопротивлений (это не точно)
                 elif task['mode_flag'] in ['ticket_end', 'interrupt']:  
                     # Сброс SMU в конце тикета или при срабатывании терминатора
                     flag = self.interface.clear_instruments()  

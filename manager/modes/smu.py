@@ -99,7 +99,8 @@ def get_smu_iv_dc(
                                'v_start': v_arrays[dir][0],
                                'v_stop': v_arrays[dir][-1],
                                'n_points': n_points[dir],
-                               'double': double[dir]}
+                               'double': double[dir],
+                               'current_compliance': params[f'{dir}_soft_cc']}
                 if 'wl' in params and 'bl' in params:
                     config_data['wl'] = params['wl']
                     config_data['bl'] = params['bl']
