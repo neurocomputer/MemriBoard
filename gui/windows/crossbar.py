@@ -199,7 +199,7 @@ class Window(QMainWindow):
         if self.math_dialog is Math:
             mode = ''
             if self.man.cb_type == "real":
-                if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c']:
+                if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c', 'rp5_rram_elbear_nano']:
                     mode = "no_crossbar"
                 if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
                     mode = "normal"
