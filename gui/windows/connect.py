@@ -137,6 +137,7 @@ class ConnectDialog(QDialog):
                       'rp5_fpga_python',
                       'rp5_fpga_c',
                       'elbear_nano',
+                      'rp5_rram_elbear_nano',
                       'rp5_rram_python',
                       'rp5_rram_c']
         try:
@@ -164,7 +165,7 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
-        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano']:
+        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano']:
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
@@ -221,7 +222,7 @@ class ConnectDialog(QDialog):
                     self.parent.ui.button_math.setEnabled(False)
                     self.accept_connet()
                 else:
-                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano']:
+                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano']:
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
                     else:
                         connected_flag = self.parent.man.connect()
