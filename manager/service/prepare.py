@@ -6,7 +6,7 @@
 
 import os
 from manager.service.global_settings import SETTINGS_PATH, DB_PATH, RESULTS_PATH
-from manager.model.src import create_empty_db
+from manager.model.db import create_empty_db
 from manager.service.templates import TEMPLATE_INI
 
 def prepare():

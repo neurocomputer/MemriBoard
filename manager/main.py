@@ -14,9 +14,8 @@ from manager.app import Application
 from manager.board import Connector
 from manager.service.saves import save_list_to_bytearray
 from manager.service import a2r
-from manager.model.src import create_empty_db_crossbar
 from manager.service.global_settings import *
-from manager.model.db import DBOperate
+from manager.model.db import DBOperate, create_empty_db_crossbar
 from simulator.src import create_crossbar_array
 
 class Manager(Application):
@@ -110,6 +109,7 @@ class Manager(Application):
         """
         status_add = False
         status, chip_data = self.db.get_chip_data(serial) # проверка наличия в базе
+        print(status, chip_data)
         if status:
             self.ap_logger.critical('crossbar #%d with serial %s already in db', chip_data[0], serial)
         else:

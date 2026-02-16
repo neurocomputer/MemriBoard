@@ -7,9 +7,10 @@ import datetime
 import sqlite3
 import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
+from sqlalchemy.exc import SQLAlchemyError, NoResultFound, MultipleResultsFound
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from manager.service.global_settings import DB_PATH
 
 # pylint: disable=C0103,W0718
@@ -29,6 +30,11 @@ class Crossbars(Base):
     wl: Mapped[int] = mapped_column(Integer, nullable=False)
     cb_type: Mapped[str] = mapped_column(String, nullable=False)
 
+    memristors: Mapped[List['Memristors']] = relationship(
+        back_populates='crossbar', 
+        cascade='all, delete-orphan'
+    )
+
     # для удобства отладки
     def __repr__(self):
         return f"<Crossbar(id={self.id}, serial='{self.serial}', {self.bl}x{self.wl})>"
@@ -47,6 +53,12 @@ class Memristors(Base):
         ForeignKey('crossbars.id', ondelete="CASCADE"),
         nullable=False,
         index=True
+    )
+
+    crossbar: Mapped['Crossbars'] = relationship(back_populates='memristors')
+    experiments: Mapped[List['Experiments']] = relationship(
+        back_populates='memristor',
+        cascade='all, delete-orphan'
     )
     
     # для удобства отладки
@@ -71,6 +83,12 @@ class Experiments(Base):
         nullable=False,
         index=True
     )
+
+    memristor: Mapped['Memristors'] = relationship(back_populates='experiments')
+    tickets: Mapped[List['Tickets']] = relationship(
+        back_populates='experiment',
+        cascade='all, delete-orphan'
+    )
     
     # для удобства отладки
     def __repr__(self):
@@ -94,17 +112,94 @@ class Tickets(Base):
         index=True
     )
     
+    experiment: Mapped['Experiments'] = relationship(back_populates='tickets')
+
     # для удобства отладки
     def __repr__(self):
         return f"<Ticket(id={self.id}, name='{self.ticket_name}', status={self.status})>"
+    
+def create_empty_db(db_path):
+    """
+    Создание пустой базы данных
+    """
+    try:
+        engine = sqla.create_engine(f'sqlite:///{db_path}')
+        with engine.connect() as conn:
+            pass
+        print('Создана пустая база данных')
+    except Exception as e:
+        print(f"Ошибка при создании пустой базы данных: {e}")
+        return False
+    return True
+
+def create_empty_db_crossbar(db_path,
+                             serial="ННГУ-1_для_отладки",
+                             comment="Кроссбар 32х8 1T1R",
+                             bl_num=32,
+                             wl_num=8,
+                             cb_type='simulator'):
+    """
+    Создание таблиц и их заполнение
+    """
+    status = False
+    crossbar_id = 0
+    
+    try:
+        session = None
+
+        engine = sqla.create_engine(f'sqlite:///{db_path}')
+        Base.metadata.create_all(engine)
+        print("Все таблицы созданы")
+        
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        print("База данных создана и успешно подключена к SQLAlchemy")
+
+        existing = session.query(Crossbars).filter_by(serial=serial).first()
+        if existing:
+            print(f"Кроссбар с серийным номером '{serial}' уже существует (id={existing.id})")
+            return True, existing.id
+        
+        new_crossbar = Crossbars(
+            serial=serial,
+            comment=comment,
+            bl=bl_num,
+            wl=wl_num,
+            cb_type=cb_type
+        )
+        
+        session.add(new_crossbar)
+        session.flush()
+        crossbar_id = new_crossbar.id
+        print("Таблица Crossbars создана и заполнена")
+        
+        memristors = [
+            Memristors(bl=i, wl=j, last_resistance=0, crossbar_id=crossbar_id)
+            for i in range(bl_num)
+            for j in range(wl_num)
+        ]
+        session.add_all(memristors)
+        session.commit()
+        print("Таблица Memristors создана и заполнена")
+        
+        # Таблица Experiments создается автоматически через create_all()
+        # Таблица Tickets создается автоматически через create_all()
+        
+        status = True
+    except SQLAlchemyError as error:
+        print("Ошибка при подключении к базе данных:", error)
+        session.rollback()
+    except Exception as e:
+        print(f"Неожиданная ошибка: {e}")
+    finally:
+        if session:
+            session.close()
+    return status, crossbar_id
     
 class DBOperate():
     """
     Методы работы с базой
     """
-    db_cursor = None
-    db_connection = None
-    
     engine = None
 
     def __init__(self, parent):
@@ -136,10 +231,10 @@ class DBOperate():
                 memristor_id = session.scalars(output).one()
                 status = True
                 return status, memristor_id
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Мемристор не найден: wl={wl}, bl={bl}, crossbar={crossbar_id}")
             return False, 0
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Найдено несколько мемристоров: wl={wl}, bl={bl}, crossbar={crossbar_id}")
             return False, 0
         except Exception as e:
@@ -290,10 +385,10 @@ class DBOperate():
                 chip_data = session.execute(output).all()[0]
                 status = True
                 return status, chip_data
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Кроссбар не найден: serial='{serial}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько кроссбаров с serial='{serial}'")
             return False, []
         except Exception as e:
@@ -311,9 +406,9 @@ class DBOperate():
                 output = select(Crossbars.serial)
                 cb_list = session.scalars(output).all()
                 status = True
-                return status, cb_list
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в get_cb_list: {e}")
+        return status, cb_list
 
     def get_cb_list_cb_type(self, cb_type):
         """
@@ -327,10 +422,10 @@ class DBOperate():
                 cb_list = session.execute(output).all()
                 status = True
                 return status, cb_list
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Кроссбар не найден: cb_type='{cb_type}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько кроссбаров с cb_type='{cb_type}'")
             return False, []
         except Exception as e:
@@ -350,10 +445,10 @@ class DBOperate():
                 exp_name = session.scalars(output).one()
                 status = True
                 return status, exp_name
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Имя эксперимента не найдено: experiment_id='{experiment_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько экспериментов с experiment_id='{experiment_id}'")
             return False, []
         except Exception as e:
@@ -377,7 +472,7 @@ class DBOperate():
                 history = session.execute(output).fetchall()
             status = True
             return status, history
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Эксперимент не найден: id='{experiment_id}'")
             return False, []
         except Exception as e:
@@ -402,7 +497,7 @@ class DBOperate():
                 history = session.execute(output).fetchall()
             status = True
             return status, history
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Эксперимент не найден: memristor_id='{memristor_id}'")
             return False, []
         except Exception as e:
@@ -435,7 +530,7 @@ class DBOperate():
                 history = session.execute(output).fetchall()
             status = True
             return status, history
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Кроссбар не найден: crossbar_id='{crossbar_id}'")
             return False, []
         except Exception as e:
@@ -456,10 +551,10 @@ class DBOperate():
                 resistance = session.scalars(output).one()
                 status = True
                 return status, resistance
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
             return False, []
         except Exception as e:
@@ -482,7 +577,7 @@ class DBOperate():
                 resistances = session.execute(output).fetchall()
             status = True
             return status, resistances
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Кроссбар не найден: crossbar_id='{crossbar_id}'")
             return False, []
         except Exception as e:
@@ -503,10 +598,10 @@ class DBOperate():
                 img = session.scalars(output).one()
                 status = True
                 return status, img
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Рисунок не найден: experiment_id='{experiment_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько рисунков с experiment_id='{experiment_id}'")
             return False, []
         except Exception as e:
@@ -527,7 +622,7 @@ class DBOperate():
                 ticket = session.execute(output).fetchall()
             status = True
             return status, ticket
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Тикет не найден: experiment_id='{experiment_id}'")
             return False, []
         except Exception as e:
@@ -548,10 +643,10 @@ class DBOperate():
                 ticket = session.scalars(output).one()
                 status = True
                 return status, ticket
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Тикет не найден: ticket_id='{ticket_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько тикетов с ticket_id='{ticket_id}'")
             return False, []
         except Exception as e:
@@ -572,10 +667,10 @@ class DBOperate():
                 serial = session.scalars(output).one()
                 status = True
                 return status, serial
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Кроссбар не найден: crossbar_id='{crossbar_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько кроссбаров с crossbar_id='{crossbar_id}'")
             return False, []
         except Exception as e:
@@ -596,10 +691,10 @@ class DBOperate():
                 mem_id = session.scalars(output).one()
                 status = True
                 return status, mem_id
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Эксперимент не найден: experiment_id='{experiment_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько экспериментов с experiment_id='{experiment_id}'")
             return False, []
         except Exception as e:
@@ -620,10 +715,10 @@ class DBOperate():
                 crb_id = session.scalars(output).one()
                 status = True
                 return status, crb_id
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
             return False, []
         except Exception as e:
@@ -644,10 +739,10 @@ class DBOperate():
                 wl = session.scalars(output).one()
                 status = True
                 return status, wl
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
             return False, []
         except Exception as e:
@@ -668,10 +763,10 @@ class DBOperate():
                 bl = session.scalars(output).one()
                 status = True
                 return status, bl
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Мемристор не найден: memristor_id='{memristor_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько мемристоров с memristor_id='{memristor_id}'")
             return False, []
         except Exception as e:
@@ -713,10 +808,10 @@ class DBOperate():
                 last = session.execute(output).scalar()
                 status = True
                 return status, last
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning("Эксперимент не найден")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error("Найдено несколько экмпериментов")
             return False, []
         except Exception as e:
@@ -737,10 +832,10 @@ class DBOperate():
                 blob = session.scalars(output).one()
                 status = True
                 return status, blob
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Тикет не найден: ticket_id='{ticket_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько тикетов с ticket_id='{ticket_id}'")
             return False, []
         except Exception as e:
@@ -761,10 +856,10 @@ class DBOperate():
                 meta_info = session.scalars(output).one()
                 status = True
                 return status, meta_info
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Эксперимент не найден: experiment_id='{experiment_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько экспериментов с experiment_id='{experiment_id}'")
             return False, []
         except Exception as e:
@@ -785,10 +880,10 @@ class DBOperate():
                 experiment_id = session.scalars(output).one()
                 status = True
                 return status, experiment_id
-        except sqla.exc.NoResultFound:
+        except NoResultFound:
             self.parent.db_logger.warning(f"Тикет не найден: ticket_id='{ticket_id}'")
             return False, []
-        except sqla.exc.MultipleResultsFound:
+        except MultipleResultsFound:
             self.parent.db_logger.error(f"Несколько тикетов с ticket_id='{ticket_id}'")
             return False, []
         except Exception as e:
