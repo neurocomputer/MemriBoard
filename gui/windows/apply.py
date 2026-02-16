@@ -50,11 +50,6 @@ class Apply(QWidget):
         """
         super().__init__(parent)
         self.parent = parent
-        # Флаг для VISA-инструментов
-        if self.parent.man.conn.board_type in ['VISA',]:
-            self.on_VISA = True
-        else:
-            self.on_VISA = False
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # доп настройки
@@ -253,8 +248,6 @@ class Apply(QWidget):
         """
         Блокировка кнопок
         """
-        if self.on_VISA:
-            flags[2] = True  # Блокировка кнопки Пауза для VISA-инструментов
         self.ui.button_start.setDisabled(flags[0])
         self.ui.button_graph_settings.setDisabled(flags[1])
         self.ui.button_pause.setDisabled(flags[2])
@@ -444,29 +437,25 @@ class ApplyExp(QThread):
         """
         for item in self.parent.coordinates:
             # todo: подобный функционал должен быть в manager
-            if self.parent.on_VISA:
-                # Подключаем нужную ячейку
-                self.parent.parent.man.conn.impact({'mode_flag': 'connect_cell', 'wl': item[0], 'bl': item[1], 'id': 0})
-            else:
-                # читаем перед экспериментом
-                resistance_previous = self.parent.parent.read_cell(item[0], # wl
-                                                                item[1]) # bl
-                # проверка проблем с АЦП
-                current_adc = r2a(self.parent.parent.man.gain,
-                                self.parent.parent.man.res_load,
-                                self.parent.parent.man.vol_read,
-                                self.parent.parent.man.adc_bit,
-                                self.parent.parent.man.vol_ref_adc,
-                                self.parent.parent.man.res_switches,
-                                resistance_previous)
-                adc_vol = a2v(self.parent.parent.man.gain,
-                            self.parent.parent.man.adc_bit,
-                            self.parent.parent.man.vol_ref_adc,
-                            current_adc)
-                if adc_vol > 3.5: # todo: вынести 3.5 в константы
-                    self.need_stop = True
-                    stop_reason = 3 # высокое напряжение на АЦП
-                    break
+            # читаем перед экспериментом
+            resistance_previous = self.parent.parent.read_cell(item[0], # wl
+                                                               item[1]) # bl
+            # проверка проблем с АЦП
+            current_adc = r2a(self.parent.parent.man.gain,
+                              self.parent.parent.man.res_load,
+                              self.parent.parent.man.vol_read,
+                              self.parent.parent.man.adc_bit,
+                              self.parent.parent.man.vol_ref_adc,
+                              self.parent.parent.man.res_switches,
+                              resistance_previous)
+            adc_vol = a2v(self.parent.parent.man.gain,
+                          self.parent.parent.man.adc_bit,
+                          self.parent.parent.man.vol_ref_adc,
+                          current_adc)
+            if adc_vol > 3.5: # todo: вынести 3.5 в константы
+                self.need_stop = True
+                stop_reason = 3 # высокое напряжение на АЦП
+                break
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
             status, memristor_id = self.parent.parent.man.db.get_memristor_id(item[0], # wl
@@ -516,30 +505,21 @@ class ApplyExp(QThread):
                         if self.need_stop:
                             break
                     # посылаем задачу в плату
-                    # start_time_iter = time.time()
-                    if self.parent.on_VISA:
-                        soft_cc_reached = False  # Soft cc flag for current task
-                    else:
-                        # прогнозируем ток
-                        if resistance_previous == 0:
-                            resistance_previous = 0.00000001 # чтобы исключить деление на 0
-                        current_predict = d2v(self.parent.parent.man.dac_bit, self.parent.parent.man.vol_ref_dac, task[0]['vol']) / resistance_previous
-                        soft_cc_reached = not ((task[0]['sign'] == 0 and current_predict <= ticket['params']['dir_soft_cc']) or 
-                                               (task[0]['sign'] == 1 and current_predict <= ticket['params']['rev_soft_cc']))
-                    if not soft_cc_reached:
-                        #print(task[1])
-                        res = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id)
-                        # учет выполнения
-                        # Для VISA impact может вернуть лист [result1, result2, ...]. Для других res = result = (resistance, id)
-                        # Учитываем, что с оборудования может прийти сразу несколько точек.
-                        if res: # Если данные пришли
-                            if isinstance(res, str):   
-                                if res == 'bad_config':  # Прерываем эксперимент, если не удалось послать конфигурацию
-                                    self.need_stop = True
-                                    break
-                            if not isinstance(res, list):
-                                res = [res]
-                            for result in res:
+                    # если задача связана с подачей импульса (mode_7, mode_9) или ее результат нужно сохранить в БД
+                    if task[0]['mode_flag'] in [7, 9]:
+                        allowed = True # проверяем разрешение посылки
+                        # включен программный ограничитель
+                        if ticket['params']['cc_type'] == 0:
+                            # прогнозируем ток
+                            if resistance_previous == 0:
+                                resistance_previous = 0.00000001 # чтобы исключить деление на 0
+                            current_predict = d2v(self.parent.parent.man.dac_bit, self.parent.parent.man.vol_ref_dac, task[0]['vol']) / resistance_previous
+                            if not ((task[0]['sign'] == 0 and current_predict <= ticket['params']['dir_cc']) or (task[0]['sign'] == 1 and current_predict <= ticket['params']['rev_cc'])):
+                                allowed = False # посылка запроса запрещена
+                        if allowed:
+                            result = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id)
+                            # учет выполнения
+                            if result:
                                 self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right},{task[0]['t_ms']},{task[0]['t_us']},{ticket['name']},{ticket['terminate']}")
                                 save_list_to_bytearray(result_file, task[0]['sign'], task[0]['vol'], result[0])
                                 resistance_previous = a2r(self.parent.parent.man.gain,
@@ -549,26 +529,32 @@ class ApplyExp(QThread):
                                                         self.parent.parent.man.vol_ref_adc,
                                                         self.parent.parent.man.res_switches,
                                                         result[0])
-                            # проверка прерывания тикета
-                            interrupt = task[1](result)
-                            if interrupt:
-                                if self.parent.on_VISA:  # Прерываем эксперимент на инструменте
-                                    self.parent.parent.man.conn.impact({'mode_flag': 'interrupt', 'wl': item[0], 'bl': item[1], 'id': 0})
-                                break
+                                # проверка прерывания тикета
+                                interrupt = task[1](result)
+                                if interrupt:
+                                    break
+                        else:
+                            self.flag_soft_cc = 1
+                            self.parent.parent.man.ap_logger.critical("Программное ограничение тока!")
+                    # иначе задача не связана с подачей сигнала
                     else:
-                        self.flag_soft_cc = 1  # Global soft cc flag
-                        self.parent.parent.man.ap_logger.critical("Программное ограничение тока!")
+                        request_status = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id)
+                        if request_status == 0: # запрос не выполнен, прерываем эксперимент
+                            break
                     counter += 1
                     self.count_changed.emit(counter)
                 #print("Весь цикл:", time.time()-start_time_loop)
                 # закрываем файл результата
                 result_file.close()
-                # Пытаемся остановить эксперимент на VISA-устройстве 
-                if self.parent.on_VISA and self.need_stop:
-                    self.parent.parent.man.conn.impact({'mode_flag': 'panic', 'id': 0})     
                 # сохраняем в БД статус завершения
                 if result:
-                    last_resistance = int(resistance_previous)  # Если результат есть, то сопротивление уже посчитали на последнем шаге цикла
+                    last_resistance = int(a2r(self.parent.parent.man.gain,
+                                              self.parent.parent.man.res_load,
+                                              self.parent.parent.man.vol_read,
+                                              self.parent.parent.man.adc_bit,
+                                              self.parent.parent.man.vol_ref_adc,
+                                              self.parent.parent.man.res_switches,
+                                              result[0]))
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно обновить информацию о сопротивлении")
@@ -615,7 +601,5 @@ class ApplyExp(QThread):
             if self.need_stop:
                 break
             #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
-        if self.parent.on_VISA:  # Отключаем все ячейки в кроссбаре от источника
-            self.parent.parent.man.conn.impact({'mode_flag': 'standby', 'id': 0})          
         self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
         #time.sleep(self.PAUSE_TIME)

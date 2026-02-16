@@ -461,7 +461,11 @@ class Window(QMainWindow):
         for task in self.man.menu[ticket['mode']](ticket['params'],
                                                   ticket['terminate'],
                                                   self.man.blank_type):
-            result = self.man.conn.impact(task[0]) # result = (resistance, id)
+            if task[0]['mode_flag'] in [7, 9]:
+                result = self.man.conn.impact(task[0]) # result = (adc, id)
+                print(result)
+            else:
+                request_status = self.man.conn.impact(task[0]) #todo: Предупреждение пользователю
         try:
             last_resistance = int(a2r(self.man.gain,
                                       self.man.res_load,

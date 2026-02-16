@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes._axes import Axes
 from manager.service import d2v
+from manager.menu import get_menu
 
 # pylint: disable=C0103,W0212
 
@@ -60,7 +61,7 @@ def plot_input_signal(parent,
     """
 
     # получаем генератор задач
-    task = parent.menu[ticket['mode']], (ticket['params'],
+    task = get_menu('offline')['std'], (ticket['params'],
                                         ticket['terminate'],
                                         parent.blank_type)
 
@@ -123,7 +124,7 @@ def plot_input_signal_stem(parent,
         count -- счетчик задач
     """
     # получаем генератор задач
-    task = parent.menu[ticket['mode']], (ticket['params'],
+    task = get_menu('offline')['std'], (ticket['params'],
                                         ticket['terminate'],
                                         parent.blank_type)
 
@@ -164,9 +165,12 @@ def plot_with_save(parent,
                    ticket: dict,
                    mode: str,
                    save_path: str = "") -> int:
+    '''
+    Отрисовывает только тикеты std
+    '''
     plt.clf()
     # получаем генератор задач
-    task = parent.menu[ticket['mode']], (ticket['params'],
+    task = get_menu('offline')['std'], (ticket['params'],
                                         ticket['terminate'],
                                         parent.blank_type)
 

@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from gui.src import show_warning_messagebox, show_choose_window, snapshot
 from gui.windows.apply import ApplyExp
 from manager.service import a2r
+from manager.menu import get_menu
 
 def save_binary_string_to_file(binary_str: str, filename: str) -> None:
     """
