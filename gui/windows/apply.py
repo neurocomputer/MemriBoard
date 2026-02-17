@@ -421,6 +421,7 @@ class ApplyExp(QThread):
         # todo: возможно need_pause и need_stop нужно тоже перезаписать на потокобезопасный
         self.need_pause = False # нужна пауза
         self.need_stop = False # нужна остановка
+        self.need_stop_rised = False # необходимость остановки возникала
         self.image_saved = False # рисунок создан и сохранен на диск
 
     def setup_image_saved(self, status):
@@ -498,22 +499,28 @@ class ApplyExp(QThread):
                 task_generator = self.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.man.blank_type)
                 for task in task_generator:
                     if self.need_stop:
-                        task_generator.throw(Exception("need stop"))
+                        task_generator.throw(Exception("need stop 1"))
+                        self.need_stop_rised = True
+                        self.need_stop = False
                         continue
                     if self.need_pause:
                         while self.need_pause:
                             if self.need_stop:
-                                task_generator.throw(Exception("need stop"))
+                                task_generator.throw(Exception("need stop 2"))
+                                self.need_stop_rised = True
+                                self.need_stop = False
                                 continue
                         if self.need_stop:
-                            task_generator.throw(Exception("need stop"))
+                            task_generator.throw(Exception("need stop 3"))
+                            self.need_stop_rised = True
+                            self.need_stop = False
                             continue
                     # посылаем задачу в плату
                     # если задача связана с подачей импульса (mode_7, mode_9) или ее результат нужно сохранить в БД
                     if task[0]['mode_flag'] in [7, 9, 'sense']: # todo: переделать, добавить в таску поле с флагом записи в БД
                         allowed = True # проверяем разрешение посылки
                         # включен программный ограничитель
-                        if ticket['params']['cc_type'] == 0:
+                        if self.parent.parent.man.ap_config['board']['cc_type'] == 'soft':
                             # прогнозируем ток
                             if resistance_previous == 0:
                                 resistance_previous = 0.00000001 # чтобы исключить деление на 0
@@ -586,7 +593,7 @@ class ApplyExp(QThread):
                 #time.sleep(self.PAUSE_TIME)
             #time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
             # сохраняем в БД статус завершения
-            if self.need_stop:
+            if self.need_stop_rised:
                 stop_reason = 2 # прерван
             else:
                 stop_reason = 1 # успешно завершен

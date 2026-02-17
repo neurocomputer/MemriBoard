@@ -68,6 +68,7 @@ def get_smu_iv_dc(
     Yields:
         Generator[list]: _description_
     """
+    interrupt_flag = False
     modes = {'dir': 0,
              'rev': 1}
     terminator = terminators[terminate['type']](terminate['value'])
@@ -165,9 +166,11 @@ def get_smu_iv_dc(
         yield [sense_data, terminator]  # Ticket_end task
     except Exception as ex: # для корректного завершения работы плат
         print(ex)
+        interrupt_flag = True
         yield
+    if interrupt_flag:
         task = {'mode_flag': 'panic', 'id': 0}
-        yield task
+        yield [task, terminator]
     # Отключаем все ячейки в кроссбаре от источника
     task = {'mode_flag': 'standby', 'id': 0}
     yield [task, terminator]
