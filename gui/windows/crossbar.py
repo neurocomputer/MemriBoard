@@ -458,14 +458,15 @@ class Window(QMainWindow):
         _, memristor_id = self.man.db.get_memristor_id(wl, bl, self.man.crossbar_id)
         # _, experiment_id = self.man.db.add_experiment('measure', memristor_id)
         # _, ticket_id = self.man.db.add_ticket(ticket, experiment_id)
-        for task in self.man.menu[ticket['mode']](ticket['params'],
-                                                  ticket['terminate'],
-                                                  self.man.blank_type):
-            if task[0]['mode_flag'] in [7, 9]:
+        task_generator = self.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.man.blank_type)
+        for task in task_generator:
+            if task[0]['mode_flag'] in [7, 9, 'sense']:
                 result = self.man.conn.impact(task[0]) # result = (adc, id)
-                print(result)
             else:
-                request_status = self.man.conn.impact(task[0]) #todo: Предупреждение пользователю
+                request_status = self.man.conn.impact(task[0]) # todo: Предупреждение пользователю
+                if not request_status:
+                    task_generator.throw(Exception("bad request"))
+                    continue
         try:
             last_resistance = int(a2r(self.man.gain,
                                       self.man.res_load,

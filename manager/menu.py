@@ -1,7 +1,7 @@
 """
 Меню режимов
 """
-from manager.modes import get_tst, get_std, get_visa
+from manager.modes import get_tst, get_std, get_smu_iv_dc
 
 def get_menu(board_type):
     '''
@@ -24,6 +24,6 @@ def get_menu(board_type):
             }
     elif board_type in ['VISA', 'VISA_test']:
         menu: dict = {
-                'std': get_visa,
+                'std': get_smu_iv_dc,
             }
     return menu

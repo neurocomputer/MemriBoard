@@ -54,8 +54,8 @@ from typing import Generator
 from manager.terminate import terminators
 
 def get_smu_iv_dc(
-    params: dict, 
-    terminate: dict, 
+    params: dict,
+    terminate: dict,
     blank_type: str
 ) -> Generator[list, None, None]:
     """Генератор для режима SMU_IV_DC.
@@ -71,6 +71,14 @@ def get_smu_iv_dc(
     modes = {'dir': 0,
              'rev': 1}
     terminator = terminators[terminate['type']](terminate['value'])
+
+    # Подключаем нужную ячейку
+    bl = params['bl']
+    wl = params['wl']
+    task = {'mode_flag': 'connect_cell',
+            'wl': wl, 'bl': bl, 'id': 0}
+    yield [task, terminator]
+
     n_points = {}
     v_arrays = {}
     double = {}
@@ -85,43 +93,81 @@ def get_smu_iv_dc(
             double[dir] = True if params[f'v_{dir}_strt_dec'] != 0 else False
         except ZeroDivisionError:
             n_points[dir] = 0
-    for _ in range(params['count']):
-        # порядок dir-rev
-        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
-        for dir in sequence:
-            if n_points[dir] != 0:
-                config_data = {'mode_flag': 'config_iv_dc',
-                               'vol': 0,
-                               't_ms': params[f't_{dir}_msec_inc'],
-                               't_us': params[f't_{dir}_usec_inc'],
-                               'id': params['id'],
-                               'sign': modes[dir],
-                               'v_start': v_arrays[dir][0],
-                               'v_stop': v_arrays[dir][-1],
-                               'n_points': n_points[dir],
-                               'double': double[dir],
-                               'current_compliance': params[f'{dir}_soft_cc']}
-                if 'wl' in params and 'bl' in params:
-                    config_data['wl'] = params['wl']
-                    config_data['bl'] = params['bl']
-                else:
-                    config_data['wl'] = 0
-                    config_data['bl'] = 0
-                yield [config_data, terminator]  # Config task
-                sense_data = {'mode_flag': 'sense',
-                              'vol': 0,
-                              't_ms': params[f't_{dir}_msec_inc'],
-                              't_us': params[f't_{dir}_usec_inc'],
-                              'id': params['id'],
-                              'sign': modes[dir]}
-                for _ in range(params[f'{dir}_inc_countr']):
-                    for vol in v_arrays[dir]:
-                        sense_data['vol'] = abs(int(vol))
-                        yield [sense_data, terminator]  # Sense task
-                    if double[dir]:
-                        for vol in v_arrays[dir][::-1]:
+    try:
+        for _ in range(params['count']):
+            # порядок dir-rev
+            sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+            for dir in sequence:
+                sense_data = {}
+                sense_data['id'] = 0
+                if n_points[dir] != 0:
+                    config_data = {'mode_flag': 'config_iv_dc',
+                                'vol': 0,
+                                't_ms': params[f't_{dir}_msec_inc'],
+                                't_us': params[f't_{dir}_usec_inc'],
+                                'id': params['id'],
+                                'sign': modes[dir],
+                                'v_start': v_arrays[dir][0],
+                                'v_stop': v_arrays[dir][-1],
+                                'n_points': n_points[dir],
+                                'double': double[dir],
+                                'current_compliance': params[f'{dir}_cc']}
+                    if 'wl' in params and 'bl' in params:
+                        config_data['wl'] = params['wl']
+                        config_data['bl'] = params['bl']
+                    else:
+                        config_data['wl'] = 0
+                        config_data['bl'] = 0
+                    yield [config_data, terminator]  # Config task
+                    sense_data = {'mode_flag': 'sense',
+                                'vol': 0,
+                                't_ms': params[f't_{dir}_msec_inc'],
+                                't_us': params[f't_{dir}_usec_inc'],
+                                'id': params['id'],
+                                'sign': modes[dir]}
+                    for _ in range(params[f'{dir}_inc_countr']):
+                        for vol in v_arrays[dir]:
                             sense_data['vol'] = abs(int(vol))
                             yield [sense_data, terminator]  # Sense task
-    sense_data['mode_flag'] = 'ticket_end'
-    sense_data['vol'] = 0
-    yield [sense_data, terminator]  # Ticket_end task
+                        if double[dir]:
+                            for vol in v_arrays[dir][::-1]:
+                                sense_data['vol'] = abs(int(vol))
+                                yield [sense_data, terminator]  # Sense task
+                else: # напряжение не подается, просто мерием сопротивление ячейки
+                    config_data = {'mode_flag': 'config_iv_dc',
+                                'vol': 0,
+                                't_ms': 0,
+                                't_us': 0,
+                                'id': 0,
+                                'sign': 0,
+                                'v_start': 0,
+                                'v_stop': 0,
+                                'n_points': 0,
+                                'double': 0,
+                                'current_compliance': 0}
+                    if 'wl' in params and 'bl' in params:
+                        config_data['wl'] = params['wl']
+                        config_data['bl'] = params['bl']
+                    else:
+                        config_data['wl'] = 0
+                        config_data['bl'] = 0
+                    yield [config_data, terminator]  # Config task
+                    sense_data = {'mode_flag': 'sense',
+                                'vol': 0,
+                                't_ms': 0,
+                                't_us': 0,
+                                'id': 0,
+                                'sign': 0}
+                    yield [sense_data, terminator]  # Sense task
+                    break
+        sense_data['mode_flag'] = 'ticket_end'
+        sense_data['vol'] = 0
+        yield [sense_data, terminator]  # Ticket_end task
+    except Exception as ex: # для корректного завершения работы плат
+        print(ex)
+        yield
+        task = {'mode_flag': 'panic', 'id': 0}
+        yield task
+    # Отключаем все ячейки в кроссбаре от источника
+    task = {'mode_flag': 'standby', 'id': 0}
+    yield [task, terminator]

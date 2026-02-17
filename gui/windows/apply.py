@@ -495,18 +495,22 @@ class ApplyExp(QThread):
                 #start_time_loop = time.time()
                 # инициируем цикл по таскам
                 result = 0
-                for task in self.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.man.blank_type):
+                task_generator = self.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.man.blank_type)
+                for task in task_generator:
                     if self.need_stop:
-                        break
+                        task_generator.throw(Exception("need stop"))
+                        continue
                     if self.need_pause:
                         while self.need_pause:
                             if self.need_stop:
-                                break
+                                task_generator.throw(Exception("need stop"))
+                                continue
                         if self.need_stop:
-                            break
+                            task_generator.throw(Exception("need stop"))
+                            continue
                     # посылаем задачу в плату
                     # если задача связана с подачей импульса (mode_7, mode_9) или ее результат нужно сохранить в БД
-                    if task[0]['mode_flag'] in [7, 9]:
+                    if task[0]['mode_flag'] in [7, 9, 'sense']: # todo: переделать, добавить в таску поле с флагом записи в БД
                         allowed = True # проверяем разрешение посылки
                         # включен программный ограничитель
                         if ticket['params']['cc_type'] == 0:
@@ -532,7 +536,8 @@ class ApplyExp(QThread):
                                 # проверка прерывания тикета
                                 interrupt = task[1](result)
                                 if interrupt:
-                                    break
+                                    task_generator.throw(Exception("interrupt"))
+                                    continue
                         else:
                             self.flag_soft_cc = 1
                             self.parent.parent.man.ap_logger.critical("Программное ограничение тока!")
@@ -540,7 +545,8 @@ class ApplyExp(QThread):
                     else:
                         request_status = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id)
                         if request_status == 0: # запрос не выполнен, прерываем эксперимент
-                            break
+                            task_generator.throw(Exception("bad request"))
+                            continue
                     counter += 1
                     self.count_changed.emit(counter)
                 #print("Весь цикл:", time.time()-start_time_loop)

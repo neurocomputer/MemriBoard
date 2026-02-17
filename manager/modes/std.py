@@ -86,136 +86,139 @@ def get_std(params: dict, terminate: dict, blank_type: str) -> Generator[list, N
         rev_dec = [int(item) for item in rev_dec]
     except ZeroDivisionError:
         rev_dec = [0]
-    for _ in range(params['count']):
-        # порядок dir-rev
-        if not params['reverse']:
-            # инкремент dir
-            data = {'vol': 0,
-                    't_ms': params['t_dir_msec_inc'],
-                    't_us': params['t_dir_usec_inc'],
-                    'id': params['id'],
-                    'sign': modes['dir']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['dir_inc_countr']):
-                for vol in dir_inc:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
-            # декремент dir
-            data = {'vol': 0,
-                    't_ms': params['t_dir_msec_dec'],
-                    't_us': params['t_dir_usec_dec'],
-                    'id': params['id'],
-                    'sign': modes['dir']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['dir_dec_countr']):
-                for vol in dir_dec:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
-            # инкремент rev
-            data = {'vol': 0,
-                    't_ms': params['t_rev_msec_inc'],
-                    't_us': params['t_rev_usec_inc'],
-                    'id': params['id'],
-                    'sign': modes['rev']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['rev_inc_countr']):
-                for vol in rev_inc:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
-            # декремент rev
-            data = {'vol': 0,
-                    't_ms': params['t_rev_msec_dec'],
-                    't_us': params['t_rev_usec_dec'],
-                    'id': params['id'],
-                    'sign': modes['rev']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['rev_dec_countr']):
-                for vol in rev_dec:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
-        # порядок rev-dir
-        else:
-            # инкремент rev
-            data = {'vol': 0,
-                    't_ms': params['t_rev_msec_inc'],
-                    't_us': params['t_rev_usec_inc'],
-                    'id': params['id'],
-                    'sign': modes['rev']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['rev_inc_countr']):
-                for vol in rev_inc:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
-            # декремент rev
-            data = {'vol': 0,
-                    't_ms': params['t_rev_msec_dec'],
-                    't_us': params['t_rev_usec_dec'],
-                    'id': params['id'],
-                    'sign': modes['rev']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['rev_dec_countr']):
-                for vol in rev_dec:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
-            # инкремент dir
-            data = {'vol': 0,
-                    't_ms': params['t_dir_msec_inc'],
-                    't_us': params['t_dir_usec_inc'],
-                    'id': params['id'],
-                    'sign': modes['dir']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['dir_inc_countr']):
-                for vol in dir_inc:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
-            # декремент dir
-            data = {'vol': 0,
-                    't_ms': params['t_dir_msec_dec'],
-                    't_us': params['t_dir_usec_dec'],
-                    'id': params['id'],
-                    'sign': modes['dir']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params['dir_dec_countr']):
-                for vol in dir_dec:
-                    task = []
-                    data['vol'] = abs(vol)
-                    task.append(fill_blank(blanks[blank_type], data))
-                    task.append(terminator)
-                    yield task
+    try:
+        for _ in range(params['count']):
+            # порядок dir-rev
+            if not params['reverse']:
+                # инкремент dir
+                data = {'vol': 0,
+                        't_ms': params['t_dir_msec_inc'],
+                        't_us': params['t_dir_usec_inc'],
+                        'id': params['id'],
+                        'sign': modes['dir']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['dir_inc_countr']):
+                    for vol in dir_inc:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+                # декремент dir
+                data = {'vol': 0,
+                        't_ms': params['t_dir_msec_dec'],
+                        't_us': params['t_dir_usec_dec'],
+                        'id': params['id'],
+                        'sign': modes['dir']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['dir_dec_countr']):
+                    for vol in dir_dec:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+                # инкремент rev
+                data = {'vol': 0,
+                        't_ms': params['t_rev_msec_inc'],
+                        't_us': params['t_rev_usec_inc'],
+                        'id': params['id'],
+                        'sign': modes['rev']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['rev_inc_countr']):
+                    for vol in rev_inc:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+                # декремент rev
+                data = {'vol': 0,
+                        't_ms': params['t_rev_msec_dec'],
+                        't_us': params['t_rev_usec_dec'],
+                        'id': params['id'],
+                        'sign': modes['rev']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['rev_dec_countr']):
+                    for vol in rev_dec:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+            # порядок rev-dir
+            else:
+                # инкремент rev
+                data = {'vol': 0,
+                        't_ms': params['t_rev_msec_inc'],
+                        't_us': params['t_rev_usec_inc'],
+                        'id': params['id'],
+                        'sign': modes['rev']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['rev_inc_countr']):
+                    for vol in rev_inc:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+                # декремент rev
+                data = {'vol': 0,
+                        't_ms': params['t_rev_msec_dec'],
+                        't_us': params['t_rev_usec_dec'],
+                        'id': params['id'],
+                        'sign': modes['rev']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['rev_dec_countr']):
+                    for vol in rev_dec:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+                # инкремент dir
+                data = {'vol': 0,
+                        't_ms': params['t_dir_msec_inc'],
+                        't_us': params['t_dir_usec_inc'],
+                        'id': params['id'],
+                        'sign': modes['dir']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['dir_inc_countr']):
+                    for vol in dir_inc:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+                # декремент dir
+                data = {'vol': 0,
+                        't_ms': params['t_dir_msec_dec'],
+                        't_us': params['t_dir_usec_dec'],
+                        'id': params['id'],
+                        'sign': modes['dir']}
+                if 'wl' in params and 'bl' in params:
+                    data['wl'] = params['wl']
+                    data['bl'] = params['bl']
+                for _ in range(params['dir_dec_countr']):
+                    for vol in dir_dec:
+                        task = []
+                        data['vol'] = abs(vol)
+                        task.append(fill_blank(blanks[blank_type], data))
+                        task.append(terminator)
+                        yield task
+    except Exception as ex: # для корректного завершения работы плат
+        yield

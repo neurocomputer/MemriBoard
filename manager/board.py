@@ -149,6 +149,8 @@ class Connector():
                         Switch_address = None,
                         VISA_library_path = ''
                     )
+                except ModuleNotFoundError:
+                    pass
             elif self.board_type == 'VISA_test':
                 try:
                     from visa_driver import VISA_driver
