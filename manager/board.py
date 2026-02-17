@@ -9,7 +9,7 @@ import random
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
-from manager.service import d2v
+from manager.service import d2v, r2a
 from simulator.src import (load_crossbar_array,
                            send_mode_7_to_crossbar,
                            send_mode_9_to_crossbar,
@@ -380,8 +380,19 @@ class Connector():
                 elif task['mode_flag'] == 'sense':
                     # Читаем данные в процессе эксперимента
                     r_array = self.interface.sense()
-                    # TODO получение res на основании массива
-                    res = 0
+                    res = []
+                    for r in r_array:
+                        adc = r2a(
+                            gain = float(self.config['board']['gain']),
+                            res_load = float(self.config['board']['res_load']),
+                            vol_read = float(self.config['board']['vol_read']),
+                            adc_bit = int(self.config['board']['adc_bit']),
+                            vol_ref_adc = float(self.config['board']['vol_ref_adc']),
+                            res_switches = float(self.config['board']['res_switches']),
+                            res = r
+                        )
+                        res.append((int(adc), task['id'])) 
+                        
                 elif task['mode_flag'] == 'config_iv_dc':
                     # Отправка конфигурации на инструменты
                     sweep_side = 'BL' if task['sign'] else 'NL'
@@ -404,7 +415,6 @@ class Connector():
                         # Останавливаем эксперимент
                         self.logger.critical(f'Could not configure instruments: {response}')
                         res = 'bad_config'
-                    # TODO сброс количества полученных сопротивлений (это не точно)
                 elif task['mode_flag'] in ['ticket_end', 'interrupt']:  
                     # Сброс SMU в конце тикета или при срабатывании терминатора
                     flag = self.interface.clear_instruments()  
@@ -414,9 +424,11 @@ class Connector():
                     res = 0
                 elif task['mode_flag'] == 'connect_cell':
                     # Подлкючение ячейки кроссбара, нумерация wl и bl начинается с 0
-                    response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
-                    if not self.silent:
+                    flag, response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
+                    if flag and not self.silent:
                         self.logger.info(response)
+                    else:
+                        self.logger.critical('Could not connect the cell!')
                     res = 0
                 elif task['mode_flag'] == 'standby':
                     # Переход в режим ожидания эксперимента
