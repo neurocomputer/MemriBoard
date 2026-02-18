@@ -50,14 +50,14 @@ class Application():
         self.ap_log_path = LOG_PATH
         self.ap_logger = logging.getLogger(__name__)
         self.ap_logger.setLevel(logging.WARNING)
-        handler = logging.FileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"])
+        handler = logging.FileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"], encoding='utf-8')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.ap_logger.addHandler(handler)
         # настраиваем логгер базы данных
         self.db_log_path = DB_LOG_PATH
         self.db_logger = logging.getLogger('db_logger')
         self.db_logger.setLevel(logging.WARNING)
-        handler = logging.FileHandler(self.db_log_path, mode=self.ap_config["logging"]["filemode"])
+        handler = logging.FileHandler(self.db_log_path, mode=self.ap_config["logging"]["filemode"], encoding='utf-8')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки
