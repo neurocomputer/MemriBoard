@@ -143,14 +143,20 @@ class Connector():
             elif self.board_type == 'VISA':
                 try:
                     from RRAM_VISA_Drivers import CID_1T1R_32x8_driver # pylint: disable=C0415
+                    A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
+                    B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
+                    switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
                     self.interface = CID_1T1R_32x8_driver(  # TODO fix addresses
-                        B2902B_1_address = None, 
-                        B2902B_2_address = None, 
-                        Switch_address = None,
+                        B2902B_1_address=A_address,
+                        B2902B_2_address=B_address,
+                        Switch_address=switch_address,
                         VISA_library_path = ''
                     )
+                    open_flag = True
                 except ModuleNotFoundError:
                     pass
+                except ConnectionError:
+                    open_flag = False
             elif self.board_type == 'VISA_test':
                 try:
                     from visa_driver import VISA_driver
@@ -366,6 +372,7 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             elif self.board_type in ['VISA']:  # Работа с VISA-инструментами
+                print(task)  # TODO remove
                 if not isinstance(task['mode_flag'], str):
                     self.logger.critical('Wrong task for VISA-driver!')
                     res = 0
@@ -430,6 +437,7 @@ class Connector():
                     if flag and not self.silent:
                         self.logger.info(response)
                     res = int(flag)
+                print(f'res = {res}')
             elif self.board_type in ['VISA_test', ]:
                 print(task)
                 res = (random.randint(20, 10000), 0)
