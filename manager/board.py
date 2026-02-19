@@ -377,22 +377,19 @@ class Connector():
                         self.logger.info('Panic resolved')
                     else:
                         self.logger.critical(f'Panic was not resolved!: {response}')
+                    res = int(flag)
                 elif task['mode_flag'] == 'sense':
                     # Читаем данные в процессе эксперимента
-                    r_array = self.interface.sense()
-                    res = []
-                    for r in r_array:
-                        adc = r2a(
-                            gain = float(self.config['board']['gain']),
-                            res_load = float(self.config['board']['res_load']),
-                            vol_read = float(self.config['board']['vol_read']),
-                            adc_bit = int(self.config['board']['adc_bit']),
-                            vol_ref_adc = float(self.config['board']['vol_ref_adc']),
-                            res_switches = float(self.config['board']['res_switches']),
-                            res = r
-                        )
-                        res.append((int(adc), task['id'])) 
-                        
+                    adc = r2a(
+                        gain = float(self.config['board']['gain']),
+                        res_load = float(self.config['board']['res_load']),
+                        vol_read = float(self.config['board']['vol_read']),
+                        adc_bit = int(self.config['board']['adc_bit']),
+                        vol_ref_adc = float(self.config['board']['vol_ref_adc']),
+                        res_switches = float(self.config['board']['res_switches']),
+                        res = self.interface.sense()
+                    )
+                    res = (int(adc), task['id'])
                 elif task['mode_flag'] == 'config_iv_dc':
                     # Отправка конфигурации на инструменты
                     sweep_side = 'BL' if task['sign'] else 'NL'
@@ -407,21 +404,18 @@ class Connector():
                         current_compliance = task['current_compliance'],
                         sweep_side = sweep_side
                     )
-                    if flag:
-                        if not self.silent:
-                            self.logger.info(response)
-                        res = 0
+                    if flag and not self.silent:
+                        self.logger.info(response)
                     else:
                         # Останавливаем эксперимент
                         self.logger.critical(f'Could not configure instruments: {response}')
-                        res = 'bad_config'
-                elif task['mode_flag'] in ['ticket_end', 'interrupt']:  
+                    res = int(flag)
+                elif task['mode_flag'] == ['interrupt']:  
                     # Сброс SMU в конце тикета или при срабатывании терминатора
                     flag = self.interface.clear_instruments()  
-                    # TODO Проработать, чтобы не прерывал если не получили все данные
                     if not flag:
                         self.logger.critical('Could not clear instruments!')
-                    res = 0
+                    res = int(flag)
                 elif task['mode_flag'] == 'connect_cell':
                     # Подлкючение ячейки кроссбара, нумерация wl и bl начинается с 0
                     flag, response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
@@ -429,16 +423,17 @@ class Connector():
                         self.logger.info(response)
                     else:
                         self.logger.critical('Could not connect the cell!')
-                    res = 0
+                    res = int(flag)
                 elif task['mode_flag'] == 'standby':
                     # Переход в режим ожидания эксперимента
-                    response = self.interface.standby()
-                    if not self.silent:
+                    flag, response = self.interface.standby()
+                    if flag and not self.silent:
                         self.logger.info(response)
-                    res = 0  
+                    res = int(flag)
             elif self.board_type in ['VISA_test', ]:
                 print(task)
                 res = (random.randint(20, 10000), 0)
+                time.sleep(0.2)
             # можно добавить работу с другими платами
         # режим симулятор
         elif self.cb_type == 'simulator':

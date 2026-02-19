@@ -66,7 +66,7 @@ def get_smu_iv_dc(
         blank_type (str): Blank type (blanks.py).
 
     Yields:
-        Generator[list]: _description_
+        Generator[list]: Task generator for smu_iv_dc mode
     """
     interrupt_flag = False
     modes = {'dir': 0,
@@ -80,6 +80,7 @@ def get_smu_iv_dc(
             'wl': wl, 'bl': bl, 'id': 0}
     yield [task, terminator]
 
+    # Рассчитываем параметры
     n_points = {}
     v_arrays = {}
     double = {}
@@ -94,7 +95,9 @@ def get_smu_iv_dc(
             double[dir] = True if params[f'v_{dir}_strt_dec'] != 0 else False
         except ZeroDivisionError:
             n_points[dir] = 0
+            
     try:
+        # Генерация основных тасков
         for _ in range(params['count']):
             # порядок dir-rev
             sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
@@ -134,43 +137,45 @@ def get_smu_iv_dc(
                             for vol in v_arrays[dir][::-1]:
                                 sense_data['vol'] = abs(int(vol))
                                 yield [sense_data, terminator]  # Sense task
-                else: # напряжение не подается, просто мерием сопротивление ячейки
-                    config_data = {'mode_flag': 'config_iv_dc',
-                                'vol': 0,
-                                't_ms': 0,
-                                't_us': 0,
-                                'id': 0,
-                                'sign': 0,
-                                'v_start': 0,
-                                'v_stop': 0,
-                                'n_points': 0,
-                                'double': 0,
-                                'current_compliance': 0}
-                    if 'wl' in params and 'bl' in params:
-                        config_data['wl'] = params['wl']
-                        config_data['bl'] = params['bl']
-                    else:
-                        config_data['wl'] = 0
-                        config_data['bl'] = 0
-                    yield [config_data, terminator]  # Config task
-                    sense_data = {'mode_flag': 'sense',
-                                'vol': 0,
-                                't_ms': 0,
-                                't_us': 0,
-                                'id': 0,
-                                'sign': 0}
-                    yield [sense_data, terminator]  # Sense task
-                    break
-        sense_data['mode_flag'] = 'ticket_end'
-        sense_data['vol'] = 0
-        yield [sense_data, terminator]  # Ticket_end task
+                # else: # напряжение не подается, просто мерием сопротивление ячейки
+                #     config_data = {'mode_flag': 'config_iv_dc',
+                #                 'vol': 0,
+                #                 't_ms': 0,
+                #                 't_us': 0,
+                #                 'id': 0,
+                #                 'sign': 0,
+                #                 'v_start': 0,
+                #                 'v_stop': 0,
+                #                 'n_points': 0,
+                #                 'double': 0,
+                #                 'current_compliance': 0}
+                #     if 'wl' in params and 'bl' in params:
+                #         config_data['wl'] = params['wl']
+                #         config_data['bl'] = params['bl']
+                #     else:
+                #         config_data['wl'] = 0
+                #         config_data['bl'] = 0
+                #     yield [config_data, terminator]  # Config task
+                #     sense_data = {'mode_flag': 'sense',
+                #                 'vol': 0,
+                #                 't_ms': 0,
+                #                 't_us': 0,
+                #                 'id': 0,
+                #                 'sign': 0}
+                #     yield [sense_data, terminator]  # Sense task
+                #     break
     except Exception as ex: # для корректного завершения работы плат
         print(ex)
         interrupt_flag = True
+        exception = ex
         yield
     if interrupt_flag:
-        task = {'mode_flag': 'panic', 'id': 0}
-        yield [task, terminator]
+        if exception == 'interrupt':
+            task = {'mode_flag': 'interrupt', 'id': 0}
+            yield [task, terminator]
+        else:
+            task = {'mode_flag': 'panic', 'id': 0}
+            yield [task, terminator]
     # Отключаем все ячейки в кроссбаре от источника
     task = {'mode_flag': 'standby', 'id': 0}
     yield [task, terminator]
