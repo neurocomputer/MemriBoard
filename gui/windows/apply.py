@@ -250,7 +250,7 @@ class Apply(QWidget):
         """
         self.ui.button_start.setDisabled(flags[0])
         self.ui.button_graph_settings.setDisabled(flags[1])
-        self.ui.button_pause.setDisabled(flags[2])
+        self.ui.button_pause.setDisabled(True)
         self.ui.button_stop.setDisabled(flags[3])
 
     def closeEvent(self, event):
