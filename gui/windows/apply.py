@@ -438,25 +438,10 @@ class ApplyExp(QThread):
         """
         for item in self.parent.coordinates:
             # todo: подобный функционал должен быть в manager
-            # читаем перед экспериментом
-            resistance_previous = self.parent.parent.read_cell(item[0], # wl
-                                                               item[1]) # bl
-            # проверка проблем с АЦП
-            current_adc = r2a(self.parent.parent.man.gain,
-                              self.parent.parent.man.res_load,
-                              self.parent.parent.man.vol_read,
-                              self.parent.parent.man.adc_bit,
-                              self.parent.parent.man.vol_ref_adc,
-                              self.parent.parent.man.res_switches,
-                              resistance_previous)
-            adc_vol = a2v(self.parent.parent.man.gain,
-                          self.parent.parent.man.adc_bit,
-                          self.parent.parent.man.vol_ref_adc,
-                          current_adc)
-            if adc_vol > 3.5: # todo: вынести 3.5 в константы
-                self.need_stop = True
-                stop_reason = 3 # высокое напряжение на АЦП
-                break
+            if self.parent.parent.man.ap_config['board']['cc_type'] == 'soft':
+                # читаем перед экспериментом
+                resistance_previous = self.parent.parent.read_cell(item[0], # wl
+                                                                item[1]) # bl
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
             status, memristor_id = self.parent.parent.man.db.get_memristor_id(item[0], # wl
