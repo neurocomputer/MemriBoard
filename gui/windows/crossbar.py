@@ -609,10 +609,17 @@ class SendTicketAll(QThread):
                 self.ticket["params"]["bl"] = j
                 # временное решение, лучше переписать на потоки
                 _, memristor_id = self.parent.man.db.get_memristor_id(i, j, self.parent.man.crossbar_id)
-                for task in self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
-                                                 self.ticket['terminate'],
-                                                 self.parent.man.blank_type):
-                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                task_generator = self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
+                                                                           self.ticket['terminate'],
+                                                                           self.parent.man.blank_type)
+                for task in task_generator:
+                    if task[0]['mode_flag'] in [7, 9, 'sense']:
+                        result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                    else:
+                        request_status = self.man.conn.impact(task[0]) # todo: Предупреждение пользователю
+                        if not request_status:
+                            task_generator.throw(Exception("bad request"))
+                            continue
                 try:
                     last_resistance = int(a2r(self.parent.man.gain,
                                             self.parent.man.res_load,
