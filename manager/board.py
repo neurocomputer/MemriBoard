@@ -417,7 +417,23 @@ class Connector():
                         # Останавливаем эксперимент
                         self.logger.critical(f'Could not configure instruments: {response}')
                     res = int(flag)
-                elif task['mode_flag'] == ['interrupt']:  
+                elif task['mode_flag'] == 'read':
+                    flag, response = self.interface.config_iv_dc(
+                        trigger_interval = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
+                        v_start = self.config['board']['vol_read'], 
+                        v_stop = self.config['board']['vol_read'],
+                        n_points = 1,
+                        double = False,
+                        current_compliance = task['current_compliance'],
+                        sweep_side = 'BL'
+                    )
+                    if flag and not self.silent:
+                        self.logger.info(response)
+                    else:
+                        # Останавливаем эксперимент
+                        self.logger.critical(f'Could not configure instruments: {response}')
+                    res = int(flag)
+                elif task['mode_flag'] == 'interrupt':  
                     # Сброс SMU в конце тикета или при срабатывании терминатора
                     flag = self.interface.clear_instruments()  
                     if not flag:
