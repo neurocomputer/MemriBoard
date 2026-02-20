@@ -386,17 +386,22 @@ class Connector():
                         self.logger.critical(f'Panic was not resolved!: {response}')
                     res = int(flag)
                 elif task['mode_flag'] == 'sense':
-                    # Читаем данные в процессе эксперимента
-                    adc = r2a(
-                        gain = float(self.config['board']['gain']),
-                        res_load = float(self.config['board']['res_load']),
-                        vol_read = float(self.config['board']['vol_read']),
-                        adc_bit = int(self.config['board']['adc_bit']),
-                        vol_ref_adc = float(self.config['board']['vol_ref_adc']),
-                        res_switches = float(self.config['board']['res_switches']),
-                        res = self.interface.sense()
-                    )
-                    res = (int(adc), task['id'])
+                    sense_data = self.interface.sense()
+                    if isinstance(sense_data, str):
+                        self.logger.critical(f'Sense error: {sense_data}')
+                        res = 0 
+                    else:
+                        # Читаем данные в процессе эксперимента
+                        adc = r2a(
+                            gain = float(self.config['board']['gain']),
+                            res_load = float(self.config['board']['res_load']),
+                            vol_read = float(self.config['board']['vol_read']),
+                            adc_bit = int(self.config['board']['adc_bit']),
+                            vol_ref_adc = float(self.config['board']['vol_ref_adc']),
+                            res_switches = float(self.config['board']['res_switches']),
+                            res = sense_data
+                        )
+                        res = (int(adc), task['id'])
                 elif task['mode_flag'] == 'config_iv_dc':
                     # Отправка конфигурации на инструменты
                     sweep_side = 'BL' if task['sign'] else 'NL'
