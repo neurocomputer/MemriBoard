@@ -113,11 +113,15 @@ class Snapshot(QWidget):
             show_warning_messagebox('Данный формат не поддерживается.')
             return
         try:
+            ext = extention.split('*')[1].split(')')[0]
+            if not filename.endswith(ext):
+                filename += ext
             save_funcs[extention](filename, self.data)
         except PermissionError:
             show_warning_messagebox('Файл занят другой программой.')
         except Exception as e:
             show_warning_messagebox(e)
+        
         
     def safe_close(self) -> None:
         """Closing the window"""
