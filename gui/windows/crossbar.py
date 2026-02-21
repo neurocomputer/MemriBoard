@@ -413,7 +413,6 @@ class Window(QMainWindow):
         try:
             sum_values = np.sum(self.all_resistances)
             log_resistances = np.log10(self.all_resistances)
-            self.snapshot = np.zeros((self.man.row_num, self.man.col_num))
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
