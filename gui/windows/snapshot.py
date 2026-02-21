@@ -28,7 +28,17 @@ class Snapshot(QWidget):
     data: list  # Массив сопротивлений
     fig: Figure
      
-    def __init__(self, parent=None, data=None, mode='resistances') -> None:
+    def __init__(self, parent=None, data: list = None, mode: str = 'resistances') -> None:
+        """Snapshot windown
+
+        Args:
+            parent (optional): Parent class. Defaults to None.
+            data (list, optional): Data to plot (2D list). If data is None, 
+                doesn't plot anything. Defaults to None.
+            mode (str, optional): Snapshot mode: 'resistances' (plotting all resistances),
+                'binary' (binary data from rram window) or 'weights' (for plotting weights 
+                on the Math window). Defaults to 'resistances'.
+        """
         super().__init__()
         self.parent = parent
         self.data = data
