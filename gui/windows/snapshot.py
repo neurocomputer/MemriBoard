@@ -109,11 +109,15 @@ class Snapshot(QWidget):
         except Exception as e:
             show_warning_messagebox(e)
         
-        
-    def closeEvent(self, event) -> None:
+    def safe_close(self) -> None:
         """Closing the window"""
         plt.close(self.fig)
         self.parent.snapshot_dialog = None
+        self.close()
+        
+        
+    def closeEvent(self, event) -> None:
+        self.safe_close()
         
         
     

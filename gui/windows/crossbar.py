@@ -639,7 +639,7 @@ class Window(QMainWindow):
         _ = self.man.db.db_backup(backup)
         # closing snapshot window
         if self.snapshot_dialog is not None:
-            self.snapshot_dialog.closeEvent(None)        
+            self.snapshot_dialog.safe_close() 
         # закрытие программы
         self.man.abort()
         self.man.close()
