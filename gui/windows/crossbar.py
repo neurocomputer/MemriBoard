@@ -602,9 +602,6 @@ class SendTicketAll(QThread):
         """
         Запуск потока посылки тикета
         """
-        # if self.parent.man.board_type == 'VISA_test':
-        #     self.run_VISA()
-        #     return
         counter = 0
         for i in range(self.parent.man.col_num):
             for j in range(self.parent.man.row_num):
@@ -641,21 +638,3 @@ class SendTicketAll(QThread):
                 counter += 1
                 self.count_changed.emit(counter)
         self.progress_finished.emit(counter)
-        
-    def run_VISA(self):
-        """
-        Запуск потока посылки тикета для сканирования сопротивлений на VISA-инструментах (цикл только по тикетам)
-        """
-        counter = 0
-        # Config
-        request_status = self.parent.man.conn.impact({'mode_flag': 'config_read_scan'})
-        if not request_status:
-            self.progress_finished.emit(1)
-            return
-        for wl in range(self.parent.man.col_num):
-            for bl in range(self.parent.man.row_num):
-                _, memristor_id = self.parent.man.db.get_memristor_id(wl, bl, self.parent.man.crossbar_id)
-                self.parrent.conn.impact(task = {'mode_flag': 'connect_cell',
-                                                 'wl': wl, 'bl': bl, 'id': 0})
-                result = self.parent.man.conn.impact({'mode_flag': 'sense'}) 
-                
