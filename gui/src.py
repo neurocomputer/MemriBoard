@@ -115,7 +115,10 @@ def save_matrix_txt(filename: str, data: list) -> None:
     
 def save_matrix_csv(filename: str, data: list) -> None:
     """Save matrix as csv"""
-    save_matrix_text_format(filename, data, sep=',')
+    header = ['   '] + [f'WL{i}' for  i in range(len(data[0]))]
+    for i in range(len(data)):
+        data[i] = [f'BL{i}'] + data[i]
+    write_csv_data(filename, header, data)
     
     
 def save_matrix_json(filename: str, data: list) -> None:
@@ -125,7 +128,7 @@ def save_matrix_json(filename: str, data: list) -> None:
     
     
 def save_matrix_xlsx(filename: str, data: list) -> None:
-    """Save matrix as csv"""
+    """Save matrix as xls or xlsx"""
     n_rows = len(data)  # bl
     n_cols = len(data[0])  # wl
     d = [[None] * n_cols] * n_rows
