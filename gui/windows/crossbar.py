@@ -602,14 +602,18 @@ class SendTicketAll(QThread):
         """
         Запуск потока посылки тикета
         """
-        if self.parent.man.board_type == 'VISA_test':
-            self.run_VISA()
-            return
+        # if self.parent.man.board_type == 'VISA_test':
+        #     self.run_VISA()
+        #     return
         counter = 0
         for i in range(self.parent.man.col_num):
             for j in range(self.parent.man.row_num):
                 self.ticket["params"]["wl"] = i
                 self.ticket["params"]["bl"] = j
+                # Флаг для экспериментов, в которых сканируется весь кроссбар
+                # Добавляется во все тикеты, кроме тикета для последней ячейки
+                if i == self.parent.man.col_num-1 and j == self.parent.man.row_num-1:
+                    self.ticket["params"]["crossbar_scan"] = True
                 # временное решение, лучше переписать на потоки
                 _, memristor_id = self.parent.man.db.get_memristor_id(i, j, self.parent.man.crossbar_id)
                 task_generator = self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
@@ -619,7 +623,7 @@ class SendTicketAll(QThread):
                     if task[0]['mode_flag'] in [7, 9, 'sense']:
                         result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
                     else:
-                        request_status = self.man.conn.impact(task[0]) # todo: Предупреждение пользователю
+                        request_status = self.parent.man.conn.impact(task[0]) # todo: Предупреждение пользователю
                         if not request_status:
                             task_generator.throw(Exception("bad request"))
                             continue

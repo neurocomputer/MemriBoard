@@ -143,9 +143,12 @@ class Connector():
             elif self.board_type == 'VISA':
                 try:
                     from RRAM_VISA_Drivers import CID_1T1R_32x8_driver # pylint: disable=C0415
-                    A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
-                    B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
-                    switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
+                    # A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
+                    # B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
+                    # switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
+                    A_address = None
+                    B_address = None
+                    switch_address = None
                     self.interface = CID_1T1R_32x8_driver(  # TODO fix addresses
                         B2902B_1_address=A_address,
                         B2902B_2_address=B_address,
