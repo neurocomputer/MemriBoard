@@ -72,8 +72,8 @@
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="1">
-                 <widget class="QLineEdit" name="forward_start">
+                <item row="2" column="3">
+                 <widget class="QLineEdit" name="forward_step">
                   <property name="text">
                    <string>0</string>
                   </property>
@@ -169,6 +169,9 @@
                    <string>Огран. Тока</string>
                   </property>
                  </widget>
+                </item>
+                <item row="3" column="4">
+                 <widget class="QSpinBox" name="backward_count"/>
                 </item>
                </layout>
               </item>
