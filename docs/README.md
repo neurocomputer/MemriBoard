@@ -24,7 +24,7 @@
 - Configuration update functionality from settings.ini.
 - Selection of ADC width (10 bits (Arduino ADC) and 14 bits (external ADC, oversampling)).
 - Adjustment of calibration factor.
-- Adjustment of the software current limiter (by predicting the current of the next pulse, based on the data obtained).  
+- Adjustment of the software current limiter (by predicting the current of the next pulse, based on the resistance).  
 ###### Settings window:
 ![Settings window](assets/settings.png)
 
@@ -37,33 +37,26 @@ After connecting, a new crossbar is created in memory, or an existing one is loa
 ##### Main window:
 ![Window](assets/connected.png)
 - RRAM for working with memory.
-- Mathematics for matrix multiplication.
+- Math for matrix multiplication.
 - ANN for working with neural networks.
-- Tests to conduct general crossbar testing.
+- Tests to conduct general crossbar testing with multiple cells.
 - Snapshot contains a crossbar color map.
 - [Settings](#Settings).
-- "Reconnect" allows you to reconnect to the board if the connection is abnormal without restarting the program, or is used to reboot the controller.
 </p>
 
-### Cells operating
+### Working width individual cells
 <p>In addition to the general functionality, it is possible to work with each cell separately. To open the cell menu, double-click on it with the left mouse button.
 
 ###### Crossbar cell Window:
 ![Crossbar_cell](assets/crossbar_cell.png)
 
-The window that opens displays the basic information about the cell, and there is basic functionality for working with it:
+The window that opens displays the basic information about the cell and contains basic functionality for working with it:
 
 
-- "Update" - reading the resistance of the cell.
+- "Update" - read the resistance of the cell.
 - ###### "History"
-    Opens a window displaying all actions performed on the cell.
-    The window is divided into 3 columns:
-    - Cell action.
-    - List of experiments in the selected activity.
-    - Graph of the result of the experiment.
-    - The "Load" button allows you to reload the input data of the experiment for its [repetition](#signal-editing-window).
-    - The "Upload to CSV" button creates a file with each point of the experiment result in the root of the CSV program directory.
-    - Cancel button closes the history window.
+    Opens a window displaying all experiments performed on the cell. By clicking on the experiment you can get it's brief overview ("Brief" tab on the right side of the window) or **export measurement data** to csv ("Full" tab on the right side of the window, then press "Export to csv"). The data is exported separately for each part of the experiment (ticket).
+    In lower left part of the window, you can **load the experiment** to [repeat](#signal-editing-window) it or export the experiment plan as a single ticket.
     ![Cell History Window](assets/history.png)
 - "New experiment" - opens the window for creating an experiment.
 Allows you to create a new experiment with a cell. It is made up of preset signals, it is possible to add your own type of signal, for this you need to press the "New Experiment" button. To add a signal to the experiment, select the signal and click twice with the left mouse button, or click the "Add to Plan" button.
