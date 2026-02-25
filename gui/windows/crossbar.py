@@ -609,8 +609,10 @@ class SendTicketAll(QThread):
                 self.ticket["params"]["bl"] = j
                 # Флаг для экспериментов, в которых сканируется весь кроссбар
                 # Добавляется во все тикеты, кроме тикета для последней ячейки
-                if i == self.parent.man.col_num-1 and j == self.parent.man.row_num-1:
+                if not (i == self.parent.man.col_num-1 and j == self.parent.man.row_num-1):
                     self.ticket["params"]["crossbar_scan"] = True
+                else:
+                    self.ticket["params"]["crossbar_scan"] = False
                 # временное решение, лучше переписать на потоки
                 _, memristor_id = self.parent.man.db.get_memristor_id(i, j, self.parent.man.crossbar_id)
                 task_generator = self.parent.man.menu[self.ticket['mode']](self.ticket['params'],

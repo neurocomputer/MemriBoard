@@ -160,7 +160,6 @@ def get_smu_iv_dc(
             task = {'mode_flag': 'panic', 'id': 0}
             yield [task, terminator]
     # Отключаем все ячейки в кроссбаре от источника
-    if 'crossbar_scan' in params:
-        if params['crossbar_scan']:  # Если сканируем весь кроссбар, то не отключаем
-            task = {'mode_flag': 'standby', 'id': 0}
-            yield [task, terminator]
+    if not ('crossbar_scan' in params and params['crossbar_scan']): # Если сканируем весь кроссбар, то не отключаем
+        task = {'mode_flag': 'standby', 'id': 0}
+        yield [task, terminator]
