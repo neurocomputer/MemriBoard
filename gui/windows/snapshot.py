@@ -28,7 +28,17 @@ class Snapshot(QWidget):
     data: list  # Массив сопротивлений
     fig: Figure
      
-    def __init__(self, parent=None, data=None, mode='resistances') -> None:
+    def __init__(self, parent=None, data: list = None, mode: str = 'resistances') -> None:
+        """Snapshot windown
+
+        Args:
+            parent (optional): Parent class. Defaults to None.
+            data (list, optional): Data to plot (2D list). If data is None, 
+                doesn't plot anything. Defaults to None.
+            mode (str, optional): Snapshot mode: 'resistances' (plotting all resistances),
+                'binary' (binary data from rram window) or 'weights' (for plotting weights 
+                on the Math window). Defaults to 'resistances'.
+        """
         super().__init__()
         self.parent = parent
         self.data = data
@@ -103,6 +113,9 @@ class Snapshot(QWidget):
             show_warning_messagebox('Данный формат не поддерживается.')
             return
         try:
+            ext = extention.split('*')[1].split(')')[0]
+            if not filename.endswith(ext):
+                filename += ext
             save_funcs[extention](filename, self.data)
         except PermissionError:
             show_warning_messagebox('Файл занят другой программой.')
@@ -110,10 +123,15 @@ class Snapshot(QWidget):
             show_warning_messagebox(e)
         
         
-    def closeEvent(self, event) -> None:
+    def safe_close(self) -> None:
         """Closing the window"""
         plt.close(self.fig)
         self.parent.snapshot_dialog = None
+        self.close()
+        
+        
+    def closeEvent(self, event) -> None:
+        self.safe_close()
         
         
     

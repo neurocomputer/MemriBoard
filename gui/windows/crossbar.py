@@ -413,7 +413,6 @@ class Window(QMainWindow):
         try:
             sum_values = np.sum(self.all_resistances)
             log_resistances = np.log10(self.all_resistances)
-            self.snapshot = np.zeros((self.man.row_num, self.man.col_num))
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
@@ -594,7 +593,7 @@ class Window(QMainWindow):
         _ = self.man.db.db_backup(backup)
         # closing snapshot window
         if self.snapshot_dialog is not None:
-            self.snapshot_dialog.closeEvent(None)        
+            self.snapshot_dialog.safe_close() 
         # закрытие программы
         self.man.abort()
         self.man.close()
