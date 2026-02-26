@@ -4,18 +4,17 @@
 
 - [**Product Overview**](#product-overview)
 - [**Connecting the crossbar array**](#connecting-the-crossbar-array)
-    - [Creating new database entry](#creating-a-database-entry-for-new-crossbar-array)
+  - [Creating new database entry](#creating-a-database-entry-for-new-crossbar-array)
     - [Settings](#settings)
 - [**Main window**](#main-window)
 - [**Working with individual cells**](#working-with-individual-cells)
-    - [History window](#history-window)
+  - [History window](#history-window)
 - [**Configuring your experiment**](#configuring-your-experiment)
-    - [Signal editing](#signal-editing-window)
-        - [Standart pulse sequence](#standart-pulse-sequence)
-        - [Terminate condition](#terminate-condition)
+  - [Signal editing](#signal-editing-window)
+    - [Standart pulse sequence](#standart-pulse-sequence)
+    - [Terminate condition](#terminate-condition)
 - [**Applying the experiment**](#applying-the-experiment)
 - [**Testing multiple cells**](#testsing-multiple-cells)
-
 
 <!-- - [Инференс нейросети](#инференс-нейросети)
 - [Демо нейросети](#демо-нейросети)  -->
@@ -59,7 +58,7 @@ Main window has a table which displays resistances of the memory cells. At the t
 - **RRAM** for working with the crossbar array as a memory bank.
 - **Math** for matrix multiplication.
 - **ANN** for working with neural networks (WIP).
-- [**Tests**](#tests) to conduct general crossbar testing on multiple cells.
+- [**Tests**](#testsing-multiple-cells) to conduct general crossbar testing on multiple cells.
 - **Snapshot** shows a color map of the resistances.
 - [**Settings**](#settings).
 
@@ -85,11 +84,11 @@ You can **Load the experiment** to repeat it: [Experiment configuration](#config
 
 ## Configuring your experiment
 
-Experiment configuration window can be opened via [Cell info](#working-with-individual-cells) window or via [Tests](#tests) window.
+Experiment configuration window can be opened via [Cell info](#working-with-individual-cells) window or via [Tests](#testsing-multiple-cells) window.
 
 ![Experiment plan window](assets/new_exp.png)
 
-The window allows you to create a new experiment with a cell. It is made up of tickets &mdash; preset experiments, such as iv-curve, endurance, programming, etc. You can **add** multiple tickets from left side of the window to the experiment plan (**Add to plan** button), or you can create a new ticket (**New** button in the bottom left corner). 
+The window allows you to create a new experiment with a cell. It is made up of tickets &mdash; preset experiments, such as iv-curve, endurance, programming, etc. You can **add** multiple tickets from left side of the window to the experiment plan (**Add to plan** button), or you can create a new ticket (**New** button in the bottom left corner).
 The **Load** button on the right side of the window allows you to load a ticket that was previously applied to one of the cells. All parameters of that ticket will be loaded to the experiment.
 You can also directly **import** tickets from a *.json* file.
 You can enter the experiment **name** in the lower right part of the window.
@@ -157,27 +156,24 @@ The **Testing window** is opened via **Tests** button on the [Main window](#main
 To conduct an experiment on multiple cells, proceed with the following steps:
 
 1. Set the **Path** to the folder where the test results will be saved (**Edit path** button). The results will be automatically exported in that folder during the experiment. Note: it's best to create a new experiment folder for each multicell test.
-
 2. In lower part of the window, in test **Test control** tab, press the **Experiment** button. The [History](#history-window) window will be opened. In it, you choose one of the previously applied experiments and **Load** it to the [Experiment plan](#configuring-your-experiment). When you are finished with configuring the experiment plan, press **Apply to all cells** button.
+3. On the **Testing** window, you can select the cells to which the experiment will be applied, or apply it to all cells in the crossbar array. To specify the cells, create a *.csv* file, following the example below. The file contains two columns which specify volumn (wl) and row (bl) of the cells. Each row of the file should contain coordinates of cells for which the experiment is applied. To load the file, click **Cells** button on the **Testing** window.
+4. To run the rest, click **Run** button. The confirmation window will appear, which displays extimated time of the experiments (The estimation is not correct for some boards, it's work-in-progress). The test will start when you press **Yes** button. The visualization is not provided for this mode, but you can check the progress via the progressbar or by checking the contents of the folder with experiment results.
 
-3. On the **Testing** window, you can select the cells to which the experiment will be applied, or apply it to all cells in the crossbar array. To specify the cells, create a *.csv* file, following this example:
+Example of a file specifying the cells for which the experiment is applied:
 
 ![Cells testing file example](assets/cells_testing_example.png)
 
-The file contains two columns which specify volumn (wl) and row (bl) of the cells. Each row of the file should contain coordinates of cells for which the experiment is applied. To load the file, click **Cells** button on the **Testing** window.
+### Result analysis
 
-4. To run the rest, click **Run** button. The confirmation window will appear, which displays extimated time of the experiments (The estimation is not correct for some boards, it's work-in-progress). The test will start when you press **Yes** button. The visualization is not provided for this mode, but you can check the progress via the progressbar or by checking the contents of the folder with experiment results.
-
-#### Result analysis
-
-After the experiment is done, you can analyse the results: 
+After the experiment is done, you can analyse the results:
 
 1. Open **Result analysis** tab on the **Testing** window.
-2. The program calculates maximum (**Rmax**) and minimum (**Rmin**) resistance recorded during the experiment for each cell. Choose one or several conditions (logical *and* is applied when choosing multiple conditions) for the resistances or their ratio and press **Calculate**. 
+2. The program calculates maximum (**Rmax**) and minimum (**Rmin**) resistance recorded during the experiment for each cell. Choose one or several conditions (logical *and* is applied when choosing multiple conditions) for the resistances or their ratio and press **Calculate**.
 3. The program will calculate the amount of cells that satisfy the conditions.
 4. In the folder with experiment results, a new folder with analysis results will be created. In it, there are lists of good and bad cells (good cells satisfy the condition) and a result map.
 
-#### Visualization
+### Visualization
 
 After the experiment is done, you can automatically generate plots of the results:
 
@@ -186,9 +182,7 @@ After the experiment is done, you can automatically generate plots of the result
 3. Press **Generate plots** button.
 4. In the experiment folder, a new folder with images will be created.
 
-
 <!-- 
 ### Инференс нейросети
-
 
 ### Демо нейросети -->
