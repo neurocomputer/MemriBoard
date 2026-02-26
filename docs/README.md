@@ -3,7 +3,20 @@
 ## Table of contents
 
 - [**Product Overview**](#product-overview)
+- [**Connecting the crossbar array**](#connecting-the-crossbar-array)
+    - [Creating new database entry](#creating-a-database-entry-for-new-crossbar-array)
+    - [Settings](#settings)
+- [**Main window**](#main-window)
 - [**Working with individual cells**](#working-with-individual-cells)
+    - [History window](#history-window)
+- [**Configuring your experiment**](#configuring-your-experiment)
+    - [Signal editing](#signal-editing-window)
+        - [Standart pulse sequence](#standart-pulse-sequence)
+        - [Terminate condition](#terminate-condition)
+- [**Applying the experiment**](#applying-the-experiment)
+- [**Testing multiple cells**](#testsing-multiple-cells)
+
+
 <!-- - [Инференс нейросети](#инференс-нейросети)
 - [Демо нейросети](#демо-нейросети)  -->
 
@@ -144,10 +157,15 @@ The **Testing window** is opened via **Tests** button on the [Main window](#main
 To conduct an experiment on multiple cells, proceed with the following steps:
 
 1. Set the **Path** to the folder where the test results will be saved (**Edit path** button). The results will be automatically exported in that folder during the experiment. Note: it's best to create a new experiment folder for each multicell test.
+
 2. In lower part of the window, in test **Test control** tab, press the **Experiment** button. The [History](#history-window) window will be opened. In it, you choose one of the previously applied experiments and **Load** it to the [Experiment plan](#configuring-your-experiment). When you are finished with configuring the experiment plan, press **Apply to all cells** button.
+
 3. On the **Testing** window, you can select the cells to which the experiment will be applied, or apply it to all cells in the crossbar array. To specify the cells, create a *.csv* file, following this example:
+
 ![Cells testing file example](assets/cells_testing_example.png)
+
 The file contains two columns which specify volumn (wl) and row (bl) of the cells. Each row of the file should contain coordinates of cells for which the experiment is applied. To load the file, click **Cells** button on the **Testing** window.
+
 4. To run the rest, click **Run** button. The confirmation window will appear, which displays extimated time of the experiments (The estimation is not correct for some boards, it's work-in-progress). The test will start when you press **Yes** button. The visualization is not provided for this mode, but you can check the progress via the progressbar or by checking the contents of the folder with experiment results.
 
 #### Result analysis
