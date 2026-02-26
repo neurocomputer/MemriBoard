@@ -43,7 +43,7 @@ def read_csv(file_path, delimiter):
                 else:
                     try:
                         data[keys[i]].append(float(item))
-                    except:
+                    except Exception:
                         data[keys[i]].append(item)
         return copy.deepcopy(data)
 
@@ -576,15 +576,15 @@ class Testing(QWidget):
                     # проверяем условия
                     if self.ui.checkbox_rmin.isChecked():
                         mode = self.ui.combo_rmin_mode.currentText()
-                        if mode is ['More', 'Больше']:
+                        if mode == self.lang_pack.get("more"):
                             case_rmin = min_res > rmin
-                        elif mode is ['Less', 'Меньше']:
+                        elif mode == self.lang_pack.get("less"):
                             case_rmin = min_res < rmin
                     if self.ui.checkbox_rmax.isChecked():
                         mode = self.ui.combo_rmax_mode.currentText()
-                        if mode is ['More', 'Больше']:
+                        if mode == self.lang_pack.get("more"):
                             case_rmax = max_res > rmax
-                        elif mode is ['Less', 'Меньше']:
+                        elif mode == self.lang_pack.get("less"):
                             case_rmax = max_res < rmax
                     if self.ui.checkbox_rtresh.isChecked():
                         if max_res/min_res < treshhold: # меньше трешхолда
@@ -601,8 +601,8 @@ class Testing(QWidget):
             # создаем папку для результатов
             now = datetime.datetime.now()
             formatted_date = now.strftime("%d.%m.%Y_%H.%M.%S")
-            analyses_path = f'analyses_{formatted_date}'
-            os.mkdir(os.path.join(self.result_path, analyses_path))
+            analysis_path = f'analysis_{formatted_date}'
+            os.mkdir(os.path.join(self.result_path, analysis_path))
             # делаем картинку
             all_tested_count = good_mem_count + bad_mem_count
             serial_label = self.lang_pack.get("serial") + str(self.crossbar_serial) + '\n'
@@ -610,10 +610,10 @@ class Testing(QWidget):
             status_label = self.lang_pack.get("suitable_cells") + str(np.round(good_mem_count/all_tested_count*100, 2)) + '%\n'
             all_data_label = self.lang_pack.get("all") + str(all_cells_count) + self.lang_pack.get("tested_cells_1") + str(all_tested_count) + self.lang_pack.get("suitable_cells") + str(good_mem_count) + self.lang_pack.get("other") + str(bad_mem_count)
             title = serial_label + data_label + status_label + all_data_label
-            custom_shaphop(copy.deepcopy(heat_map), title, save_flag=True, save_path=os.path.join(self.result_path, analyses_path))
+            custom_shaphop(copy.deepcopy(heat_map), title, save_flag=True, save_path=os.path.join(self.result_path, analysis_path))
             self.ui.label_result.setText(self.lang_pack.get("suitable_cells") + str(np.round(good_mem_count/all_tested_count*100, 2)) + '%')
             # запись csv годные
-            fname = os.path.join(self.result_path, analyses_path, 'good_cells.csv')
+            fname = os.path.join(self.result_path, analysis_path, 'good_cells.csv')
             with open(fname,'w', newline='', encoding='utf-8') as file:
                 file_wr = csv.writer(file, delimiter=",")
                 file_wr.writerow(['wl','bl'])
@@ -621,7 +621,7 @@ class Testing(QWidget):
                     for j in range(wl_max):
                         if heat_map[i][j] == 2: # есть РП
                             file_wr.writerow([j, i])
-            fname = os.path.join(self.result_path, analyses_path, 'bad_cells.csv')
+            fname = os.path.join(self.result_path, analysis_path, 'bad_cells.csv')
             # запись csv не годные
             # todo: сделать отдельной функцией чтобы не дублировать код
             with open(fname,'w', newline='', encoding='utf-8') as file:
@@ -678,7 +678,7 @@ class Testing(QWidget):
         plt.grid(True, linestyle='--')
         plt.tight_layout()
         plt.savefig(os.path.join(self.result_path,
-                                    self.image_thread.analyses_path,
+                                    self.image_thread.analysis_path,
                                     f'{self.crossbar_serial}_{self.image_thread.wl}_{self.image_thread.bl}.png'),
                                     dpi=100)
         plt.close()
@@ -697,7 +697,7 @@ class ImageGenerator(QThread):
     y_data: npt.NDArray
     xlabel_type: str
     ylabel_type: str
-    analyses_path: str
+    analysis_path: str
     wl: int
     bl: int
     lang_pack: dict
@@ -723,8 +723,8 @@ class ImageGenerator(QThread):
         # создаем папку
         now = datetime.datetime.now()
         formatted_date = now.strftime("%d.%m.%Y_%H.%M.%S")
-        self.analyses_path = f'images_{formatted_date}'
-        os.mkdir(os.path.join(self.parent.result_path, self.analyses_path))
+        self.analysis_path = f'images_{formatted_date}'
+        os.mkdir(os.path.join(self.parent.result_path, self.analysis_path))
         # настраиваем оси
         self.xlabel_type = self.parent.ui.combo_xlabel.currentText()
         if self.xlabel_type == self.lang_pack.get("voltage"):
@@ -751,7 +751,7 @@ class ImageGenerator(QThread):
                     self.x_data = np.array(df['vol'])
                     self.y_data = np.array(df['res'])
                     if y_axes_type == 'cur':
-                        self.y_data = self.x_data/self.y_data
+                        self.y_data = self.x_data/self.y_data*1000
                     if x_axes_type == 'count':
                         self.x_data = [i+1 for i in range(len(self.x_data))]
                     # от plotly отказались из-за большого размера библиотеки
@@ -759,7 +759,7 @@ class ImageGenerator(QThread):
                     # fig.update_layout(xaxis_title=xlabel_type,
                     #                   yaxis_title=ylabel_type)
                     # fig.write_image(os.path.join(self.parent.result_path,
-                    #                              analyses_path,
+                    #                              analysis_path,
                     #                              f'{self.parent.crossbar_serial}_{wl}_{bl}.png'),
                     #                              width=640, height=480)
                     self.need_image.emit('')
