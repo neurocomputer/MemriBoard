@@ -153,7 +153,7 @@ def plot_input_signal_stem(parent,
         else:
             ax.plot(result)
         ax.set_ylabel('Voltage, V')
-        ax.set_xlabel('Momentum')
+        ax.set_xlabel('Pulse count')
         ax.grid(True, linestyle='--')
         if not shadow:
             plt.show()
@@ -207,7 +207,7 @@ def plot_with_save(parent,
     if mode == 'stem':
         if result_stem:
             plt.stem(result_stem)
-            plt.xlabel('Momentum')
+            plt.xlabel('Pulse count')
         else:
             plt.plot(result_stem)
             plt.xlabel('Time, mcs')
