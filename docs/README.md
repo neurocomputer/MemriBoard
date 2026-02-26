@@ -77,21 +77,51 @@ Experiment configuration window can be opened via [Cell info](#working-with-indi
 
 The window allows you to create a new experiment with a cell. It is made up of tickets &mdash; preset experiments, such as iv-curve, endurance, programming, etc. You can **add** multiple tickets from left side of the window to the experiment plan (**Add to plan** button), or you can create a new ticket (**New** button in the bottom left corner). The **Load** button on the right side of the window allows you to load a ticket that was previously applied to one of the cells. You can also directly **import** tickets from a *.json* file.
 You can enter the experiment **name** in the lower right part of the window.
+
+Preset tickets, available by default, are:
+
+- *blank* &mdash; empty ticket that all.
+- *endurance* &mdash; standart endurance test for RRAM cells.
+- *iv-curve*, *iv-curve-set*, *iv-curve-reset*, *iv-curve-reversed* &mdash; tickets for measuring pulsed IV-curves.
+- *measure* &mdash; ticket for measuring cell resistance.
+- *programming*, *programming-reversed* &mdash; for programming specific resistance (see [Terminate condition](#terminate-condition)).
+- *retention* &mdash; ticket for measuring the retention of the resistive states.
+- *plast-dep-pot*, *plast-pot-dep* &mdash; tickets for studying potentiation and depression behaviours of the memristive cells.
+
 By double-clicking the ticket on the right side of the window (or pressing **Edit** button), you can adjust the ticket parameters (voltage applied to the cell, number of cycles, etc.): the [Signal editing window](#signal-editing-window) opens.
+**Apply to the cell** button opens [Apply window](#applying-the-experiment) where you can start the experiment.
 
-###### Signal editing window:
-When editing a signal or creating a new one, the signal editing window opens. Each signal consists of two parts - an adjustable pulse of action on the cell, and a pulse of reading the state of the cell. Pulse of interaction has settings of amplitude, duration, and order of signal supply in case of its multiplicity. The signal can be either forward (reset) or reverse (set). It is possible to set the reason for the interruption of the signal and preview its graph. Start, stop and step are indicated in volts.
-For example, to remove the VAC of the cell, the following parameters are indicated:
+#### Signal editing window
 
-|        |Start| Stop| Step | Quantity |Decrement| MS| ISS |
-|--------|-----|-----|------|----------|---------|---|-----|
-| Direct | 0.0 | 1.6 | 0.05 |     1    |    +    | 0 | 100 |
-|  Back  | 0.0 | 1.2 | 0.05 |     1    |    +    | 0 | 100 |
+The signal window is opened via [Experiment plan](#configuring-your-experiment) window, it allows you to set the signal which is applied to the memristive cell.
 
-*Signaling: straight-back; Repeat: 1 time*
+![Signal Setup Window](assets/signal.png)
+
+Set and reset signals can be controlled independently in the top half of the window: the pulse amplitudes (in volts) and widths (**Time: ms and μs**) can be adjusted. The **Amound** field specifies the amount of set or reset sweeps in a set-reset cycle, the **Repeat** fields specifies the total amount of set-reset cycles. If the **Dec** flag is off, the voltage sweeps from **Start** to **Stop** with the specified **Step**. If the **Dec** flag is on, the voltage also sweeps from **Stop** to **Start**.
+For example, measuring 10 IV curves requires the following parameters:
+
+|            |Start| Stop| Step | Quantity |Decrement| Time, ms| Time, μs |
+|------------|-----|-----|------|----------|---------|---------|----------|
+| **Reset**  | 0.0 | 1.6 | 0.05 |     1    |    +    |    0    |    100   |
+|  **Set**   | 0.0 | 1.2 | 0.05 |     1    |    +    |    0    |    100   |
+
+**Sending order:** Reset-Set; **Repeat**: 10 times
+
+##### Standart pulse sequence
+
+Each measurement point consists of two parts &mdash; a voltage pulse with the adjustable amplitude for changing the resistive state of the cell, and a read pulse that always follows it. The amplitude of the reading pulse is fixed in the *settings.ini* file.
+During the experiment, the resistive state of the cell is controlled only via read pulses with constant amplitude.
+
+##### Terminate condition
+
+The terminate condition can be specified in the [Signal editing window](#signal-editing-window) and ***it is checked after every measurement point is acquired***. The **pass** condition turns the terminator off. For other condition values, you need to enter the resistance in the **Value** field (or **Min** and **Max** fields), and it will be compared to the acquired resistance.
+For example, the [Signal editing window figure](#signal-editing-window) shows standart terminate condition for programming resistive states via ***write-verify algorithm***: the **condition** is set to **><**. The experiment (for this ticket only) will automatically stop when the resistance of the memory cell will be from 5000 to 5500 Ohm.
+You can increase the amount of set-reset cycles to ensure that the memristive cell reaches the desired resistance range.
+You can add other tickets after the programming ticket (for example, a retention ticket) to create an autonomous experiment.
+
+### Applying the experiment
 
 ###### Signal setup result:
-![Signal Setup Window](assets/signal.png)
 
 To run the created experiment, click the Apply To Cell button to apply it to the selected cell.
 After that, the experiment window will open. It contains:
