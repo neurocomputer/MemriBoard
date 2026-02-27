@@ -7,6 +7,7 @@
   - [Creating new database entry](#creating-a-database-entry-for-new-crossbar-array)
     - [Settings](#settings)
 - [**Main window**](#main-window)
+  - [Shortcuts](#shortcuts)
 - [**Working with individual cells**](#working-with-individual-cells)
   - [History window](#history-window)
 - [**Configuring your experiment**](#configuring-your-experiment)
