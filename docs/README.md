@@ -25,7 +25,7 @@ The program can run on any operating system with python 3.9 or higher support.
 
 ### Connecting the crossbar array
 
-The connection window appears at startup. In it, you can select a crossbar you are working with, COM-port to which the device is connected, or choose the simulation mode.
+The connection window appears at startup. Here you can select a crossbar you are working with, COM-port to which the device is connected, or choose the simulation mode.
 
 ![Connection window](assets/connect_window.png)
 
@@ -62,13 +62,23 @@ Main window has a table which displays resistances of the memory cells. At the t
 - **Snapshot** shows a color map of the resistances.
 - [**Settings**](#settings).
 
+### Shortcuts
+
+There are several shortcuts available on the main window:
+
+- `Ctrl+T` &mdash; open the terminal.
+- `Ctrl+M` &mdash; show the weights in the crossbar array.
+- `Ctrl+I` &mdash; show information abot the crossbar array.
+- `Ctrl+B` &mdash; open **Writing weight to the crossbar** window.
+- `Ctrl+U` &mdash; **update all resistances** in the crossbar array.
+
 ## Working with individual cells
 
 In addition to the general functionality, it is possible to work with each cell separately. To open the cell menu, double-click on it with the left mouse button.
 
 ![Crossbar_cell](assets/crossbar_cell.png)
 
-The window that opens displays the basic information about the cell and contains basic functionality for working with it:
+The popup window displays the basic information about the cell and contains basic functionality for operating on it:
 
 - **Update** &mdash; read the resistance of the cell.
 - [**History**](#history-window) &mdash; get the journal of all experiments conducted on the cell.
@@ -95,7 +105,7 @@ You can enter the experiment **name** in the lower right part of the window.
 
 Preset tickets, available by default, are:
 
-- *blank* &mdash; empty ticket that all.
+- *blank* &mdash; empty ticket.
 - *endurance* &mdash; standart endurance test for RRAM cells.
 - *iv-curve*, *iv-curve-set*, *iv-curve-reset*, *iv-curve-reversed* &mdash; tickets for measuring pulsed IV-curves.
 - *measure* &mdash; ticket for measuring cell resistance.
@@ -112,7 +122,7 @@ The signal window is opened via [Experiment plan](#configuring-your-experiment) 
 
 ![Signal Setup Window](assets/signal.png)
 
-Set and reset signals can be controlled independently in the top half of the window: the pulse amplitudes (in volts) and widths (**Time: ms and μs**) can be adjusted. The **Amound** field specifies the amount of set or reset sweeps in a set-reset cycle, the **Repeat** fields specifies the total amount of set-reset cycles. If the **Dec** flag is off, the voltage sweeps from **Start** to **Stop** with the specified **Step**. If the **Dec** flag is on, the voltage also sweeps from **Stop** to **Start**.
+Set and reset signals can be controlled independently in the top half of the window: the pulse amplitudes (in volts) and widths (**Time: ms and μs**) can be adjusted. The **Amount** field specifies the amount of set or reset sweeps in a set-reset cycle, the **Repeat** fields specifies the total number of set-reset cycles. If the **Dec** flag is off, the voltage sweeps from **Start** to **Stop** with the specified **Step**. If the **Dec** flag is on, the voltage also sweeps from **Stop** to **Start**.
 For example, measuring 10 IV curves requires the following parameters:
 
 |            |Start| Stop| Step | Quantity |Decrement| Time, ms| Time, μs |
@@ -149,16 +159,16 @@ After the experiment is completed, a notification of completion will be shown. I
 
 ## Testsing multiple cells
 
-The **Testing window** is opened via **Tests** button on the [Main window](#main-window). In it, you can configure an experiment an apply it to multiple cells.
+The **Testing window** is opened via **Tests** button on the [Main window](#main-window). In it, you can configure an experiment and apply it to multiple cells.
 
 ![Testing Window](assets/testing_window.png)
 
 To conduct an experiment on multiple cells, proceed with the following steps:
 
 1. Set the **Path** to the folder where the test results will be saved (**Edit path** button). The results will be automatically exported in that folder during the experiment. Note: it's best to create a new experiment folder for each multicell test.
-2. In lower part of the window, in test **Test control** tab, press the **Experiment** button. The [History](#history-window) window will be opened. In it, you choose one of the previously applied experiments and **Load** it to the [Experiment plan](#configuring-your-experiment). When you are finished with configuring the experiment plan, press **Apply to all cells** button.
-3. On the **Testing** window, you can select the cells to which the experiment will be applied, or apply it to all cells in the crossbar array. To specify the cells, create a *.csv* file, following the example below. The file contains two columns which specify volumn (wl) and row (bl) of the cells. Each row of the file should contain coordinates of cells for which the experiment is applied. To load the file, click **Cells** button on the **Testing** window.
-4. To run the rest, click **Run** button. The confirmation window will appear, which displays extimated time of the experiments (The estimation is not correct for some boards, it's work-in-progress). The test will start when you press **Yes** button. The visualization is not provided for this mode, but you can check the progress via the progressbar or by checking the contents of the folder with experiment results.
+2. In lower part of the window, in test **Test control** tab, press the **Experiment** button. The [History](#history-window) window will be opened. In it, you need to choose one of the previously applied experiments and **Load** it to the [Experiment plan](#configuring-your-experiment). When you are finished with configuring the experiment plan, press **Apply to all cells** button.
+3. On the **Testing** window, you can select the cells to which the experiment will be applied, or apply it to all cells in the crossbar array. To specify the cells, create a *.csv* file, following the example below. The file contains two columns which specify column (wl) and row (bl) of the cells. Each row of the file should contain coordinates of cells for which the experiment is applied. To load the file, click **Cells** button on the **Testing** window.
+4. To run the test, click **Run** button. The confirmation window will appear, which displays estimated time of the experiments (The estimation is not correct for some boards, it's work-in-progress). The test will start when you press **Yes** button. The visualization is not provided for this mode, but you can check the progress via the progressbar or by checking the contents of the folder with experiment results.
 
 Example of a file specifying the cells for which the experiment is applied:
 
