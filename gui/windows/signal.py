@@ -4,9 +4,9 @@
 
 # pylint: disable=E0611,W0401,W0611,R0903,R0915,R0912,C0301,C0103
 
+import re
 import os
 import json
-import numpy as np
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtGui import QPixmap
@@ -104,23 +104,31 @@ class SignalMod(QDialog):
         pixmap = QPixmap(self.IMG_PATH)
         self.ui.label_png.setPixmap(pixmap)
 
-    def _get_scaling_unit(self, text:str, unit:str):
+    def _get_scaling_unit(self, text:str):
         """
         Изменить число в соответствии с единицей измерения
         """
         result = 0
         status = False
         try:
-            result = float(text)
-            if unit == 'кВ':
-                result = result * 1000
-            elif unit == 'мВ':
-                result = result / 1000
-            elif unit == 'мкВ':
-                result = result / 1000000
+            text = text.replace(' ', '')
+            data = re.match(r"([0-9.]+)(.*)", text)
+            if data:
+                num = data.group(1)
+                unit = data.group(2)
+                if unit == 'мкВ':
+                    result = float(num) / 1000000
+                elif unit == 'кВ':
+                    result = float(num) * 1000
+                elif unit == 'мВ':
+                    result = float(num) / 1000
+                elif unit == 'В' or unit == '':
+                    result = float(num)
             status = True
-        except ValueError as e:
+        except ValueError:
             show_warning_messagebox('Некорректный символ!')
+        except Exception as e:
+            print("Ошибка: ", e)
         return status, result
 
     def _make_json(self) -> bool:
@@ -132,17 +140,17 @@ class SignalMod(QDialog):
         """
         status = False
         try:
-            ok, f_start = self._get_scaling_unit(self.ui.forward_start.text(), self.ui.combo_forward_start.currentText())
+            ok, f_start = self._get_scaling_unit(self.ui.forward_start.text())
             if ok:
-                ok, b_start = self._get_scaling_unit(self.ui.backward_start.text(), self.ui.combo_backward_start.currentText())
+                ok, b_start = self._get_scaling_unit(self.ui.backward_start.text())
             if ok:
-                ok, f_stop = self._get_scaling_unit(self.ui.forward_stop.text(), self.ui.combo_forward_stop.currentText())
+                ok, f_stop = self._get_scaling_unit(self.ui.forward_stop.text())
             if ok:
-                ok, b_stop = self._get_scaling_unit(self.ui.backward_stop.text(), self.ui.combo_backward_stop.currentText())
+                ok, b_stop = self._get_scaling_unit(self.ui.backward_stop.text())
             if ok:
-                ok, f_step = self._get_scaling_unit(self.ui.forward_step.text(), self.ui.combo_forward_step.currentText())
+                ok, f_step = self._get_scaling_unit(self.ui.forward_step.text())
             if ok:
-                ok, b_step = self._get_scaling_unit(self.ui.backward_step.text(), self.ui.combo_backward_step.currentText())
+                ok, b_step = self._get_scaling_unit(self.ui.backward_step.text())
             if not ok:
                 return status
 
