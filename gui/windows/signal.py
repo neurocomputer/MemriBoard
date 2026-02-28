@@ -187,6 +187,9 @@ class SignalMod(QDialog):
         """
         status = False
         try:
+            # Режим работы (manager/menu)
+            self.base_json['mode'] = self.ui.menu_combobox.currentText()
+            
             ok, f_start = self._get_scaling_unit(self.ui.forward_start.text())
             if ok:
                 ok, b_start = self._get_scaling_unit(self.ui.backward_start.text())
