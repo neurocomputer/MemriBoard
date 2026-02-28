@@ -4,6 +4,6 @@
 
 from manager.modes.tst import get_tst
 from manager.modes.std import get_std # mode_7 (или mode_2)
-from manager.modes.smu import get_smu_iv_dc  # Modes SMUs
+from manager.modes.smu import get_smu_iv_dc, get_smu_std  # Modes for SMUs
 
 # todo: по правильному mode_9 и mode_mvm должны быть тоже здесь

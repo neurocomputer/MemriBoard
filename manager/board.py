@@ -375,7 +375,7 @@ class Connector():
                     res = (int(adc[0]), int(adc[1]))
             elif self.board_type in ['VISA']:  # Работа с VISA-инструментами
                 print(task)  # TODO remove
-                if not isinstance(task['mode_flag'], str):
+                if not isinstance(task['mode_flag'], str) and task['mode_flag'] not in [7]:
                     self.logger.critical('Wrong task for VISA-driver!')
                     res = 0
                 elif task['mode_flag'] == 'panic':
@@ -440,6 +440,19 @@ class Connector():
                         # Останавливаем эксперимент
                         self.logger.critical(f'Could not configure instruments: {response}')
                     res = int(flag)
+                elif task['mode_flag'] == 7:
+                    import numpy as np
+                    sense_data = np.random.randint(1000, 10000)
+                    adc = r2a(
+                        gain = float(self.config['board']['gain']),
+                        res_load = float(self.config['board']['res_load']),
+                        vol_read = float(self.config['board']['vol_read']),
+                        adc_bit = int(self.config['board']['adc_bit']),
+                        vol_ref_adc = float(self.config['board']['vol_ref_adc']),
+                        res_switches = float(self.config['board']['res_switches']),
+                        res = sense_data
+                    )
+                    res = (int(adc), task['id'])
                 elif task['mode_flag'] == 'interrupt':  
                     # Сброс SMU в конце тикета или при срабатывании терминатора
                     flag = self.interface.clear_instruments()  

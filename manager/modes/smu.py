@@ -52,13 +52,19 @@ params =  {
 import numpy as np
 from typing import Generator
 from manager.terminate import terminators
+from manager.blanks import blanks, fill_blank
+
+
+_modes = {'dir': 0,  # Режимы прямо и обратно
+          'rev': 1}
+
 
 def get_smu_iv_dc(
     params: dict,
     terminate: dict,
-    blank_type: str
+    blank_type:str
 ) -> Generator[list, None, None]:
-    """Генератор для режима SMU_IV_DC.
+    """Генератор тасков для режима smu_iv_dc
 
     Args:
         params (dict): Experiment params.
@@ -66,11 +72,46 @@ def get_smu_iv_dc(
         blank_type (str): Blank type (blanks.py).
 
     Yields:
-        Generator[list]: Task generator for smu_iv_dc mode
+        Generator[list, None, None]: Task generator
+    """
+    yield from smu_generator(params, terminate, blank_type, _smu_iv_dc_gen)
+    
+    
+def get_smu_std(
+    params: dict,
+    terminate: dict,
+    blank_type:str
+) -> Generator[list, None, None]:
+    """Генератор тасков для режима smu_std (режимы 7 и 9)
+
+    Args:
+        params (dict): Experiment params.
+        terminate (dict): Terminator type and value.
+        blank_type (str): Blank type (blanks.py).
+
+    Yields:
+        Generator[list, None, None]: Task generator
+    """
+    yield from smu_generator(params, terminate, blank_type, _smu_std_gen)
+
+
+def smu_generator(
+    params: dict,
+    terminate: dict,
+    blank_type: str,
+    main_task_generator: Generator) -> Generator[list, None, None]:
+    """Глобальный генератор тасков для инструметов с SMU.
+
+    Args:
+        params (dict): Experiment params.
+        terminate (dict): Terminator type and value.
+        blank_type (str): Blank type (blanks.py).
+        main_task_generator (Generator[list, None, None]): Main task generator
+
+    Yields:
+        Generator[list, None, None]: Task generator
     """
     interrupt_flag = False
-    modes = {'dir': 0,
-             'rev': 1}
     terminator = terminators[terminate['type']](terminate['value'])
 
     # Подключаем нужную ячейку
@@ -95,58 +136,10 @@ def get_smu_iv_dc(
             double[dir] = True if params[f'v_{dir}_strt_dec'] != 0 else False
         except ZeroDivisionError:
             n_points[dir] = 0
-            
+    
     try:
         # Генерация основных тасков
-        for _ in range(params['count']):
-            # порядок dir-rev
-            sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
-            for dir in sequence:
-                sense_data = {}
-                sense_data['id'] = 0
-                if n_points[dir] != 0:
-                    config_data = {'mode_flag': 'config_iv_dc',
-                                   'vol': 0,
-                                   't_ms': params[f't_{dir}_msec_inc'],
-                                   't_us': params[f't_{dir}_usec_inc'],
-                                   'id': params['id'],
-                                   'sign': modes[dir],
-                                   'v_start': v_arrays[dir][0],
-                                   'v_stop': v_arrays[dir][-1],
-                                   'n_points': n_points[dir],
-                                   'double': double[dir],
-                                   'current_compliance': params[f'{dir}_cc']}
-                    yield [config_data, terminator]  # Config task
-                    sense_data = {'mode_flag': 'sense',
-                                  'vol': 0,
-                                  't_ms': params[f't_{dir}_msec_inc'],
-                                  't_us': params[f't_{dir}_usec_inc'],
-                                  'id': params['id'],
-                                  'sign': modes[dir]}
-                    for _ in range(params[f'{dir}_inc_countr']):
-                        for vol in v_arrays[dir]:
-                            sense_data['vol'] = abs(int(vol))
-                            yield [sense_data, terminator]  # Sense task
-                        if double[dir]:
-                            for vol in v_arrays[dir][::-1]:
-                                sense_data['vol'] = abs(int(vol))
-                                yield [sense_data, terminator]  # Sense task
-        # Reading after the experiment
-        read_config = {'mode_flag': 'read',
-                       'vol': 0,
-                       't_ms': params['t_rev_msec_inc'],
-                       't_us': params['t_rev_usec_inc'],
-                       'id': params['id'],
-                       'sign': 1,
-                       'current_compliance': params['rev_cc']}  # Reset
-        yield [read_config, terminator]  # Read after experiment task
-        sense_data = {'mode_flag': 'sense',
-                      'vol': 0,
-                      't_ms': params['t_rev_msec_inc'],
-                      't_us': params['t_rev_usec_inc'],
-                      'id': params['id'],
-                      'sign': 1}
-        yield [sense_data, terminator]
+        yield from main_task_generator(params, n_points, v_arrays, double, terminator, blank_type)
     except Exception as ex: # для корректного завершения работы плат
         print(ex)
         interrupt_flag = True
@@ -163,3 +156,94 @@ def get_smu_iv_dc(
     if not ('crossbar_scan' in params and params['crossbar_scan']): # Если сканируем весь кроссбар, то не отключаем
         task = {'mode_flag': 'standby', 'id': 0}
         yield [task, terminator]
+        
+        
+def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+    # Генерация основных тасков
+    for _ in range(params['count']):
+        # порядок dir-rev
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        for dir in sequence:
+            sense_data = {}
+            sense_data['id'] = 0
+            if n_points[dir] != 0:
+                config_data = {'mode_flag': 'config_iv_dc',
+                                'vol': 0,
+                                't_ms': params[f't_{dir}_msec_inc'],
+                                't_us': params[f't_{dir}_usec_inc'],
+                                'id': params['id'],
+                                'sign': _modes[dir],
+                                'v_start': v_arrays[dir][0],
+                                'v_stop': v_arrays[dir][-1],
+                                'n_points': n_points[dir],
+                                'double': double[dir],
+                                'current_compliance': params[f'{dir}_cc']}
+                yield [config_data, terminator]  # Config task
+                sense_data = {'mode_flag': 'sense',
+                                'vol': 0,
+                                't_ms': params[f't_{dir}_msec_inc'],
+                                't_us': params[f't_{dir}_usec_inc'],
+                                'id': params['id'],
+                                'sign': _modes[dir]}
+                for _ in range(params[f'{dir}_inc_countr']):
+                    for vol in v_arrays[dir]:
+                        sense_data['vol'] = abs(int(vol))
+                        yield [sense_data, terminator]  # Sense task
+                    if double[dir]:
+                        for vol in v_arrays[dir][::-1]:
+                            sense_data['vol'] = abs(int(vol))
+                            yield [sense_data, terminator]  # Sense task
+    # Reading after the experiment
+    read_config = {'mode_flag': 'read',
+                    'vol': 0,
+                    't_ms': params['t_rev_msec_inc'],
+                    't_us': params['t_rev_usec_inc'],
+                    'id': params['id'],
+                    'sign': 1,
+                    'current_compliance': params['rev_cc']}  # Reset
+    yield [read_config, terminator]  # Read after experiment task
+    sense_data = {'mode_flag': 'sense',
+                    'vol': 0,
+                    't_ms': params['t_rev_msec_inc'],
+                    't_us': params['t_rev_usec_inc'],
+                    'id': params['id'],
+                    'sign': 1}
+    yield [sense_data, terminator]
+        
+        
+def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+    """Генератор для режима std (режимы 7 и 9).
+
+    Args:
+        params (dict): Experiment params.
+        terminate (dict): Terminator type and value.
+        blank_type (str): Blank type (blanks.py).
+
+    Yields:
+        Generator[list]: Task generator for smu_iv_dc mode
+    """
+    # Генерация основных тасков
+    for _ in range(params['count']):
+        # Порядок dir-rev
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        for dir in sequence:
+            data = {'vol': 0,
+                    't_ms': params[f't_{dir}_msec_inc'],
+                    't_us': params[f't_{dir}_usec_inc'],
+                    'id': params['id'],
+                    'sign': _modes[dir]}
+            if 'wl' in params and 'bl' in params:
+                data['wl'] = params['wl']
+                data['bl'] = params['bl']
+            for _ in range(params[f'{dir}_inc_countr']):
+                if n_points[dir] == 0:
+                    data['vol'] = 0
+                    yield [fill_blank(blanks[blank_type], data), terminator]
+                else:
+                    for vol in v_arrays[dir]:
+                        data['vol'] = abs(int(vol))
+                        yield [fill_blank(blanks[blank_type], data), terminator]
+                    if double:
+                        for vol in v_arrays[dir][::-1]:
+                            data['vol'] = abs(int(vol))
+                            yield [fill_blank(blanks[blank_type], data), terminator]
