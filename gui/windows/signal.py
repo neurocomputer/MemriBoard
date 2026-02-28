@@ -81,6 +81,8 @@ class SignalMod(QDialog):
         self.one_value_terminators = ['==', '>', '<']
         self.base_json = {}
         self.file_saved = False
+        self.ui.menu_combobox.clear()
+        self.ui.menu_combobox.addItems(self.parent.man.menu.keys())
 
     def _plot_ticket(self) -> None:
         """
@@ -112,6 +114,8 @@ class SignalMod(QDialog):
         """
         status = False
         try:
+            # Режим работы (manager/menu)
+            self.base_json['mode'] = self.ui.menu_combobox.currentText()
             # dir inc
             self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_start.text()))
             self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_stop.text()))
@@ -248,6 +252,8 @@ class SignalMod(QDialog):
         self.ui.json_name.setText(file_name)
         if self.mode == "edit":
             self.json_name.setEnabled(False)
+            
+        self.ui.menu_combobox.setCurrentText(self.base_json['mode'])
 
         self.ui.forward_start.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc'])))
         self.ui.forward_stop.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc'])))

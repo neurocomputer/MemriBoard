@@ -24,6 +24,7 @@ def get_menu(board_type):
             }
     elif board_type in ['VISA', 'VISA_test']:
         menu: dict = {
-                'std': get_smu_iv_dc,
+                'std': get_std,
+                'smu_iv_dc': get_smu_iv_dc
             }
     return menu
