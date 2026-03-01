@@ -99,7 +99,8 @@ def smu_generator(
     params: dict,
     terminate: dict,
     blank_type: str,
-    main_task_generator: Generator) -> Generator[list, None, None]:
+    main_task_generator: Generator
+) -> Generator[list, None, None]:
     """Глобальный генератор тасков для инструметов с SMU.
 
     Args:
@@ -227,23 +228,25 @@ def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> 
         # Порядок dir-rev
         sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
         for dir in sequence:
-            data = {'vol': 0,
+            data = {'mode_flag': 7,
+                    'vol': 0,
                     't_ms': params[f't_{dir}_msec_inc'],
                     't_us': params[f't_{dir}_usec_inc'],
                     'id': params['id'],
-                    'sign': _modes[dir]}
+                    'sign': _modes[dir],
+                    'current_compliance': params[f'{dir}_cc']}
             if 'wl' in params and 'bl' in params:
                 data['wl'] = params['wl']
                 data['bl'] = params['bl']
             for _ in range(params[f'{dir}_inc_countr']):
                 if n_points[dir] == 0:
                     data['vol'] = 0
-                    yield [fill_blank(blanks[blank_type], data), terminator]
+                    yield [data, terminator]
                 else:
                     for vol in v_arrays[dir]:
                         data['vol'] = abs(int(vol))
-                        yield [fill_blank(blanks[blank_type], data), terminator]
+                        yield [data, terminator]
                     if double:
                         for vol in v_arrays[dir][::-1]:
                             data['vol'] = abs(int(vol))
-                            yield [fill_blank(blanks[blank_type], data), terminator]
+                            yield [data, terminator]

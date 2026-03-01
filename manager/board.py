@@ -406,7 +406,6 @@ class Connector():
                         res = (int(adc), task['id'])
                 elif task['mode_flag'] == 'config_iv_dc':
                     # Отправка конфигурации на инструменты
-                    sweep_side = 'BL' if task['sign'] else 'NL'
                     flag, response = self.interface.config_iv_dc(
                         trigger_interval = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
                         v_start = d2v(int(self.config['board']['dac_bit']), 
@@ -416,7 +415,7 @@ class Connector():
                         n_points = task['n_points'],
                         double = task['double'],
                         current_compliance = task['current_compliance'],
-                        sweep_side = sweep_side
+                        sign = task['sign']
                     )
                     if flag and not self.silent:
                         self.logger.info(response)
@@ -432,7 +431,7 @@ class Connector():
                         n_points = 1,
                         double = False,
                         current_compliance = task['current_compliance'],
-                        sweep_side = 'BL'
+                        sign = 1  # Reset
                     )
                     if flag and not self.silent:
                         self.logger.info(response)
@@ -441,18 +440,28 @@ class Connector():
                         self.logger.critical(f'Could not configure instruments: {response}')
                     res = int(flag)
                 elif task['mode_flag'] == 7:
-                    import numpy as np
-                    sense_data = np.random.randint(1000, 10000)
-                    adc = r2a(
-                        gain = float(self.config['board']['gain']),
-                        res_load = float(self.config['board']['res_load']),
-                        vol_read = float(self.config['board']['vol_read']),
-                        adc_bit = int(self.config['board']['adc_bit']),
-                        vol_ref_adc = float(self.config['board']['vol_ref_adc']),
-                        res_switches = float(self.config['board']['res_switches']),
-                        res = sense_data
+                    flag, response, sense_data = self.interface.mode_7(
+                        pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
+                        apply_voltage = d2v(int(self.config['board']['dac_bit']), 
+                                            float(self.config['board']['vol_ref_dac']), task['vol']),
+                        read_voltage = self.config['board']['vol_read'],
+                        current_compliance = task['current_compliance'],
+                        sign = task['sign']
                     )
-                    res = (int(adc), task['id'])
+                    if flag:
+                        adc = r2a(
+                            gain = float(self.config['board']['gain']),
+                            res_load = float(self.config['board']['res_load']),
+                            vol_read = float(self.config['board']['vol_read']),
+                            adc_bit = int(self.config['board']['adc_bit']),
+                            vol_ref_adc = float(self.config['board']['vol_ref_adc']),
+                            res_switches = float(self.config['board']['res_switches']),
+                            res = sense_data
+                        )
+                        res = (int(adc), task['id'])
+                    else:
+                        self.logger.critical(f'Mode_7 error: {response}')
+                        res = 0
                 elif task['mode_flag'] == 'interrupt':  
                     # Сброс SMU в конце тикета или при срабатывании терминатора
                     flag = self.interface.clear_instruments()  
