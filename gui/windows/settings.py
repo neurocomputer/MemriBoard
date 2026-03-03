@@ -46,22 +46,14 @@ class Settings(QDialog):
         """
         Сохранение настроек
         """
-        backup_path = self.ui.lineedit_backup.text()
         writable_cells = self.ui.lineedit_writable_cells.text()
-        if len(backup_path) != 0:
-            if platform.system() == "Linux" and backup_path[len(backup_path)-1] != "/":
-                backup_path = backup_path + "/"
-            elif platform.system() == "Windows" and backup_path[len(backup_path)-1] != '\\':
-                backup_path = backup_path + '\\'
-        if not os.path.isdir(backup_path):
-            backup_path = os.path.join(os.getcwd(), "base.db")[:-7]
         if len(writable_cells) != 0:
             if not os.path.isfile(writable_cells):
                 writable_cells = ''
         self.parent.man.save_settings(adc_bit = self.ui.choose_adc_bit.currentText(),
                                       gain = str(self.ui.choose_gain.value()),
                                       soft_cc = str(self.ui.choose_software_cc.value()),
-                                      backup = backup_path,
+                                      backup = '',
                                       writable_cells = writable_cells)
         self.close()
 

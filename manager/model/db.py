@@ -2,16 +2,17 @@
 База данных
 """
 
+import pgembed as pg
+import os
 import pickle
 import datetime
-import sqlite3
 import sqlalchemy as sqla
-from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select
+from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound, MultipleResultsFound
 from datetime import datetime
 from typing import Optional, List
-from manager.service.global_settings import DB_PATH
+# from manager.service.global_settings import DB_PATH
 
 # pylint: disable=C0103,W0718
 
@@ -72,7 +73,7 @@ class Experiments(Base):
     datestamp: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     image: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
-    status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[Boolean] = mapped_column(Boolean, nullable=False, default=False)
     last_resistance: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     meta_info: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
     
@@ -102,7 +103,7 @@ class Tickets(Base):
     ticket_name: Mapped[str] = mapped_column(String, nullable=False)
     ticket: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     result: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[Boolean] = mapped_column(Boolean, nullable=False, default=False)
     
     # внешний ключ
     experiment_id: Mapped[int] = mapped_column(
@@ -117,102 +118,110 @@ class Tickets(Base):
     # для удобства отладки
     def __repr__(self):
         return f"<Ticket(id={self.id}, name='{self.ticket_name}', status={self.status})>"
-    
-def create_empty_db(db_path):
-    """
-    Создание пустой базы данных
-    """
-    try:
-        engine = sqla.create_engine(f'sqlite:///{db_path}')
-        with engine.connect() as conn:
-            pass
-        print('Создана пустая база данных')
-    except Exception as e:
-        print(f"Ошибка при создании пустой базы данных: {e}")
-        return False
-    return True
 
-def create_empty_db_crossbar(db_path,
-                             serial="ННГУ-1_для_отладки",
-                             comment="Кроссбар 32х8 1T1R",
-                             bl_num=32,
-                             wl_num=8,
-                             cb_type='simulator'):
-    """
-    Создание таблиц и их заполнение
-    """
-    status = False
-    crossbar_id = 0
-    
-    try:
-        session = None
-
-        engine = sqla.create_engine(f'sqlite:///{db_path}')
-        Base.metadata.create_all(engine)
-        print("Все таблицы созданы")
-        
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        print("База данных создана и успешно подключена к SQLAlchemy")
-
-        existing = session.query(Crossbars).filter_by(serial=serial).first()
-        if existing:
-            print(f"Кроссбар с серийным номером '{serial}' уже существует (id={existing.id})")
-            return True, existing.id
-        
-        new_crossbar = Crossbars(
-            serial=serial,
-            comment=comment,
-            bl=bl_num,
-            wl=wl_num,
-            cb_type=cb_type
-        )
-        
-        session.add(new_crossbar)
-        session.flush()
-        crossbar_id = new_crossbar.id
-        print("Таблица Crossbars создана и заполнена")
-        
-        memristors = [
-            Memristors(bl=i, wl=j, last_resistance=0, crossbar_id=crossbar_id)
-            for i in range(bl_num)
-            for j in range(wl_num)
-        ]
-        session.add_all(memristors)
-        session.commit()
-        print("Таблица Memristors создана и заполнена")
-        
-        # Таблица Experiments создается автоматически через create_all()
-        # Таблица Tickets создается автоматически через create_all()
-        
-        status = True
-    except SQLAlchemyError as error:
-        print("Ошибка при подключении к базе данных:", error)
-        session.rollback()
-    except Exception as e:
-        print(f"Неожиданная ошибка: {e}")
-    finally:
-        if session:
-            session.close()
-    return status, crossbar_id
-    
 class DBOperate():
-    """
-    Методы работы с базой
-    """
-    engine = None
 
+    engine = None
     def __init__(self, parent):
         """
         Инициализация
         """
         self.parent = parent
         try:
-            self.engine = sqla.create_engine(f'sqlite:///{DB_PATH}')
+            # поднятие сервера
+            data_dir = os.path.join(os.getcwd(), 'postgress')
+            server = pg.get_server(data_dir)
+            uri = server.get_uri()
+            # создание базы, если отсутствует
+            engine = sqla.create_engine(uri)
+            with engine.connect() as conn:
+                conn.execute(sqla.text("COMMIT"))
+                result = conn.execute(sqla.text("SELECT 1 FROM pg_database WHERE datname='base'"))
+                if not result.fetchone():
+                    conn.execute(sqla.text("CREATE DATABASE base"))
+                    print("База данных 'base' создана")
+                # проверка соединения с базой
+                db_info = conn.execute(
+                sqla.text("""
+                    SELECT datname, datdba, encoding, datcollate, datctype 
+                    FROM pg_database 
+                    WHERE datname = 'base'
+                    """)
+                ).fetchone()
+                if not db_info:
+                    print("Не удалось получить информацию о базе 'base'")
+                    raise Exception("Не удалось получить информацию о базе 'base'")
+                else:
+                    new_uri = uri[:-8]+'base'
+                    self.engine = sqla.create_engine(new_uri)
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в подключении к базе: {e}")
 
     # ФУНКЦИОНАЛ РАБОТЫ С БАЗОЙ
+
+    def create_empty_db_crossbar(self,
+                                serial="ННГУ-1_для_отладки",
+                                comment="Кроссбар 32х8 1T1R",
+                                bl_num=32,
+                                wl_num=8,
+                                cb_type='simulator'):
+        """
+        Создание таблиц и их заполнение
+        """
+
+        if self.engine is None:
+            print("Ошибка: engine не инициализирован")
+            return False, 0
+    
+        status = False
+        crossbar_id = 0
+        try:
+            session = None
+            Base.metadata.create_all(self.engine)
+            print("Все таблицы созданы")
+            
+            Session = sessionmaker(bind=self.engine)
+            session = Session()
+            print("База данных создана и успешно подключена к SQLAlchemy")
+
+            existing = session.query(Crossbars).filter_by(serial=serial).first()
+            if existing:
+                print(f"Кроссбар с серийным номером '{serial}' уже существует (id={existing.id})")
+                return True, existing.id
+            
+            new_crossbar = Crossbars(
+                serial=serial,
+                comment=comment,
+                bl=bl_num,
+                wl=wl_num,
+                cb_type=cb_type
+            )
+            
+            session.add(new_crossbar)
+            session.flush()
+            crossbar_id = new_crossbar.id
+            print("Таблица Crossbars создана и заполнена")
+            
+            memristors = [
+                Memristors(bl=i, wl=j, last_resistance=0, crossbar_id=crossbar_id)
+                for i in range(bl_num)
+                for j in range(wl_num)
+            ]
+            session.add_all(memristors)
+            session.commit()
+            print("Таблица Memristors создана и заполнена")
+            
+            status = True
+        except SQLAlchemyError as error:
+            print("Ошибка при подключении к базе данных:", error)
+            if session:
+                session.rollback()
+        except Exception as e:
+            print(f"Неожиданная ошибка: {e}")
+        finally:
+            if session:
+                session.close()
+        return status, crossbar_id
 
     def get_memristor_id(self, wl: int, bl: int, crossbar_id: int):
         """
@@ -399,6 +408,10 @@ class DBOperate():
         """
         Список кроссбаров
         """
+        if self.engine is None:
+            print("Ошибка в get_cb_list: engine не инициализирован")
+            return False, 0
+        
         cb_list = ''
         status = False
         try:
@@ -890,17 +903,17 @@ class DBOperate():
             self.parent.db_logger.critical(f"Ошибка в ticket_id: {e}")
             return False, []
     
-    def db_backup(self, backup_path) -> None:
-        """
-        Резервное копирование базы
-        """
-        status = False
-        try:
-            base = sqlite3.connect(DB_PATH)
-            backup = sqlite3.connect(backup_path + 'backup.db')
-            base.backup(backup)
-            backup.close()
-            base.close()
-        except sqlite3.Error as er:
-            self.parent.db_logger.critical("bd_backup",er)
-        return status
+    # def db_backup(self, backup_path) -> None:
+    #     """
+    #     Резервное копирование базы
+    #     """
+    #     status = False
+    #     try:
+    #         base = sqlite3.connect(DB_PATH)
+    #         backup = sqlite3.connect(backup_path + 'backup.db')
+    #         base.backup(backup)
+    #         backup.close()
+    #         base.close()
+    #     except sqlite3.Error as er:
+    #         self.parent.db_logger.critical("bd_backup",er)
+    #     return status
