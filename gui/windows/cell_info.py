@@ -68,6 +68,13 @@ class CellInfo(QDialog):
         self.ui.label_bl.setText(f"BL = {self.parent.current_bl}")
         self.ui.label_wl.setText(f"WL = {self.parent.current_wl}")
         self.ui.label_resistance.setText(f"R = {self.parent.current_last_resistance} Ом")
+        _, memristor_id = self.parent.man.db.get_memristor_id(self.parent.current_wl, self.parent.current_bl, self.parent.man.crossbar_id)
+        _, experiments = self.parent.man.db.get_memristor_experiments(memristor_id)
+        amount = 0
+        for exp in experiments:
+            tickets = self.parent.man.db.count_tickets_of_experiment(exp[0])[1]
+            amount = amount + tickets
+        self.ui.label_tickets.setText(f"Тикетов: {amount}")
 
     def set_up_init_values(self) -> None:
         """

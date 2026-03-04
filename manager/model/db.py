@@ -651,6 +651,24 @@ class DBOperate():
                 self.parent.db_logger.critical(f'Ошибка в get_experiment_id_from_ticket_id:{er}')
         self.db_disconnect('get_experiment_id_from_ticket_id')
         return status, experiment_id
+
+    def count_tickets_of_experiment(self, exp_id):
+        """
+        Обновить тикет
+        """
+        self.db_connect('count_tickets_of_experiment')
+        status = False
+        tickets = 0
+        if self.db_connection:
+            try:
+                QUERY = f"SELECT COUNT(*) FROM Tickets WHERE experiment_id = {exp_id}"
+                self.db_cursor.execute(QUERY)
+                tickets = self.db_cursor.fetchone()[0]
+                status = True
+            except Exception as er:
+                self.parent.db_logger.critical(f'Ошибка в count_tickets_of_experiment:{er}')
+        self.db_disconnect('count_tickets_of_experiment')
+        return status, tickets
     
     def db_backup(self, backup_path) -> None:
         """

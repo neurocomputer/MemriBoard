@@ -51,6 +51,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QLabel" name="label_tickets">
+            <property name="text">
+             <string>Тикетов = </string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
