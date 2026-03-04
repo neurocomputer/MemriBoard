@@ -52,7 +52,6 @@ params =  {
 import numpy as np
 from typing import Generator
 from manager.terminate import terminators
-from manager.blanks import blanks, fill_blank
 
 
 _modes = {'dir': 0,  # Режимы прямо и обратно
@@ -64,7 +63,7 @@ def get_smu_iv_dc(
     terminate: dict,
     blank_type:str
 ) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_iv_dc
+    """Генератор тасков для режима smu_iv_dc.
 
     Args:
         params (dict): Experiment params.
@@ -82,7 +81,7 @@ def get_smu_std(
     terminate: dict,
     blank_type:str
 ) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_std (режимы 7 и 9)
+    """Генератор тасков для режима smu_std (режимы 7 и 9).
 
     Args:
         params (dict): Experiment params.
@@ -93,6 +92,24 @@ def get_smu_std(
         Generator[list, None, None]: Task generator
     """
     yield from smu_generator(params, terminate, blank_type, _smu_std_gen)
+    
+    
+def get_smu_pulsed_retention(
+    params: dict,
+    terminate: dict,
+    blank_type:str
+) -> Generator[list, None, None]:
+    """Генератор тасков для режима smu_pulsed_retention.
+
+    Args:
+        params (dict): Experiment params.
+        terminate (dict): Terminator type and value.
+        blank_type (str): Blank type (blanks.py).
+
+    Yields:
+        Generator[list, None, None]: Task generator
+    """
+    yield from smu_generator(params, terminate, blank_type, _smu_pulsed_retention_gen)
 
 
 def smu_generator(
@@ -250,3 +267,36 @@ def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> 
                         for vol in v_arrays[dir][::-1]:
                             data['vol'] = abs(int(vol))
                             yield [data, terminator]
+                            
+                            
+def _smu_pulsed_retention_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+    """Генератор для режима pulsed_retention: Игнорируются все напряжения, которые тикет пытается подать, 
+    подаются только импульсы чтения. Очистка буффера устройства проводится на каждый Set-Reset цикл.
+
+    Yields:
+        Generator[list, None, None]: Task generator for smu_pulsed_retention mode.
+    """
+    # Генерация основных тасков
+    n_pulses = params['dir_inc_countr'] + params['dir_dec_countr'] + \
+               params['rev_inc_countr'] + params['rev_dec_countr']
+    for _ in range(params['count']):
+        data = {'mode_flag': 'config_pulsed_retention',
+                'vol': 0,
+                't_ms': params['t_dir_msec_inc'],
+                't_us': params['t_dir_usec_inc'],
+                'id': params['id'],
+                'sign': 1,
+                'n_pulses': n_pulses,
+                'current_compliance': params['dir_cc']}
+        if 'wl' in params and 'bl' in params:
+            data['wl'] = params['wl']
+            data['bl'] = params['bl']
+        yield [data, terminator]  # Config task
+        sense_data = {'mode_flag': 'sense',
+                      'vol': 0,
+                      't_ms': params['t_dir_msec_inc'],
+                      't_us': params['t_dir_usec_inc'],
+                      'id': params['id'],
+                      'sign': 1}
+        for _ in range(n_pulses):
+            yield [sense_data, terminator]  # Sense task

@@ -533,14 +533,14 @@ class ApplyExp(QThread):
                         else:
                             self.flag_soft_cc = 1
                             self.parent.parent.man.ap_logger.critical("Программное ограничение тока!")
+                        counter += 1
+                        self.count_changed.emit(counter)
                     # иначе задача не связана с подачей сигнала
                     else:
                         request_status = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id)
                         if request_status == 0: # запрос не выполнен, прерываем эксперимент
                             task_generator.throw(Exception("bad request"))
                             continue
-                    counter += 1
-                    self.count_changed.emit(counter)
                 #print("Весь цикл:", time.time()-start_time_loop)
                 # закрываем файл результата
                 result_file.close()

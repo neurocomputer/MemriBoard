@@ -383,7 +383,7 @@ class Connector():
                     self.logger.critical('VISA instruments: Panic!')
                     flag, response = self.interface.panic()
                     if flag:
-                        self.logger.info('Panic resolved')
+                        self.logger.critical('Panic resolved')
                     else:
                         self.logger.critical(f'Panic was not resolved!: {response}')
                     res = int(flag)
@@ -431,6 +431,20 @@ class Connector():
                         n_points = 1,
                         double = False,
                         current_compliance = task['current_compliance'],
+                        sign = 1  # Reset
+                    )
+                    if flag and not self.silent:
+                        self.logger.info(response)
+                    else:
+                        # Останавливаем эксперимент
+                        self.logger.critical(f'Could not configure instruments: {response}')
+                    res = int(flag)
+                elif task['mode_flag'] == 'config_pulsed_retention':
+                    flag, response = self.interface.config_pulsed_retention(
+                        pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
+                        current_compliance = task['current_compliance'],
+                        n_pulses = task['n_pulses'],
+                        read_voltage = self.config['board']['vol_read'],
                         sign = 1  # Reset
                     )
                     if flag and not self.silent:

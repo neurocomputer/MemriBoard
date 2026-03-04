@@ -1,7 +1,13 @@
 """
 Меню режимов
 """
-from manager.modes import get_tst, get_std, get_smu_iv_dc, get_smu_std
+from manager.modes import (
+    get_tst, 
+    get_std, 
+    get_smu_iv_dc, 
+    get_smu_std, 
+    get_smu_pulsed_retention
+)
 
 def get_menu(board_type):
     '''
@@ -25,6 +31,7 @@ def get_menu(board_type):
     elif board_type in ['VISA', 'VISA_test']:
         menu: dict = {
                 'std': get_smu_std,
-                'smu_iv_dc': get_smu_iv_dc
+                'smu_iv_dc': get_smu_iv_dc,
+                'smu_pulsed_retention': get_smu_pulsed_retention,
             }
     return menu
