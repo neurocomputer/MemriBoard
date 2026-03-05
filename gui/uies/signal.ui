@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1215</width>
+    <width>1217</width>
     <height>530</height>
    </rect>
   </property>
@@ -59,7 +59,11 @@
                  </widget>
                 </item>
                 <item row="3" column="4">
-                 <widget class="QSpinBox" name="backward_count"/>
+                 <widget class="QSpinBox" name="backward_count">
+                  <property name="maximum">
+                   <number>99999</number>
+                  </property>
+                 </widget>
                 </item>
                 <item row="3" column="3">
                  <widget class="QLineEdit" name="backward_step">
@@ -97,7 +101,11 @@
                  </widget>
                 </item>
                 <item row="2" column="4">
-                 <widget class="QSpinBox" name="forward_count"/>
+                 <widget class="QSpinBox" name="forward_count">
+                  <property name="maximum">
+                   <number>99999</number>
+                  </property>
+                 </widget>
                 </item>
                 <item row="3" column="2">
                  <widget class="QLineEdit" name="backward_stop">
@@ -425,7 +433,7 @@
            <property name="title">
             <string/>
            </property>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <property name="geometry">
              <rect>
               <x>10</x>
