@@ -2,7 +2,6 @@
 База данных
 """
 
-import pgembed as pg
 import os
 import pickle
 import datetime
@@ -128,32 +127,37 @@ class DBOperate():
         """
         self.parent = parent
         try:
-            # поднятие сервера
-            data_dir = os.path.join(os.getcwd(), 'postgress')
-            server = pg.get_server(data_dir)
-            uri = server.get_uri()
-            # создание базы, если отсутствует
-            engine = sqla.create_engine(uri)
-            with engine.connect() as conn:
-                conn.execute(sqla.text("COMMIT"))
-                result = conn.execute(sqla.text("SELECT 1 FROM pg_database WHERE datname='base'"))
-                if not result.fetchone():
-                    conn.execute(sqla.text("CREATE DATABASE base"))
-                    print("База данных 'base' создана")
-                # проверка соединения с базой
-                db_info = conn.execute(
-                sqla.text("""
-                    SELECT datname, datdba, encoding, datcollate, datctype 
-                    FROM pg_database 
-                    WHERE datname = 'base'
-                    """)
-                ).fetchone()
-                if not db_info:
-                    print("Не удалось получить информацию о базе 'base'")
-                    raise Exception("Не удалось получить информацию о базе 'base'")
-                else:
-                    new_uri = uri[:-8]+'base'
-                    self.engine = sqla.create_engine(new_uri)
+            base = self.parent.get_meta_info()["database_mode"]
+            if base == 'sqlite':
+                self.engine = sqla.create_engine('sqlite:///base.db')
+            elif base == 'postgress':
+                import pgembed as pg
+                # поднятие сервера
+                data_dir = os.path.join(os.getcwd(), 'postgress')
+                server = pg.get_server(data_dir)
+                uri = server.get_uri()
+                # создание базы, если отсутствует
+                engine = sqla.create_engine(uri)
+                with engine.connect() as conn:
+                    conn.execute(sqla.text("COMMIT"))
+                    result = conn.execute(sqla.text("SELECT 1 FROM pg_database WHERE datname='base'"))
+                    if not result.fetchone():
+                        conn.execute(sqla.text("CREATE DATABASE base"))
+                        print("База данных 'base' создана")
+                    # проверка соединения с базой
+                    db_info = conn.execute(
+                    sqla.text("""
+                        SELECT datname, datdba, encoding, datcollate, datctype 
+                        FROM pg_database 
+                        WHERE datname = 'base'
+                        """)
+                    ).fetchone()
+                    if not db_info:
+                        print("Не удалось получить информацию о базе 'base'")
+                        raise Exception("Не удалось получить информацию о базе 'base'")
+                    else:
+                        new_uri = uri[:-8]+'base'
+                        self.engine = sqla.create_engine(new_uri)
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в подключении к базе: {e}")
 

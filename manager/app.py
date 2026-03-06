@@ -38,6 +38,7 @@ class Application():
     backup: str
     writable_cells: str
     lock_board_type: bool
+    database_mode: str
 
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
@@ -71,7 +72,7 @@ class Application():
         self.ap_config.read(self.ap_config_path, encoding="utf-8")  # читаем конфиг
         self.connected_port = self.ap_config['connector']['com_port']
         self.board_type = self.ap_config['board']['board_type']
-        self.backup = self.ap_config['backup']['backup_path']
+        self.backup = self.ap_config['database']['backup_path']
         # для отдельных настроек создаем алиасы
         self.dac_bit = int(self.ap_config['board']['dac_bit'])
         self.vol_ref_dac = float(self.ap_config['board']['vol_ref_dac'])
@@ -85,6 +86,7 @@ class Application():
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
         self.writable_cells = self.ap_config['gui']['writable_cells']
         self.lock_board_type = eval(self.ap_config['gui']['lock_board_type'])
+        self.database_mode = self.ap_config['database']['database_mode']
 
     def save_settings(self, **kwargs):
         """
@@ -105,11 +107,13 @@ class Application():
         if "board_type" in kwargs:
             self.ap_config['board']['board_type'] = kwargs["board_type"]
         if "backup" in kwargs:
-            self.ap_config['backup']['backup_path'] = kwargs["backup"]
+            self.ap_config['database']['backup_path'] = kwargs["backup"]
         if "writable_cells" in kwargs:
             self.ap_config['gui']['writable_cells'] = kwargs["writable_cells"]
         if "lock_board_type" in kwargs:
             self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
+        if "database_mode" in kwargs:
+            self.ap_config['database']['database_mode'] = kwargs["database_mode"]
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
@@ -135,4 +139,5 @@ class Application():
         meta_info['backup'] = self.backup
         meta_info['writable_cells'] = self.writable_cells
         meta_info['lock_board_type'] = self.lock_board_type
+        meta_info['database_mode'] = self.database_mode
         return deepcopy(meta_info)
