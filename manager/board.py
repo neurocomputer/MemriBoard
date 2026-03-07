@@ -138,6 +138,22 @@ class Connector():
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
+            elif self.board_type == 'rp5_rram_elbear_nano':
+                try:
+                    self.portnum = kwargs['com_port']
+                    self.attempts = kwargs['attempts']
+                    import RRAMPiDriver.ReRAMPiDrv as driver
+                    self.interface = driver.RPI_modes_RRAM(kwargs['com_port'])
+                    open_flag = self.interface.check_connection(kwargs['attempts'])
+                except ModuleNotFoundError:
+                    pass
+            elif self.board_type == 'rp5_rram_python':
+                try:
+                    import RRAMPiDriver.ReRAMPiDrv_GPIO as driver
+                    self.interface = driver.RPI_modes_RRAM()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
         return open_flag
 
     def close_port(self) -> bool:
@@ -152,7 +168,7 @@ class Connector():
             close_flag = True
         elif self.cb_type == 'real':
             # для плат на базе Arduino
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano']:
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano', 'rp5_rram_elbear_nano']:
                 self.interface.com_close()
                 if self.interface.com_is_open():
                     self.logger.info('Fail to close')
@@ -160,7 +176,7 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -239,7 +255,7 @@ class Connector():
                         rec_data = str(rx, 'utf-8').strip().split(',')
                     except ValueError:
                         pass
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
                 send_flag = True
                 rec_data = ['raspberry pi 5']
             elif self.board_type == 'elbear_nano':
@@ -309,7 +325,7 @@ class Connector():
                             pass
                         pass
                     if status: break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
                     adc = self.interface.mode_7(task['vol'],
@@ -334,6 +350,7 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             # можно добавить работу с другими платами
+            # time.sleep(55/1000)
         # режим симулятор
         elif self.cb_type == 'simulator':
             task_id = task["id"]
@@ -428,7 +445,7 @@ class Connector():
                     attempts -= 1
                     if attempts == 0:
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)

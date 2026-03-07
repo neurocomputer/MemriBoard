@@ -340,6 +340,9 @@ class Testing(QWidget):
                                   ])
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
+        plt.rcParams['agg.path.chunksize'] = 20000  # FIXME: This is a hacky fix
+        # При исполнении теста на множество ячеек с большим количеством точек (endurance 1e5 циклов)
+        # рисунок не сохраняется (OverflowError). Возможно, лучше рисовать не все точки
         plt.clf()
         if len(data_for_plot_x) > 1000:
             plt.plot(data_for_plot_x[0:1000], data_for_plot_y[0:1000], marker='o', linewidth=0.5)
@@ -688,6 +691,7 @@ class ImageGenerator(QThread):
         """
         Запуск потока посылки тикета
         """
+        # TODO: Add current in uA as ylabel type
         # создаем папку
         now = datetime.datetime.now()
         formatted_date = now.strftime("%d.%m.%Y_%H.%M.%S")
@@ -719,7 +723,7 @@ class ImageGenerator(QThread):
                     self.x_data = np.array(df['vol'])
                     self.y_data = np.array(df['res'])
                     if y_axes_type == 'cur':
-                        self.y_data = self.x_data/self.y_data*1000
+                        self.y_data = self.x_data / self.y_data * 1000  # Converting current to mA
                     if x_axes_type == 'count':
                         self.x_data = [i+1 for i in range(len(self.x_data))]
                     # от plotly отказались из-за большого размера библиотеки

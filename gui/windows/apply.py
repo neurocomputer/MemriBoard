@@ -398,8 +398,8 @@ class Apply(QWidget):
         if self._plot_flag:
             # выбор отображения по осям
             y_item = self.y_value_process(value, vol, sign)
-            x_item = self.x_value_process(vol=vol, sign=sign, count=count)
-            size = 400 # todo: глубина отрисовки, вынести в константы
+            x_item = self.x_value_process(vol, sign, count)
+            size = 3000 # todo: глубина отрисовки, вынести в константы
             data_len = len(self.data_for_plot_y)
             if data_len > size:
                 self.data_for_plot_y = self.data_for_plot_y[1:] + [y_item]

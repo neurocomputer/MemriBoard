@@ -30,72 +30,10 @@
              <layout class="QVBoxLayout" name="verticalLayout_8">
               <item>
                <layout class="QGridLayout" name="gridLayout">
-                <item row="1" column="4">
-                 <widget class="QLabel" name="label_6">
+                <item row="2" column="5">
+                 <widget class="QCheckBox" name="forward_dec">
                   <property name="text">
-                   <string>Кол.</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="0">
-                 <widget class="QLabel" name="label_10">
-                  <property name="text">
-                   <string>Прямо</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="2">
-                 <widget class="QLabel" name="label_4">
-                  <property name="text">
-                   <string>Стоп</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="3">
-                 <widget class="QLabel" name="label_5">
-                  <property name="text">
-                   <string>Шаг</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
-                 <widget class="QLabel" name="label_3">
-                  <property name="text">
-                   <string>Старт</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QLabel" name="label_11">
-                  <property name="text">
-                   <string>Обратно</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="4">
-                 <widget class="QSpinBox" name="forward_count"/>
-                </item>
-                <item row="3" column="4">
-                 <widget class="QSpinBox" name="backward_count"/>
-                </item>
-                <item row="2" column="1">
-                 <widget class="QLineEdit" name="forward_start">
-                  <property name="text">
-                   <string>0</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="1">
-                 <widget class="QLineEdit" name="backward_start">
-                  <property name="text">
-                   <string>0</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="2" column="2">
-                 <widget class="QLineEdit" name="forward_stop">
-                  <property name="text">
-                   <string>0</string>
+                   <string/>
                   </property>
                  </widget>
                 </item>
@@ -113,17 +51,17 @@
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="3">
-                 <widget class="QLineEdit" name="backward_step">
+                <item row="2" column="2">
+                 <widget class="QLineEdit" name="forward_stop">
                   <property name="text">
                    <string>0</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="5">
-                 <widget class="QCheckBox" name="forward_dec">
+                <item row="1" column="5">
+                 <widget class="QLabel" name="label_7">
                   <property name="text">
-                   <string/>
+                   <string>Дек.</string>
                   </property>
                  </widget>
                 </item>
@@ -134,12 +72,74 @@
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="5">
-                 <widget class="QLabel" name="label_7">
+                <item row="3" column="3">
+                 <widget class="QLineEdit" name="backward_step">
                   <property name="text">
-                   <string>Дек.</string>
+                   <string>0</string>
                   </property>
                  </widget>
+                </item>
+                <item row="1" column="2">
+                 <widget class="QLabel" name="label_4">
+                  <property name="text">
+                   <string>Стоп</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="4">
+                 <widget class="QLabel" name="label_6">
+                  <property name="text">
+                   <string>Кол.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="3">
+                 <widget class="QLabel" name="label_5">
+                  <property name="text">
+                   <string>Шаг</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_10">
+                  <property name="text">
+                   <string>Прямо</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLabel" name="label_3">
+                  <property name="text">
+                   <string>Старт</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="4">
+                 <widget class="QSpinBox" name="forward_count"/>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QLineEdit" name="forward_start">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QLabel" name="label_11">
+                  <property name="text">
+                   <string>Обратно</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QLineEdit" name="backward_start">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="4">
+                 <widget class="QSpinBox" name="backward_count"/>
                 </item>
                </layout>
               </item>
