@@ -164,7 +164,10 @@ class NewAnn(QDialog):
         # получаем с интерфейса сопротивления
         res_min = self.ui.spinbox_r_min.value()
         res_max = self.ui.spinbox_r_max.value()
-        random_res = np.random.uniform(res_min, res_max, size=(self.parent.man.row_num*self.parent.man.col_num,))
+        if self.cells_coordinates_choosen:
+            random_res = np.random.uniform(res_min, res_max, size=(len(self.cells_coordinates_choosen),))
+        else:
+            random_res = np.random.uniform(res_min, res_max, size=(self.parent.man.row_num*self.parent.man.col_num,))
         if self.mode == 'matmul':
             random_weights = map(lambda x: self.parent.man.sum_gain/float(x), random_res)
         else:
@@ -576,6 +579,8 @@ class NewAnn(QDialog):
                             qtable_item = QTableWidgetItem()
                             qtable_item.setData(0, closest_resistance)
                             self.ui.table_match.setItem(row_position, 3, qtable_item)
+                            wl = closest_key[0]
+                            bl = closest_key[1]
                             self.target_cells_resistances[(wl,bl)] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
                     self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))

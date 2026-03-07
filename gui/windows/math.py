@@ -710,7 +710,7 @@ class Math(QWidget):
             for vol in self.voltages:
                 text += str(vol).replace('.',',') + '\n'
             self.ui.text_voltage.appendPlainText(text)
-            self.ui.label_input_data_status.setText(len(self.voltages) + self.lang_pack.get("vals_inputes"))
+            self.ui.label_input_data_status.setText(str(len(self.voltages)) + self.lang_pack.get("vals_inputed"))
             self.ui.button_apply.setEnabled(True)
             if len(self.voltages) == 0:
                 self.ui.label_input_data_status.setText(self.lang_pack.get("input_nums"))
