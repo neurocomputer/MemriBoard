@@ -36,6 +36,7 @@ from gui.windows.settings import Settings
 from gui.windows.history import History
 from gui.windows.requests import RequestsList
 from gui.windows.terminal import Terminal
+from gui.windows.filter import Filter
 from gui.windows.testing import Testing
 from gui.windows.map import Map
 from gui.windows.cb_info import CbInfo
@@ -79,6 +80,7 @@ class Window(QMainWindow):
     requests_dialog: RequestsList
     history_dialog: History
     terminal_dialog: Terminal
+    filter_dialog: Filter
     testing_dialog: Testing
     map_dialog: Map
     cb_info_dialog: CbInfo
@@ -89,6 +91,8 @@ class Window(QMainWindow):
     opener: str = ''
     extra = []
     coordinate_error = False
+    filter_rmin = None
+    filter_rmax = None
 
     protected_modes: list = ['blank', # защищенные от удаления и перезаписи файлы
                              'endurance',
@@ -128,6 +132,8 @@ class Window(QMainWindow):
         # хоткей
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         shortcut.activated.connect(self.show_terminal_dialog)
+        shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        shortcut.activated.connect(self.show_filter_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
         shortcut.activated.connect(self.show_crossbar_weights_dialog)
         shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
@@ -192,6 +198,13 @@ class Window(QMainWindow):
         """
         self.terminal_dialog = Terminal(parent=self)
         self.terminal_dialog.show()
+
+    def show_filter_dialog(self) -> None:
+        """
+        Открыть фильтр
+        """
+        self.filter_dialog = Filter(parent=self)
+        self.filter_dialog.show()
 
     def show_requests_dialog(self) -> None:
         """
@@ -439,7 +452,12 @@ class Window(QMainWindow):
                         else:
                             color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
                             color_value = int(color_value*255)
-                        if writable != []:
+                        if (not self.filter_rmin is None) and (not self.filter_rmax is None):
+                            if self.filter_rmin < int(self.ui.table_crossbar.item(i, j).text()) < self.filter_rmax:
+                                colors[i][j] = QColor(204, 255, 229)
+                            else:
+                                colors[i][j] = QColor(255, 204, 229)
+                        elif writable != []:
                             if writable[i][j] == 1:
                                 colors[i][j] = QColor(color_value, color_value, color_value)
                             else:
