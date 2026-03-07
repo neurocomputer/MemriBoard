@@ -29,6 +29,7 @@ class History(QDialog):
     mode: str # режим открытия
     export_to_json_mode: bool # режим экспорта
     tickets_ids: list    # id тикетов выбранного эксперимента
+    lang_pack: dict
 
     def __init__(self, parent=None, mode=None) -> None:
         super().__init__(parent)
@@ -36,16 +37,17 @@ class History(QDialog):
         self.mode = mode
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # параметры таблицы table_history_experiments
         self.ui.table_history_experiments.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_history_experiments.setColumnCount(4)
-        self.ui.table_history_experiments.setHorizontalHeaderLabels(["Дата", "Название", "Статус", "Сопротивление"])
+        self.ui.table_history_experiments.setHorizontalHeaderLabels([self.lang_pack.get("e_data"), self.lang_pack.get("e_name"), self.lang_pack.get("e_status"), self.lang_pack.get("e_res")])
         self.ui.table_history_experiments.itemClicked.connect(self.show_experiment_tickets)
         self.ui.table_history_tickets.itemDoubleClicked.connect(self.show_ticket)
         # параметры таблицы table_history_tickets
         self.ui.table_history_tickets.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.table_history_tickets.setColumnCount(3)
-        self.ui.table_history_tickets.setHorizontalHeaderLabels(["Дата", "Тикет", "Статус"])
+        self.ui.table_history_tickets.setHorizontalHeaderLabels([self.lang_pack.get("e_data"), self.lang_pack.get("e_tic"), self.lang_pack.get("e_status")])
         # доп настройки
         self.setModal(True)
         # история
@@ -70,6 +72,26 @@ class History(QDialog):
         # прочее
         self.export_to_json_mode = False
         self.tickets_ids = []
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("history")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.groupBox_2.setTitle(self.lang_pack.get("name"))
+            self.ui.label_3.setText(self.lang_pack.get("exps"))
+            self.ui.button_load.setText(self.lang_pack.get("load"))
+            self.ui.button_export.setText(self.lang_pack.get("export"))
+            self.ui.button_choose_exp.setText(self.lang_pack.get("choose"))
+            self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
+            self.ui.tab_history_info.setTabText(0, self.lang_pack.get("short"))
+            self.ui.tab_history_info.setTabText(1, self.lang_pack.get("full"))
+            self.ui.label_2.setText(self.lang_pack.get("quick"))
+            self.ui.label.setText(self.lang_pack.get("exp_history"))
+            self.ui.button_load_from_db.setText(self.lang_pack.get("csv"))
+            self.ui.button_export_to_json.setText(self.lang_pack.get("json"))
 
     def export_ticket_from_db(self) -> None:
         """
@@ -136,9 +158,9 @@ class History(QDialog):
                                                 vol_ref_adc,
                                                 res_switches,
                                                 raw_adc[i])).replace('.',',')])
-            show_warning_messagebox(f'Выгружено в файл {fname}')
+            show_warning_messagebox(self.lang_pack.get("exported") + fname, rlj=self.parent.read_language_json)
         else:
-            show_warning_messagebox('Выберите тикеты!')
+            show_warning_messagebox(self.lang_pack.get("pick_ticket"), rlj=self.parent.read_language_json)
 
     def load_experiment(self) -> None:
         """
@@ -170,7 +192,7 @@ class History(QDialog):
             self.ui.table_history_experiments.insertRow(row_position)
             self.ui.table_history_experiments.setItem(row_position, 0, QTableWidgetItem(item[1]))
             self.ui.table_history_experiments.setItem(row_position, 1, QTableWidgetItem(item[2]))
-            self.ui.table_history_experiments.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3])))
+            self.ui.table_history_experiments.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3], rlj=self.parent.read_language_json)))
             self.ui.table_history_experiments.setItem(row_position, 3, QTableWidgetItem(str(item[4])))
         self.ui.table_history_experiments.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
@@ -191,7 +213,7 @@ class History(QDialog):
             self.ui.table_history_tickets.insertRow(row_position)
             self.ui.table_history_tickets.setItem(row_position, 0, QTableWidgetItem(item[1]))
             self.ui.table_history_tickets.setItem(row_position, 1, QTableWidgetItem(item[2]))
-            self.ui.table_history_tickets.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3])))
+            self.ui.table_history_tickets.setItem(row_position, 2, QTableWidgetItem(bool_to_label(item[3], rlj=self.parent.read_language_json)))
         self.ui.table_history_tickets.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         if self.parent.man.board_type != 'offline':
             self.ui.button_load.setDisabled(False)
@@ -204,12 +226,12 @@ class History(QDialog):
             pixmap = QPixmap()
             pixmap.loadFromData(image)
             self.ui.label_image.setPixmap(pixmap)
-            quick_data = "Дата проведения: " + self.experiments[current_row][1]
-            quick_data += "\nНазвание: " + self.experiments[current_row][2]
+            quick_data = self.lang_pack.get("data") + self.experiments[current_row][1]
+            quick_data += "\n" + self.lang_pack.get("tic_name") + self.experiments[current_row][2]
             _, mem_id = self.parent.man.db.get_memristor_id_from_experiment_id(experiment_id)
             _, crb_id = self.parent.man.db.get_crossbar_id_from_memristor_id(mem_id)
             _, serial = self.parent.man.db.get_crossbar_serial_from_id(crb_id)
-            quick_data += "\nСерийный номер кроссбара: " + str(serial)
+            quick_data += "\n" + self.lang_pack.get("serial") + str(serial)
             _, wl = self.parent.man.db.get_wl_from_memristor_id(mem_id)
             quick_data += "\nWL: " + str(wl)
             _, bl = self.parent.man.db.get_bl_from_memristor_id(mem_id)
@@ -243,16 +265,16 @@ class History(QDialog):
                         outfile.write(",\n")
                 outfile.write("}")
                 outfile.close()
-            show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'))
+            show_warning_messagebox(self.lang_pack.get("exported") + os.path.join(TICKET_PATH, fname + '.json'), rlj=self.parent.read_language_json)
         else:
             items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
             # проверки на выбор
             ok = True
             if len(items) == 0:
-                show_warning_messagebox('Выберите тикет для экспортирования!')
+                show_warning_messagebox(self.lang_pack.get("pick_ticket"), rlj=self.parent.read_language_json)
                 ok = False
             elif len(items) > 3:
-                show_warning_messagebox('Выберите один тикет!')
+                show_warning_messagebox(self.lang_pack.get("pick_one"), rlj=self.parent.read_language_json)
                 ok = False
             rows = []
             for item in items:
@@ -263,7 +285,7 @@ class History(QDialog):
                         more_than_one = True
                         break
                 if more_than_one:
-                    show_warning_messagebox('Выберите один тикет!')
+                    show_warning_messagebox(self.lang_pack.get("pick_one"), rlj=self.parent.read_language_json)
                     ok = False
                 else:
                     rows.append(cur_row)
@@ -278,7 +300,7 @@ class History(QDialog):
                                     'w', encoding='utf-8') as outfile:
                     json.dump(ticket_info, outfile)
                     outfile.close()
-                show_warning_messagebox("Тикет экспортирован в " + os.path.join(TICKET_PATH, fname + '.json'))
+                show_warning_messagebox(self.lang_pack.get("exported") + os.path.join(TICKET_PATH, fname + '.json'), rlj=self.parent.read_language_json)
 
     def show_ticket(self) -> None:
         """

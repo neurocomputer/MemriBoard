@@ -95,8 +95,8 @@ def plot_input_signal(parent,
             figure.clear()
         ax = figure.add_subplot(111)
         ax.plot(result)
-        ax.set_ylabel('Напряжение, В')
-        ax.set_xlabel('Время, мкс')
+        ax.set_ylabel('Voltage, V')
+        ax.set_xlabel('Time, mcs')
         ax.grid(True, linestyle='--')
         if not shadow:
             plt.show()
@@ -151,8 +151,8 @@ def plot_input_signal_stem(parent,
             ax.stem(result)
         else:
             ax.plot(result)
-        ax.set_ylabel('Напряжение, В')
-        ax.set_xlabel('Импульс')
+        ax.set_ylabel('Voltage, V')
+        ax.set_xlabel('Pulse count')
         ax.grid(True, linestyle='--')
         if not shadow:
             plt.show()
@@ -203,14 +203,14 @@ def plot_with_save(parent,
     if mode == 'stem':
         if result_stem:
             plt.stem(result_stem)
-            plt.xlabel('Импульс')
+            plt.xlabel('Pulse count')
         else:
             plt.plot(result_stem)
-            plt.xlabel('Время, мкс')
+            plt.xlabel('Time, mcs')
     else:
         plt.plot(result_plot)
-        plt.xlabel('Время, мкс')
-    plt.ylabel('Напряжение, В')
+        plt.xlabel('Time, mcs')
+    plt.ylabel('Voltage, V')
     plt.grid(True, linestyle='--')
     plt.tight_layout()
     if save_path:

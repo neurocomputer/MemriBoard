@@ -4,6 +4,8 @@ Application
 
 # pylint: disable=W0401,W0614,R0902,C0321
 
+import os
+import json
 import logging
 from copy import deepcopy
 from configparser import ConfigParser
@@ -38,6 +40,7 @@ class Application():
     status_db_connect: bool
     backup: str
     writable_cells: str
+    language: str
     lock_board_type: bool
 
     def __init__(self) -> None:
@@ -89,6 +92,7 @@ class Application():
         self.sum_gain = int(self.ap_config['board']['sum_gain'])
         self.soft_cc = float(self.ap_config['board']['soft_cc'])
         self.writable_cells = self.ap_config['gui']['writable_cells']
+        self.language = self.ap_config['gui']['language']
         self.lock_board_type = eval(self.ap_config['gui']['lock_board_type'])
 
     def save_settings(self, **kwargs):
@@ -113,6 +117,8 @@ class Application():
             self.ap_config['backup']['backup_path'] = kwargs["backup"]
         if "writable_cells" in kwargs:
             self.ap_config['gui']['writable_cells'] = kwargs["writable_cells"]
+        if "language" in kwargs:
+            self.ap_config['gui']['language'] = kwargs["language"]
         if "lock_board_type" in kwargs:
             self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
         # запись в файл
@@ -139,5 +145,6 @@ class Application():
         meta_info['connected_port'] = self.connected_port
         meta_info['backup'] = self.backup
         meta_info['writable_cells'] = self.writable_cells
+        meta_info['language'] = self.language
         meta_info['lock_board_type'] = self.lock_board_type
         return deepcopy(meta_info)

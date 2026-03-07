@@ -56,9 +56,9 @@ def save_as_array_to_csv(parent, array):
                 if path_check[-1] != 'csv':
                     file_path += '.csv'
                 save_array_to_csv(array, file_path)
-                show_warning_messagebox(f'Сохранено в {file_path}')
+                show_warning_messagebox(f'Сохранено в {file_path}', rlj=parent.read_language_json)
             except Exception: # pylint: disable=W0718
-                show_warning_messagebox('Ошибка сохранения!')
+                show_warning_messagebox('Ошибка сохранения!', rlj=parent.read_language_json)
 
 def read_csv_to_array(file_path):
     """
@@ -98,6 +98,7 @@ class Math(QWidget):
     input_array_source = None
     vol_comp: int # ограничитель напряжения
     is_quintisation_on = False
+    lang_pack: dict
 
     def __init__(self, parent=None, mode=str) -> None:
         super().__init__(parent)
@@ -105,6 +106,7 @@ class Math(QWidget):
         self.mode = mode
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.ui.change_language()
         # доп настройки
         self.ui.setWindowFlags(Qt.Window)
         if self.mode == "no_crossbar":
@@ -186,6 +188,83 @@ class Math(QWidget):
         self.read_current_weights_matrix()
         self.fill_table_mask_with_ones()
 
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("math")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.tabwidget_mode.setTabText(0, self.lang_pack.get("cell"))
+            self.ui.tabwidget_mode.setTabText(1, self.lang_pack.get("crossbar"))
+            self.ui.label_10.setText(self.lang_pack.get("goal"))
+            self.ui.button_change_weight_cell.setText(self.lang_pack.get("set"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("ent_val"))
+            self.ui.groupBox_2.setTitle(self.lang_pack.get("result"))
+            self.ui.button_load_input_data.setText(self.lang_pack.get("upload"))
+            self.ui.button_save_input_data.setText(self.lang_pack.get("save"))
+            self.ui.button_save_result.setText(self.lang_pack.get("save"))
+            self.ui.label.setText(self.lang_pack.get("nums"))
+            self.ui.label_2.setText(self.lang_pack.get("voltages"))
+            self.ui.label_input_data_status.setText(self.lang_pack.get("input_nums"))
+            self.ui.groupBox_3.setTitle(self.lang_pack.get("exec"))
+            self.ui.label_4.setText(self.lang_pack.get("ent_scale"))
+            self.ui.label_3.setText(self.lang_pack.get("weights_scale"))
+            self.ui.label_5.setText(self.lang_pack.get("prep"))
+            self.ui.label_6.setText(self.lang_pack.get("post"))
+            self.ui.combo_preprocess.setItemText(0, self.lang_pack.get("no"))
+            self.ui.combo_postprocess.setItemText(0, self.lang_pack.get("no"))
+            self.ui.button_apply.setText(self.lang_pack.get("run"))
+            self.ui.horizontalGroupBox.setTitle(self.lang_pack.get("depth"))
+            self.ui.label_11.setText(self.lang_pack.get("weights"))
+            self.ui.label_13.setText(self.lang_pack.get("data"))
+            self.ui.label_12.setText(self.lang_pack.get("results"))
+            self.ui.button_do_quantisation.setText(self.lang_pack.get("quan"))
+            self.ui.button_undo_quantisation.setText(self.lang_pack.get("cancel"))
+            self.ui.tabWidget_4.setTabText(0, self.lang_pack.get("weights"))
+            self.ui.tabWidget_4.setTabText(1, self.lang_pack.get("data"))
+            self.ui.tabWidget_4.setTabText(2, self.lang_pack.get("results"))
+            self.ui.tabWidget_2.setTabText(0, self.lang_pack.get("written"))
+            self.ui.tabWidget_2.setTabText(1, self.lang_pack.get("mask"))
+            self.ui.tabWidget_2.setTabText(2, self.lang_pack.get("goal"))
+            self.ui.tabWidget_2.setTabText(3, self.lang_pack.get("mistake"))
+            self.ui.tabWidget_2.setTabText(4, self.lang_pack.get("summary"))
+            self.ui.button_read_current_weights_matrix.setText(self.lang_pack.get("read"))
+            self.ui.button_save_current_weights_matrix.setText(self.lang_pack.get("save_csv"))
+            self.ui.button_heatmap_current_weights_matrix.setText(self.lang_pack.get("heatmap"))
+            self.ui.button_histogram_current_weights_matrix.setText(self.lang_pack.get("hist"))
+            self.ui.button_masking.setText(self.lang_pack.get("masking"))
+            self.ui.button_reset_mask.setText(self.lang_pack.get("reset"))
+            self.ui.button_heatmap_mask_weights_matrix.setText(self.lang_pack.get("heatmap"))
+            self.ui.button_goal_weights_from_current.setText(self.lang_pack.get("from_written"))
+            self.ui.button_write_goal_weights_matrix.setText(self.lang_pack.get("upload"))
+            self.ui.button_save_goal_weights_matrix.setText(self.lang_pack.get("save_csv"))
+            self.ui.button_heatmap_goal_weights_matrix.setText(self.lang_pack.get("heatmap"))
+            self.ui.button_histogram_goal_weights_matrix.setText(self.lang_pack.get("hist"))
+            self.ui.button_calculate_error_weights.setText(self.lang_pack.get("calc"))
+            self.ui.button_save_error_weights.setText(self.lang_pack.get("save_csv"))
+            self.ui.button_heatmap_error_weights.setText(self.lang_pack.get("heatmap"))
+            self.ui.button_histogram_error_weights_matrix.setText(self.lang_pack.get("hist"))
+            self.ui.tabWidget_3.setTabText(0, self.lang_pack.get("nums"))
+            self.ui.tabWidget_3.setTabText(1, self.lang_pack.get("voltages"))
+            self.ui.tabWidget_3.setTabText(2, self.lang_pack.get("summary"))
+            self.ui.button_load_input_array_from_disk.setText(self.lang_pack.get("upload"))
+            self.ui.button_generate_random_input_data.setText(self.lang_pack.get("generate"))
+            self.ui.label_8.setText(self.lang_pack.get("amount"))
+            self.ui.label_9.setText(self.lang_pack.get("max"))
+            self.ui.button_save_input_array_to_disk.setText(self.lang_pack.get("save_csv"))
+            self.ui.button_histogram_numbers.setText(self.lang_pack.get("hist"))
+            self.ui.button_save_input_voltage_to_disk.setText(self.lang_pack.get("save_csv"))
+            self.ui.button_histogram_voltage.setText(self.lang_pack.get("hist"))
+            self.ui.button_predict_output_data.setText(self.lang_pack.get("calc"))
+            self.ui.button_calculate_etalon_results.setText(self.lang_pack.get("calc"))
+            self.ui.button_save_etalon_array_to_disk.setText(self.lang_pack.get("save_csv"))
+            self.ui.button_save_output_array_to_disk.setText(self.lang_pack.get("save_csv"))
+            self.ui.button_etalon_vs_output_graph.setText(self.lang_pack.get("graph"))
+            self.ui.label_7.setText(self.lang_pack.get("correction"))
+            self.ui.button_calculate_matmul_errors.setText(self.lang_pack.get("calc"))
+            self.ui.button_save_error_array_to_disk.setText(self.lang_pack.get("save_csv"))
+
     def update_label_weight_info(self):
         """
         Данные о весах
@@ -216,7 +295,7 @@ class Math(QWidget):
         """
         if self.ui.combo_preprocess.currentText() == 'scaling':
             self.goal_weights = deepcopy(self.current_weights_scaled)
-        elif self.ui.combo_preprocess.currentText() == 'нет':
+        elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
             self.goal_weights = deepcopy(self.current_weights)
         self.fill_table(self.table_goal_weights,
                             self.goal_weights,
@@ -287,7 +366,7 @@ class Math(QWidget):
                         self.current_weights_scaled,
                         self.parent.man.row_num,
                         self.parent.man.col_num)
-        elif self.ui.combo_preprocess.currentText() == 'нет':
+        elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
             self.fill_table(self.table_real_weights,
                         self.current_weights,
                         self.parent.man.row_num,
@@ -302,7 +381,7 @@ class Math(QWidget):
         if not self.goal_weights is None:
             if self.ui.combo_preprocess.currentText() == 'scaling':
                 self.error_weights = np.abs(self.goal_weights - self.current_weights_scaled)
-            elif self.ui.combo_preprocess.currentText() == 'нет':
+            elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
                 self.error_weights = np.abs(self.goal_weights - self.current_weights)
             self.fill_table(self.table_weights_errors,
                             self.error_weights,
@@ -341,24 +420,24 @@ class Math(QWidget):
         Обновление сводки весов
         """
         data = []
-        data.append(['', 'Минимум', 'Максимум'])
+        data.append(['', self.lang_pack.get("minimum"), self.lang_pack.get("maximum")])
         rows = 1
         max = None
         min = None
         if self.current_weights is not None:
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 max, min = self.get_max_min(self.current_weights_scaled)
-            elif self.ui.combo_postprocess.currentText() == 'нет':
+            elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
                 max, min = self.get_max_min(self.current_weights)
-            data.append(['Записанные:', str(min), str(max)])
+            data.append([self.lang_pack.get("written") + ':', str(min), str(max)])
             rows += 1
         if self.goal_weights is not None:
             max, min = self.get_max_min(self.goal_weights)
-            data.append(['Целевые:', str(min), str(max)])
+            data.append([self.lang_pack.get("goal") + ':', str(min), str(max)])
             rows += 1
         if self.error_weights is not None:
             max, min = self.get_max_min(self.error_weights)
-            data.append(['Ошибка:', str(min), str(max)])
+            data.append([self.lang_pack.get("mistake") + ':', str(min), str(max)])
             rows += 1
         if min != None or max != None:
             self.ui.table_summary_weights.setRowCount(rows)
@@ -375,17 +454,17 @@ class Math(QWidget):
         Обновление сводки данных
         """
         data = []
-        data.append(['', 'Минимум', 'Максимум'])
+        data.append(['', self.lang_pack.get("minimum"), self.lang_pack.get("maximum")])
         rows = 1
         max = None
         min = None
         if self.input_array_source is not None:
             max, min = self.get_max_min(self.input_array_source)
-            data.append(['Числа:', str(round(min, 4)), str(round(max, 4))])
+            data.append([self.lang_pack.get("nums") + ":", str(round(min, 4)), str(round(max, 4))])
             rows += 1
         if self.input_array_scaled is not None:
             max, min = self.get_max_min(self.input_array_scaled)
-            data.append(['Напряжения:', str(round(min, 4)), str(round(max, 4))])
+            data.append([self.lang_pack.get("voltages") + ":", str(round(min, 4)), str(round(max, 4))])
             rows += 1
         if min != None or max != None:
             self.ui.table_summary_data.setRowCount(rows)
@@ -402,7 +481,7 @@ class Math(QWidget):
         """
         Загрузить входные данные (массив) с диска
         """
-        file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
+        file_path = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
         if file_path:
             try:
                 # загружаем
@@ -418,14 +497,14 @@ class Math(QWidget):
                             zeros = True
                             break                            
                 if zeros:
-                    show_warning_messagebox('В файле обнаружены отрицательные числа. Они будут загружены по модулю.')
+                    show_warning_messagebox(self.lang_pack.get("neg_nums"), rlj=self.parent.read_language_json)
                     for i in range(len(self.input_array_source)):
                         for j in range(len(self.input_array_source[0])):
                             self.input_array_source[i][j] = abs(self.input_array_source[i][j])
                 self.update_voltages_array()
                 self.update_summary_data() # обновление сводки
             except Exception as ex: # pylint: disable=W0718
-                show_warning_messagebox(f'Файл не соответствует требованиям! {ex}')
+                show_warning_messagebox(self.lang_pack.get("incorrect_file") + ex, rlj=self.parent.read_language_json)
 
     def generate_random_input_data(self):
         """
@@ -496,7 +575,7 @@ class Math(QWidget):
         if not self.matmul_crossbar_results is None:
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled
-            elif self.ui.combo_postprocess.currentText() == 'нет':
+            elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
                 # correction_a = 1
                 # correction_b = 0
                 # if self.ui.checkbox_correction.isChecked():
@@ -562,7 +641,7 @@ class Math(QWidget):
                         text += row[0].replace(',','.') + '\n'
                     self.ui.text_input_data.appendPlainText(text)
         except Exception: # pylint: disable=W0718
-            show_warning_messagebox("Некорректный файл!")
+            show_warning_messagebox(self.lang_pack.get("incorrect_file"), rlj=self.parent.read_language_json)
 
     def update_all_data(self):
         """
@@ -594,7 +673,7 @@ class Math(QWidget):
         if not self.input_array_source is None:
             if self.ui.combo_preprocess.currentText() == 'scaling':
                 self.input_array_scaled = deepcopy(self.input_array_source) / self.ui.spinbox_max_input.value()
-            elif self.ui.combo_preprocess.currentText() == 'нет':
+            elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
                 self.input_array_scaled = deepcopy(self.input_array_source)
             # отображаем
             self.fill_table(self.ui.input_data_table,
@@ -624,7 +703,7 @@ class Math(QWidget):
             if self.ui.combo_preprocess.currentText() == 'scaling':
                 for val in inp_data:
                     self.voltages.append(round(val/float(self.ui.spinbox_max_input.value()),4))
-            elif self.ui.combo_preprocess.currentText() == 'нет':
+            elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
                 for val in inp_data:
                     self.voltages.append(val)
             # заполнение текста
@@ -632,16 +711,16 @@ class Math(QWidget):
             for vol in self.voltages:
                 text += str(vol).replace('.',',') + '\n'
             self.ui.text_voltage.appendPlainText(text)
-            self.ui.label_input_data_status.setText(f"Введено {len(self.voltages)} значений!")
+            self.ui.label_input_data_status.setText(len(self.voltages) + self.lang_pack.get("vals_inputes"))
             self.ui.button_apply.setEnabled(True)
             if len(self.voltages) == 0:
-                self.ui.label_input_data_status.setText("Введите по одному числу в строке!")
+                self.ui.label_input_data_status.setText(self.lang_pack.get("input_nums"))
                 self.ui.button_apply.setEnabled(False)
         except ValueError:
-            self.ui.label_input_data_status.setText("Некорректное значение!")
+            self.ui.label_input_data_status.setText(self.lang_pack.get("incorrect"))
             self.ui.button_apply.setEnabled(False)
         except ZeroDivisionError:
-            show_warning_messagebox("Задайте максимум!")
+            show_warning_messagebox(self.lang_pack.get("max_unset"), rlj=self.parent.read_language_json)
             self.ui.button_apply.setEnabled(False)
 
     def update_label_cell_info(self):
@@ -655,9 +734,9 @@ class Math(QWidget):
             weight = 0
             if self.ui.combo_preprocess.currentText() == 'scaling':
                 weight = round(r2w(self.parent.man.res_load, int(self.parent.current_last_resistance))*float(self.ui.spinbox_max_weight.value()), 4)
-            elif self.ui.combo_preprocess.currentText() == 'нет':
+            elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
                 weight = round(r2w(self.parent.man.res_load, int(self.parent.current_last_resistance)), 4)
-            self.ui.label_cell_info.setText(f"WL={wl}, BL={bl}, R={res}, Текущее значение={weight}")
+            self.ui.label_cell_info.setText(f"WL={wl}, BL={bl}, R={res}," + self.lang_pack.get("cur_val") + str(weight))
         except ZeroDivisionError:
             pass
 
@@ -669,9 +748,9 @@ class Math(QWidget):
             res = 0
             if self.ui.combo_preprocess.currentText() == 'scaling':
                 res = w2r(self.parent.man.res_load, self.ui.spinbox_new_weight.value()/self.ui.spinbox_max_weight.value())
-            elif self.ui.combo_preprocess.currentText() == 'нет':
+            elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
                 res = w2r(self.parent.man.res_load, self.ui.spinbox_new_weight.value())
-            self.ui.label_target_resistance.setText(f"R={res} Ом")
+            self.ui.label_target_resistance.setText(f"R={res}" + self.lang_pack.get("ohm"))
         except ZeroDivisionError:
             pass
 
@@ -691,7 +770,7 @@ class Math(QWidget):
         if self.parent.man.get_meta_info()["writable_cells"] != '':
             is_correct, cells = self.parent.is_writable_cells_file_correct(None)
         else:   # выбрать файл вручную
-            file_path = open_file_dialog(self, file_types="CSV Files (*.csv)")
+            file_path = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
             is_correct, cells = self.parent.is_writable_cells_file_correct(file_path)
         
         if is_correct:
@@ -729,7 +808,7 @@ class Math(QWidget):
                         self.current_weights_scaled,
                         self.parent.man.row_num,
                         self.parent.man.col_num)
-        elif self.ui.combo_preprocess.currentText() == 'нет':
+        elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
             self.fill_table(self.table_real_weights,
                         self.current_weights,
                         self.parent.man.row_num,
@@ -761,7 +840,7 @@ class Math(QWidget):
                         self.current_weights_scaled,
                         self.parent.man.row_num,
                         self.parent.man.col_num)
-        elif self.ui.combo_preprocess.currentText() == 'нет':
+        elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
             self.fill_table(self.table_real_weights,
                         self.current_weights,
                         self.parent.man.row_num,
@@ -960,7 +1039,7 @@ class Math(QWidget):
         if not self.matmul_crossbar_results is None:
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 self.matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
-            elif self.ui.combo_postprocess.currentText() == 'нет':
+            elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
                 self.matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results)
             if self.ui.checkbox_correction.isChecked():
                 self.matmul_crossbar_results_scaled = self.matmul_crossbar_results_scaled * self.ui.spinbox_correction_a.value() + self.ui.spinbox_correction_b.value()
@@ -994,7 +1073,7 @@ class Math(QWidget):
                                         self.parent.man.adc_bit,
                                         self.parent.man.vol_ref_adc,
                                         item) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value()))
-            elif self.ui.combo_postprocess.currentText() == 'нет':
+            elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
                 result_for_show.append(a2v(self.parent.man.gain,
                                         self.parent.man.adc_bit,
                                         self.parent.man.vol_ref_adc,

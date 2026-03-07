@@ -1,21 +1,21 @@
 # MemriBoard
 Memristors are coming!
 
-This program is designed to work with memristors using the MemArdBoard and MemRaspBoard boards. The program includes the functionality of taking measurements and taking various characteristics of memristors, automatic testing, using memristors as ReRAM memory, performing mathematical operations and working with artificial neural networks. The program also has a memristor simulator, so you can work with it without special boards.
+Данная программа предназначена для работы с мемристорами с использованием плат MemArdBoard и MemRaspBoard. В программе заложен функционал проведения измерений и снятия различных характеристик мемристоров, автоматического тестирования, использования мемристоров в качестве памяти ReRAM, выполнения математических операций и работы с искусственными нейронными сетями. В программе также есть симулятор мемристоров, поэтому с ней можно работать и не имея специальных плат.
 
-![Program view](docs/assets/general.png)
+![Общий вид программы](docs/assets-rus/general.png)
 
-## Instruction
+## Инструкция
 
-### Installing
+### Установка
 
-To work with the program, you need a Python interpreter with a version of at least 3.9.6. To clone the repository, run the command:
+Для работы с программой понадобится интерпретатор Python версии не ниже 3.9.6. Для клонирования репозитория выполните команду:
 
 ```
 git clone git@github.com:neurocomputer/MemBoard.git
 ```
 
-Next, configure the virtual environment and install the necessary packages:
+Далее настройте виртуальное окружение и установите необходимые пакеты:
 
 ```
 python3 -m venv venv
@@ -24,9 +24,9 @@ python3 -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### First launching
+### Первый запуск
 
-Use the file 'main.py' to start the program. After starting the program, the files `settings.ini` (contains the necessary settings), `base.db` (database of experimental results), `app.log` (program log) will be automatically created in the directory. When working with the program in simulator mode, files with the extension `.cb` containing the memristor array model will also be created. Instructions for using the program are provided [here](https://github.com/neurocomputer/MemBoard/blob/main/docs/README.md).
+Для запуска программы используйте файл `main.py`. После запуска программы в директории автоматически создадутся файлы `settings.ini` (содержит необходимые настройки), `base.db` (база данных результатов экспериментов), `app.log` (журнал программы). При работе с программой в режиме симулятора также будут создаваться файлы с расширением `.cb`, содержащие модель массива мемристоров. Инструкция по работе с программой приведена [здесь](https://github.com/neurocomputer/MemBoard/blob/main/docs/README.md).
 
 ### Видеоинструкции
 |#|Дата|Описание|Актуальность|Ссылка|
