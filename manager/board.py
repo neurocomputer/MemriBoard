@@ -312,6 +312,10 @@ class Connector():
                                                     task['bl']) # vDAC, tms, tus, rev, id, wl, bl
                             res = (int(adc[0]), int(adc[1]))
                             status = True
+                        elif task['mode_flag'] == 9: # режим команды 9
+                            adc = self.interface.mode_9(task['vol'], 0, task['wl'], task['bl'])
+                            res = (int(adc[0]), int(adc[1]))
+                            status = True
                     except TimeoutError as ex:
                         print(ex)
                         try:
