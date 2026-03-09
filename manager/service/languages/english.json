@@ -313,7 +313,10 @@
         "incorrect":"Incorrect!",
         "vals_inputed":" values inputed",
         "max_unset":"Maximum is unset!",
-        "ohm":" Ohm"
+        "ohm":" Ohm",
+        "saving_dir":"Choose a directory for saving",
+        "saved_to":"Saved to ",
+        "saving_error":"Error while saving!"
     },
     "apply":{
         "name":"Apply",
