@@ -47,18 +47,18 @@ def save_as_array_to_csv(parent, array):
     """
     Сохранить массив через диалог
     """
-    if not array is None:
+    if array is not None:
         file_path = QFileDialog.getSaveFileName(parent,
-                                                    "Выберите директорию для сохранения")[0]
+                                                    parent.lang_pack.get('saving_dir'))[0]
         if file_path:
             try:
                 path_check = file_path.split('.')
                 if path_check[-1] != 'csv':
                     file_path += '.csv'
                 save_array_to_csv(array, file_path)
-                show_warning_messagebox(f'Сохранено в {file_path}', rlj=parent.read_language_json)
+                show_warning_messagebox(f'{parent.lang_pack.get('saved_to')}{file_path}', rlj=parent.parent.read_language_json)
             except Exception: # pylint: disable=W0718
-                show_warning_messagebox('Ошибка сохранения!', rlj=parent.read_language_json)
+                show_warning_messagebox(parent.lang_pack.get('saving_error'), rlj=parent.parent.read_language_json)
 
 def read_csv_to_array(file_path):
     """
@@ -378,7 +378,7 @@ class Math(QWidget):
         """
         Посчитать ошибку
         """
-        if not self.goal_weights is None:
+        if self.goal_weights is not None:
             if self.ui.combo_preprocess.currentText() == 'scaling':
                 self.error_weights = np.abs(self.goal_weights - self.current_weights_scaled)
             elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
@@ -439,7 +439,7 @@ class Math(QWidget):
             max, min = self.get_max_min(self.error_weights)
             data.append([self.lang_pack.get("mistake") + ':', str(min), str(max)])
             rows += 1
-        if min != None or max != None:
+        if min is not None or max is not None:
             self.ui.table_summary_weights.setRowCount(rows)
             self.ui.table_summary_weights.setColumnCount(3)
             # заполнение данными
@@ -466,7 +466,7 @@ class Math(QWidget):
             max, min = self.get_max_min(self.input_array_scaled)
             data.append([self.lang_pack.get("voltages") + ":", str(round(min, 4)), str(round(max, 4))])
             rows += 1
-        if min != None or max != None:
+        if min is not None or max is not None:
             self.ui.table_summary_data.setRowCount(rows)
             self.ui.table_summary_data.setColumnCount(3)
             # заполнение данными
@@ -519,7 +519,7 @@ class Math(QWidget):
         """
         Посчитать результат матричного умножения (эталон)
         """
-        if (not self.input_array_source is None) and (not self.goal_weights is None):
+        if (self.input_array_source is not None) and (self.goal_weights is not None):
             self.matmul_etalon_results = self.input_array_source @ self.goal_weights
             print(self.matmul_etalon_results)
             self.fill_table(self.ui.etalon_output_table,
@@ -532,7 +532,7 @@ class Math(QWidget):
         """
         Прогноз результата с текущими весами
         """
-        if not self.input_array_scaled is None:
+        if self.input_array_scaled is not None:
             self.matmul_predicted_results = self.input_array_scaled @ self.current_weights
             self.fill_table(self.ui.predicted_output_table,
                             self.matmul_predicted_results,
@@ -544,7 +544,7 @@ class Math(QWidget):
         """
         График эталона и ошибок матричного умножения
         """
-        if (not self.matmul_etalon_results is None) and (not self.matmul_crossbar_results is None):
+        if (self.matmul_etalon_results is not None) and (self.matmul_crossbar_results is not None):
             plt.clf()
             # correction_a = 1
             # correction_b = 0
@@ -572,7 +572,7 @@ class Math(QWidget):
         """
         Посчитать ошибку умножения
         """
-        if not self.matmul_crossbar_results is None:
+        if self.matmul_crossbar_results is not None:
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 self.matmul_error_results = self.matmul_etalon_results - self.matmul_crossbar_results_scaled
             elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
@@ -670,7 +670,7 @@ class Math(QWidget):
         """
         Обновить массив напряжений
         """
-        if not self.input_array_source is None:
+        if self.input_array_source is not None:
             if self.ui.combo_preprocess.currentText() == 'scaling':
                 self.input_array_scaled = deepcopy(self.input_array_source) / self.ui.spinbox_max_input.value()
             elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
@@ -1036,7 +1036,7 @@ class Math(QWidget):
         """
         Обновить отображение результата
         """
-        if not self.matmul_crossbar_results is None:
+        if self.matmul_crossbar_results is not None:
             if self.ui.combo_postprocess.currentText() == 'scaling':
                 self.matmul_crossbar_results_scaled = deepcopy(self.matmul_crossbar_results) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value())
             elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
