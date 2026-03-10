@@ -157,7 +157,7 @@ class Math(QWidget):
         self.ui.button_save_error_weights.clicked.connect(lambda: save_as_array_to_csv(self, self.error_weights))
         self.ui.button_heatmap_error_weights.clicked.connect(lambda: self.show_snapshot(self.error_weights))
         self.ui.button_histogram_error_weights_matrix.clicked.connect(lambda: self.array_to_vector(self.error_weights))
-        self.ui.button_heatmap_mask_weights_matrix.clicked.connect(lambda: snapshot(self.mask_weights))
+        self.ui.button_heatmap_mask_weights_matrix.clicked.connect(lambda: self.show_snapshot(self.mask_weights, mode='binary'))
         # кнопки работы с данными
         self.ui.input_data_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.input_data_voltage_table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
@@ -1115,16 +1115,16 @@ class Math(QWidget):
                                 self.matmul_crossbar_results.shape[1])
         self.ui.progress_bar.setValue(0)
         
-    def show_snapshot(self, data: list) -> None:
+    def show_snapshot(self, data: list, mode: str = 'weights') -> None:
         """
         Окно со снапшотом
         """
         if self.parent.snapshot_dialog is None:
-            self.parent.snapshot_dialog = Snapshot(parent=self, data=data, mode='weights')
+            self.parent.snapshot_dialog = Snapshot(self.parent, data, mode=mode)
             self.parent.snapshot_dialog.show()
         else:
             self.parent.snapshot_dialog.data = data
-            self.parent.snapshot_dialog.plot_matrix(mode='weights')
+            self.parent.snapshot_dialog.plot_matrix(mode=mode)
             self.parent.snapshot_dialog.showNormal()
             self.parent.snapshot_dialog.activateWindow()
 
