@@ -123,7 +123,7 @@ class Snapshot(QWidget):
         if filename == '':
             return
         if extention not in save_funcs:
-            show_warning_messagebox('Данный формат не поддерживается.')
+            show_warning_messagebox(self.lang_pack['ext_not_supported'], rlj=self.parent.read_language_json)
             return
         try:
             ext = extention.split('*')[1].split(')')[0]
@@ -131,9 +131,9 @@ class Snapshot(QWidget):
                 filename += ext
             save_funcs[extention](filename, self.data)
         except PermissionError:
-            show_warning_messagebox('Файл занят другой программой.')
+            show_warning_messagebox(self.lang_pack['file_busy'], rlj=self.parent.read_language_json)
         except Exception as e:
-            show_warning_messagebox(e)
+            show_warning_messagebox(e, rlj=self.parent.read_language_json)
         
         
     def safe_close(self) -> None:
