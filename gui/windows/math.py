@@ -56,7 +56,7 @@ def save_as_array_to_csv(parent, array):
                 if path_check[-1] != 'csv':
                     file_path += '.csv'
                 save_array_to_csv(array, file_path)
-                show_warning_messagebox(f'{parent.lang_pack.get('saved_to')}{file_path}', rlj=parent.parent.read_language_json)
+                show_warning_messagebox(parent.lang_pack.get('saved_to') + file_path, rlj=parent.parent.read_language_json)
             except Exception: # pylint: disable=W0718
                 show_warning_messagebox(parent.lang_pack.get('saving_error'), rlj=parent.parent.read_language_json)
 

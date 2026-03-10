@@ -245,7 +245,7 @@
         "quick":"Brief overview:",
         "exp_history":"Plan of the experiment:",
         "csv":"Export results to csv file",
-        "json":"Export experiment plan to json file",
+        "json":"Export ticket",
         "exported":"Exported to ",
         "pick_ticket":"Choose a ticket!",
         "data":"Data: ",
