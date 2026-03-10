@@ -425,5 +425,15 @@
         "send":"Send",
         "no_answer":"Didn't get any answer!",
         "req_inc":"Incorrect request!"
+    },
+    "snapshot":{
+        "window_title":"Snapshot",
+        "export":"Export data",
+        "weight":"Weight",
+        "res_kOhm":"Resistance (kΩ)",
+        "txt":"Text file",
+        "csv":"Comma Separated Values",
+        "xls":"Excel Spreadsheet",
+        "json":"JSON file"
     }
 }

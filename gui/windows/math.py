@@ -1121,7 +1121,7 @@ class Math(QWidget):
         Окно со снапшотом
         """
         if self.parent.snapshot_dialog is None:
-            self.parent.snapshot_dialog = Snapshot(parent=self, data=data, mode=mode)
+            self.parent.snapshot_dialog = Snapshot(self.parent, data, mode=mode)
             self.parent.snapshot_dialog.show()
         else:
             self.parent.snapshot_dialog.data = data

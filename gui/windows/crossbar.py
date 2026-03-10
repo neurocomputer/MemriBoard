@@ -185,6 +185,8 @@ class Window(QMainWindow):
             self.ui.button_tests.setText(self.lang_pack.get("tests"))
             self.ui.button_snapshot.setText(self.lang_pack.get("snapshot"))
             self.ui.button_settings.setText(self.lang_pack.get("settings"))
+            if self.snapshot_dialog is not None:
+                self.snapshot_dialog.change_language()
 
     # методы открытия диалоговых окон
 
