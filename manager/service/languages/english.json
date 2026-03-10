@@ -434,6 +434,8 @@
         "txt":"Text file",
         "csv":"Comma Separated Values",
         "xls":"Excel Spreadsheet",
-        "json":"JSON file"
+        "json":"JSON file",
+        "ext_not_supported":"This file extention is not supported.",
+        "file_busy":"The file is in use by another program."
     }
 }
