@@ -182,28 +182,26 @@ def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -
         # порядок dir-rev
         sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
         for dir in sequence:
-            sense_data = {}
-            sense_data['id'] = 0
-            if n_points[dir] != 0:
-                config_data = {'mode_flag': 'config_iv_dc',
-                                'vol': 0,
-                                't_ms': params[f't_{dir}_msec_inc'],
-                                't_us': params[f't_{dir}_usec_inc'],
-                                'id': params['id'],
-                                'sign': _modes[dir],
-                                'v_start': v_arrays[dir][0],
-                                'v_stop': v_arrays[dir][-1],
-                                'n_points': n_points[dir],
-                                'double': double[dir],
-                                'current_compliance': params[f'{dir}_cc']}
-                yield [config_data, terminator]  # Config task
-                sense_data = {'mode_flag': 'sense',
-                                'vol': 0,
-                                't_ms': params[f't_{dir}_msec_inc'],
-                                't_us': params[f't_{dir}_usec_inc'],
-                                'id': params['id'],
-                                'sign': _modes[dir]}
-                for _ in range(params[f'{dir}_inc_countr']):
+            for _ in range(params[f'{dir}_inc_countr']):
+                if n_points[dir] != 0:
+                    config_data = {'mode_flag': 'config_iv_dc',
+                                    'vol': 0,
+                                    't_ms': params[f't_{dir}_msec_inc'],
+                                    't_us': params[f't_{dir}_usec_inc'],
+                                    'id': params['id'],
+                                    'sign': _modes[dir],
+                                    'v_start': v_arrays[dir][0],
+                                    'v_stop': v_arrays[dir][-1],
+                                    'n_points': n_points[dir],
+                                    'double': double[dir],
+                                    'current_compliance': params[f'{dir}_cc']}
+                    yield [config_data, terminator]  # Config task
+                    sense_data = {'mode_flag': 'sense',
+                                    'vol': 0,
+                                    't_ms': params[f't_{dir}_msec_inc'],
+                                    't_us': params[f't_{dir}_usec_inc'],
+                                    'id': params['id'],
+                                    'sign': _modes[dir]}
                     for vol in v_arrays[dir]:
                         sense_data['vol'] = abs(int(vol))
                         yield [sense_data, terminator]  # Sense task
@@ -242,31 +240,49 @@ def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> 
     """
     # Генерация основных тасков
     for _ in range(params['count']):
-        # Порядок dir-rev
+        # порядок dir-rev
         sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
         for dir in sequence:
-            data = {'mode_flag': 7,
-                    'vol': 0,
-                    't_ms': params[f't_{dir}_msec_inc'],
-                    't_us': params[f't_{dir}_usec_inc'],
-                    'id': params['id'],
-                    'sign': _modes[dir],
-                    'current_compliance': params[f'{dir}_cc']}
-            if 'wl' in params and 'bl' in params:
-                data['wl'] = params['wl']
-                data['bl'] = params['bl']
-            for _ in range(params[f'{dir}_inc_countr']):
+            config_data = {'mode_flag': 'config_std',
+                            'vol': 0,
+                            't_ms': params[f't_{dir}_msec_inc'],
+                            't_us': params[f't_{dir}_usec_inc'],
+                            'id': params['id'],
+                            'sign': _modes[dir],
+                            'current_compliance': params[f'{dir}_cc']}
+            pulse_sequence = []
+            for _ in range(params[f'{dir}_inc_countr']):  # One config per direction
                 if n_points[dir] == 0:
-                    data['vol'] = 0
-                    yield [data, terminator]
+                    pulse_sequence.append('read')
                 else:
-                    for vol in v_arrays[dir]:
-                        data['vol'] = abs(int(vol))
-                        yield [data, terminator]
-                    if double:
-                        for vol in v_arrays[dir][::-1]:
-                            data['vol'] = abs(int(vol))
-                            yield [data, terminator]
+                    for v in v_arrays[dir]:
+                        if v != 0:
+                            pulse_sequence.append(v)    
+                        pulse_sequence.append('read')
+                    if double[dir]:
+                        for v in v_arrays[dir][::-1]:
+                            if v != 0:
+                                pulse_sequence.append(v)
+                            pulse_sequence.append('read')
+            if len(pulse_sequence) != 0:
+                config_data['pulse_sequence'] = pulse_sequence
+                yield [config_data, terminator]  # Config task
+                sense_data = {'mode_flag': 'sense',
+                            'vol': 0,
+                            't_ms': params[f't_{dir}_msec_inc'],
+                            't_us': params[f't_{dir}_usec_inc'],
+                            'id': params['id'],
+                            'sign': _modes[dir],
+                            'triggered': True}
+                for pulse in pulse_sequence:
+                    if pulse == 'read':
+                        sense_data['mode_flag'] = 'sense'  # Read pulse by trigger
+                        yield [sense_data, terminator]
+                        sense_data['vol'] = 0
+                    else:
+                        sense_data['mode_flag'] = 'trigger'  # Apply pulse by trigger
+                        sense_data['vol'] = abs(int(pulse))
+                        yield [sense_data, terminator]
                             
                             
 def _smu_pulsed_retention_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:

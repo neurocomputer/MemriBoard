@@ -8,6 +8,7 @@ import logging
 from copy import deepcopy
 from configparser import ConfigParser
 from logging import Logger
+from logging.handlers import RotatingFileHandler
 from manager.model.db import DBOperate
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
@@ -48,8 +49,8 @@ class Application():
         # настраиваем логгер приложения
         self.ap_log_path = LOG_PATH
         self.ap_logger = logging.getLogger(__name__)
-        self.ap_logger.setLevel(logging.WARNING)
-        handler = logging.FileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"])
+        self.ap_logger.setLevel(logging.INFO)
+        handler = RotatingFileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"], maxBytes=50)
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.ap_logger.addHandler(handler)
         # настраиваем логгер базы данных

@@ -142,14 +142,14 @@ class Connector():
             # Для VISA-инструментов
             elif self.board_type == 'VISA':
                 try:
-                    from RRAM_VISA_Drivers import CID_1T1R_32x8_probe_station # pylint: disable=C0415
+                    from RRAM_VISA_Drivers import ITC_1T1R_32x8_probe_station # pylint: disable=C0415
                     # A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
                     # B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
                     # switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
                     A_address = None
                     B_address = None
                     switch_address = None
-                    self.interface = CID_1T1R_32x8_probe_station(  # TODO fix addresses
+                    self.interface = ITC_1T1R_32x8_probe_station(  # TODO fix addresses
                         B2902B_1_address=A_address,
                         B2902B_2_address=B_address,
                         VISA_library_path = ''
@@ -387,8 +387,18 @@ class Connector():
                     else:
                         self.logger.critical(f'Panic was not resolved!: {response}')
                     res = int(flag)
+                elif task['mode_flag'] == 'interrupt':  
+                    # Сброс SMU в конце тикета или при срабатывании терминатора
+                    flag = self.interface.clear_instruments()  
+                    if not flag:
+                        self.logger.critical('Could not clear instruments!')
+                    res = int(flag)
                 elif task['mode_flag'] == 'sense':
-                    sense_data = self.interface.sense()
+                    if 'triggered' in task:
+                        trig_flag = task['triggered']
+                    else:
+                        trig_flag = False
+                    sense_data = self.interface.sense(trigger=trig_flag)
                     if isinstance(sense_data, str):
                         self.logger.critical(f'Sense error: {sense_data}')
                         res = 0 
@@ -404,6 +414,9 @@ class Connector():
                             res = sense_data
                         )
                         res = (int(adc), task['id'])
+                elif task['mode_flag'] == 'trigger':
+                    self.interface.trigger()
+                    res = 1
                 elif task['mode_flag'] == 'config_iv_dc':
                     # Отправка конфигурации на инструменты
                     flag, response = self.interface.config_iv_dc(
@@ -432,6 +445,29 @@ class Connector():
                         double = False,
                         current_compliance = task['current_compliance'],
                         sign = 1  # Reset
+                    )
+                    if flag and not self.silent:
+                        self.logger.info(response)
+                    else:
+                        # Останавливаем эксперимент
+                        self.logger.critical(f'Could not configure instruments: {response}')
+                    res = int(flag)
+                elif task['mode_flag'] == 'config_std':
+                    pulse_sequence, read_flags = [], []
+                    for pulse in task['pulse_sequence']:
+                        if pulse == 'read':
+                            pulse_sequence.append(self.config['board']['vol_read'])
+                            read_flags.append(True)
+                        else:
+                            pulse_sequence.append(pulse)
+                            read_flags.append(False)
+                    print('pulse_seq', pulse_sequence)
+                    flag, response = self.interface.config_std(
+                        pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3,
+                        pulse_sequence = pulse_sequence,
+                        read_flags = read_flags,
+                        current_compliance = task['current_compliance'],
+                        sign = task['sign']
                     )
                     if flag and not self.silent:
                         self.logger.info(response)
@@ -476,12 +512,6 @@ class Connector():
                     else:
                         self.logger.critical(f'Mode_7 error: {response}')
                         res = 0
-                elif task['mode_flag'] == 'interrupt':  
-                    # Сброс SMU в конце тикета или при срабатывании терминатора
-                    flag = self.interface.clear_instruments()  
-                    if not flag:
-                        self.logger.critical('Could not clear instruments!')
-                    res = int(flag)
                 elif task['mode_flag'] == 'connect_cell':
                     # Подлкючение ячейки кроссбара, нумерация wl и bl начинается с 0
                     flag, response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
