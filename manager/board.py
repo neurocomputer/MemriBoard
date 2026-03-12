@@ -143,11 +143,11 @@ class Connector():
             elif self.board_type == 'VISA':
                 try:
                     from RRAM_VISA_Drivers import ITC_1T1R_32x8_probe_station # pylint: disable=C0415
-                    # A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
-                    # B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
+                    A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
+                    B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
                     # switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
-                    A_address = None
-                    B_address = None
+                    # A_address = None
+                    # B_address = None
                     switch_address = None
                     self.interface = ITC_1T1R_32x8_probe_station(  # TODO fix addresses
                         B2902B_1_address=A_address,
@@ -459,7 +459,8 @@ class Connector():
                             pulse_sequence.append(self.config['board']['vol_read'])
                             read_flags.append(True)
                         else:
-                            pulse_sequence.append(pulse)
+                            pulse_sequence.append(d2v(int(self.config['board']['dac_bit']), 
+                                                      float(self.config['board']['vol_ref_dac']), pulse))
                             read_flags.append(False)
                     print('pulse_seq', pulse_sequence)
                     flag, response = self.interface.config_std(
