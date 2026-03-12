@@ -513,10 +513,10 @@ class ApplyExp(QThread):
                             if not ((task[0]['sign'] == 0 and current_predict <= ticket['params']['dir_cc']) or (task[0]['sign'] == 1 and current_predict <= ticket['params']['rev_cc'])):
                                 allowed = False # посылка запроса запрещена
                         if allowed:
-                            result = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id)
+                            result = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id, timestamp)
                             # учет выполнения
                             if result:
-                                self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right},{task[0]['t_ms']},{task[0]['t_us']},{ticket['name']},{ticket['terminate']}")
+                                self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right},{task[0]['t_ms']},{task[0]['t_us']},{ticket['name']},{ticket['terminate']},{ticket['mode']},{result[2]},{result[3]},{result[4]}")
                                 save_list_to_bytearray(result_file, task[0]['sign'], task[0]['vol'], result[0])
                                 resistance_previous = a2r(self.parent.parent.man.gain,
                                                         self.parent.parent.man.res_load,

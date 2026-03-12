@@ -274,37 +274,60 @@ class Testing(QWidget):
         # сохранение файла
         wl = int(value[3])
         bl = int(value[4])
+        TEMPERATURE = 0  # Celsius
         fname = f'{self.crossbar_serial}_{self.parent.exp_name}_{wl}_{bl}.csv'
         fpath = os.path.join(self.result_path, fname)
         with open(fpath, 'w+', newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "terminate_type", "terminate_1", "terminate_2"])
+            file_wr.writerow(['sign', 'vol', 'res', 'timestamp', 'temperature(C)', 'smu_volt', 'smu_current', 'crossbar_id', 'vol_read', "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "ticket_mode", "terminate_type", "terminate_1", "terminate_2"])
             for item_index, item in enumerate(raw_data):
                 file_wr.writerow([item[0],  # 'sign'
-                                  item[1],  # 'dac'
-                                  item[2],  # 'adc'
                                   data_for_plot_x[item_index],  # 'vol'
                                   data_for_plot_y[item_index],  # 'res'
                                   item[3],   # 'timestamp'
+                                  TEMPERATURE,
+                                  raw_data_extended[item_index][4],
+                                  raw_data_extended[item_index][5],
                                   self.crossbar_serial, # "crossbar_id"
-                                  self.parent.man.get_meta_info()["dac_bit"],
-                                  self.parent.man.get_meta_info()["vol_ref_dac"],
-                                  self.parent.man.get_meta_info()["res_load"],
                                   self.parent.man.get_meta_info()["vol_read"],
-                                  self.parent.man.get_meta_info()["adc_bit"],
-                                  self.parent.man.get_meta_info()["vol_ref_adc"],
-                                  self.parent.man.get_meta_info()["res_switches"],
-                                  self.parent.man.get_meta_info()["gain"],
-                                  wl,
+                                  wl, 
                                   bl,
                                   raw_data_extended[item_index][0],
                                   raw_data_extended[item_index][1],
                                   self.parent.exp_name,
                                   raw_data_extended[item_index][2],
                                   raw_data_extended[item_index][3],
-                                  raw_data_extended[item_index][4],
-                                  raw_data_extended[item_index][5],
-                                  ])
+                                  raw_data_extended[item_index][6],
+                                  raw_data_extended[item_index][7],
+                                  raw_data_extended[item_index][8],
+                ])
+            # file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "terminate_type", "terminate_1", "terminate_2"])
+            # for item_index, item in enumerate(raw_data):
+            #     file_wr.writerow([item[0],  # 'sign'
+            #                       item[1],  # 'dac'
+            #                       item[2],  # 'adc'
+            #                       data_for_plot_x[item_index],  # 'vol'
+            #                       data_for_plot_y[item_index],  # 'res'
+            #                       item[3],   # 'timestamp'
+            #                       self.crossbar_serial, # "crossbar_id"
+            #                       self.parent.man.get_meta_info()["dac_bit"],
+            #                       self.parent.man.get_meta_info()["vol_ref_dac"],
+            #                       self.parent.man.get_meta_info()["res_load"],
+            #                       self.parent.man.get_meta_info()["vol_read"],
+            #                       self.parent.man.get_meta_info()["adc_bit"],
+            #                       self.parent.man.get_meta_info()["vol_ref_adc"],
+            #                       self.parent.man.get_meta_info()["res_switches"],
+            #                       self.parent.man.get_meta_info()["gain"],
+            #                       wl,
+            #                       bl,
+            #                       raw_data_extended[item_index][0],
+            #                       raw_data_extended[item_index][1],
+            #                       self.parent.exp_name,
+            #                       raw_data_extended[item_index][2],
+            #                       raw_data_extended[item_index][3],
+            #                       raw_data_extended[item_index][4],
+            #                       raw_data_extended[item_index][5],
+            #                       ])
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
         plt.clf()
@@ -331,18 +354,27 @@ class Testing(QWidget):
         adc_value = int(value[1])
         dac_value = int(value[2])
         sign = int(value[3])
-        if len(value) > 11:
+        if len(value) > 15:
             self.terminator = ast.literal_eval(value[9]+", " +value[10] + ", " +value[11])
+            ticket_mode = value[12]
+            timestamp = value[13]
+            real_voltage = value[14]
+            real_current = value[15]
         else:
             self.terminator = ast.literal_eval(value[9]+", " +value[10])
+            ticket_mode = value[11]
+            timestamp = value[12]
+            real_voltage = value[13]
+            real_current = value[14]
         if isinstance(self.terminator.get("value"), int):
             term_1 = self.terminator.get("value")
             term_2 = ""
         else:
             term_1 = self.terminator.get("value")[0]
             term_2 = self.terminator.get("value")[1]
-        self.raw_data.append((sign, dac_value, adc_value, datetime.datetime.now().timestamp()))
-        self.raw_data_extended.append((int(value[6]), int(value[7]), value[8], self.terminator.get("type"), term_1, term_2)) # t_ms, t_us, ticket_name, terminate
+        
+        self.raw_data.append((sign, dac_value, adc_value, timestamp))
+        self.raw_data_extended.append((int(value[6]), int(value[7]), value[8], ticket_mode, real_voltage, real_current, self.terminator.get("type"), term_1, term_2)) # t_ms, t_us, ticket_name, terminate, ticket_mode
         self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
                                         self.parent.man.vol_ref_dac,
                                         dac_value,

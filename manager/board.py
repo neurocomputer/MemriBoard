@@ -143,11 +143,11 @@ class Connector():
             elif self.board_type == 'VISA':
                 try:
                     from RRAM_VISA_Drivers import ITC_1T1R_32x8_probe_station # pylint: disable=C0415
-                    A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
-                    B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
+                    # A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
+                    # B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
                     # switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
-                    # A_address = None
-                    # B_address = None
+                    A_address = None
+                    B_address = None
                     switch_address = None
                     self.interface = ITC_1T1R_32x8_probe_station(  # TODO fix addresses
                         B2902B_1_address=A_address,
@@ -398,7 +398,7 @@ class Connector():
                         trig_flag = task['triggered']
                     else:
                         trig_flag = False
-                    sense_data = self.interface.sense(trigger=trig_flag)
+                    sense_data = self.interface.sense(trigger=trig_flag)  # (R, timestamp)
                     if isinstance(sense_data, str):
                         self.logger.critical(f'Sense error: {sense_data}')
                         res = 0 
@@ -411,9 +411,9 @@ class Connector():
                             adc_bit = int(self.config['board']['adc_bit']),
                             vol_ref_adc = float(self.config['board']['vol_ref_adc']),
                             res_switches = float(self.config['board']['res_switches']),
-                            res = sense_data
+                            res = sense_data[0]
                         )
-                        res = (int(adc), task['id'])
+                        res = (int(adc), task['id'], *sense_data[1:])
                 elif task['mode_flag'] == 'trigger':
                     self.interface.trigger()
                     res = 1
