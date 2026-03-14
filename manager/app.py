@@ -8,7 +8,6 @@ import logging
 from copy import deepcopy
 from configparser import ConfigParser
 from logging import Logger
-from logging.handlers import RotatingFileHandler
 from manager.model.db import DBOperate
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
@@ -50,7 +49,7 @@ class Application():
         self.ap_log_path = LOG_PATH
         self.ap_logger = logging.getLogger(__name__)
         self.ap_logger.setLevel(logging.INFO)
-        handler = RotatingFileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"], maxBytes=1e6, backupCount=1)
+        handler = logging.FileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"])
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.ap_logger.addHandler(handler)
         # настраиваем логгер базы данных
@@ -90,6 +89,10 @@ class Application():
         # TODO remove
         self.apply_csv_path = self.ap_config['gui']['apply_csv_path']
         self.apply_save_csv = eval(self.ap_config['gui']['apply_save_csv'])
+        # Updating driver settings
+        if (hasattr(self, 'conn') and hasattr(self.conn, 'interface') and 
+            hasattr(self.conn.interface, 'update_settings') and callable(self.conn.interface.update_settings)):
+            self.conn.interface.update_settings()
 
     def save_settings(self, **kwargs):
         """

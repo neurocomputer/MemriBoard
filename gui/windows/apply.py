@@ -469,7 +469,8 @@ class ApplyExp(QThread):
                 csv_path = init_csv_apply(self.parent.parent.man.apply_csv_path, name, crossbar_serial, item[0], item[1], csv_header)
             # ----------------------------------------------------------
             # инициируем цикл по тикетам
-            counter = 0
+            counter = 0  # Счетчик полученных значений (наносятся на график)
+            task_counter = 0  # Счетчик тасков
             for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, task_list, count
                 ticket = ticket_info[1]
                 # терминатор
@@ -583,13 +584,14 @@ class ApplyExp(QThread):
                             self.flag_soft_cc = 1
                             self.parent.parent.man.ap_logger.critical("Программное ограничение тока!")
                         counter += 1
-                        self.count_changed.emit(counter)
                     # иначе задача не связана с подачей сигнала
                     else:
                         request_status = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id)
                         if request_status == 0: # запрос не выполнен, прерываем эксперимент
                             task_generator.throw(Exception("bad request"))
                             continue
+                    task_counter += 1
+                    self.count_changed.emit(task_counter)
                 #print("Весь цикл:", time.time()-start_time_loop)
                 # закрываем файл результата
                 result_file.close()

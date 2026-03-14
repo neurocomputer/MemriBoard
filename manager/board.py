@@ -374,7 +374,7 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             elif self.board_type in ['VISA']:  # Работа с VISA-инструментами
-                print(task)  # TODO remove
+                self.interface.logger.info(f'Task: {task}')
                 if not isinstance(task['mode_flag'], str) and task['mode_flag'] not in [7]:
                     self.logger.critical('Wrong task for VISA-driver!')
                     res = 0
@@ -462,7 +462,7 @@ class Connector():
                             pulse_sequence.append(d2v(int(self.config['board']['dac_bit']), 
                                                       float(self.config['board']['vol_ref_dac']), pulse))
                             read_flags.append(False)
-                    print('pulse_seq', pulse_sequence)
+                    self.interface.logger.debug(f'config_std: pulse_sequence:\n{pulse_sequence}')
                     flag, response = self.interface.config_std(
                         pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3,
                         pulse_sequence = pulse_sequence,
@@ -527,7 +527,7 @@ class Connector():
                     if flag and not self.silent:
                         self.logger.info(response)
                     res = int(flag)
-                print(f'res = {res}')
+                self.interface.logger.info(f'Impact: res = {res}')
             elif self.board_type in ['VISA_test', ]:
                 print(task)
                 res = (random.randint(20, 10000), 0)
