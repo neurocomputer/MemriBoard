@@ -50,7 +50,7 @@ class Application():
         self.ap_log_path = LOG_PATH
         self.ap_logger = logging.getLogger(__name__)
         self.ap_logger.setLevel(logging.INFO)
-        handler = RotatingFileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"], maxBytes=50)
+        handler = RotatingFileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"], maxBytes=1e6, backupCount=1)
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.ap_logger.addHandler(handler)
         # настраиваем логгер базы данных
@@ -87,6 +87,9 @@ class Application():
         self.sum_gain = int(self.ap_config['board']['sum_gain'])
         self.writable_cells = self.ap_config['gui']['writable_cells']
         self.lock_board_type = eval(self.ap_config['gui']['lock_board_type'])
+        # TODO remove
+        self.apply_csv_path = self.ap_config['gui']['apply_csv_path']
+        self.apply_save_csv = eval(self.ap_config['gui']['apply_save_csv'])
 
     def save_settings(self, **kwargs):
         """

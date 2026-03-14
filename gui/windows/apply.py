@@ -21,7 +21,8 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
 from manager.service import d2v, a2r, a2c, r2a, a2v
-from manager.service.saves import save_list_to_bytearray
+from manager.service.saves import save_list_to_bytearray, init_csv_apply
+import csv
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Apply(QWidget):
@@ -461,12 +462,34 @@ class ApplyExp(QThread):
             status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
             if not status:
                 self.parent.parent.man.ap_logger.critical("Ошибка БД: не возможно добавить метаинформацию")
+            # TODO remove: Initializing .csv save file -----------------
+            if self.parent.parent.man.apply_save_csv:
+                _, crossbar_serial = self.parent.parent.man.db.get_crossbar_serial_from_id(self.parent.parent.man.crossbar_id)
+                csv_header = ['sign', 'vol', 'res', 'timestamp', 'temperature(C)', 'V_temp', 'smu_volt', 'smu_current', 'crossbar_id', "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "ticket_mode", "terminate_type", "terminate_1", "terminate_2"]
+                csv_path = init_csv_apply(self.parent.parent.man.apply_csv_path, name, crossbar_serial, item[0], item[1], csv_header)
+            # ----------------------------------------------------------
             # инициируем цикл по тикетам
             counter = 0
             for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, task_list, count
                 ticket = ticket_info[1]
                 # терминатор
                 term_left, term_right = self.parent.parent.man.get_term_values(ticket['terminate'])
+                # TODO remove teminator in Ohms ----------
+                term_left_ohm = a2r(self.parent.parent.man.gain,
+                                    self.parent.parent.man.res_load,
+                                    self.parent.parent.man.vol_read,
+                                    self.parent.parent.man.adc_bit,
+                                    self.parent.parent.man.vol_ref_adc,
+                                    self.parent.parent.man.res_switches,
+                                    term_left)
+                term_right_ohm = a2r(self.parent.parent.man.gain,
+                                     self.parent.parent.man.res_load,
+                                     self.parent.parent.man.vol_read,
+                                     self.parent.parent.man.adc_bit,
+                                     self.parent.parent.man.vol_ref_adc,
+                                     self.parent.parent.man.res_switches,
+                                     term_right)
+                # ----------------------------------------
                 # вбиваем координаты
                 ticket['params']['wl'] = item[0]
                 ticket['params']['bl'] = item[1]
@@ -518,6 +541,32 @@ class ApplyExp(QThread):
                             if result:
                                 self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right},{task[0]['t_ms']},{task[0]['t_us']},{ticket['name']},{ticket['terminate']},{ticket['mode']},{result[2]},{result[3]},{result[4]}")
                                 save_list_to_bytearray(result_file, task[0]['sign'], task[0]['vol'], result[0])
+                                # TODO remove: saving to csv -------------------
+                                if self.parent.parent.man.apply_save_csv:
+                                    with open(csv_path, 'a', newline='', encoding='utf-8') as file:
+                                        file_wr = csv.writer(file, delimiter=';')
+                                        file_wr.writerow([
+                                            task[0]['sign'],
+                                            task[0]['vol'],
+                                            result[0],  # res
+                                            result[2],  # timestamp
+                                            result[5],  # temperature(C)
+                                            result[6],  # V_temp
+                                            result[3],  # smu_volt
+                                            result[4],  # smu_current
+                                            crossbar_serial,  # crossbar_id
+                                            item[0],  # wl
+                                            item[1],  # bl
+                                            task[0]['t_ms'],  # t_ms
+                                            task[0]['t_us'],  # t_us
+                                            name,  # exp_name
+                                            ticket['name'],  # ticket_name
+                                            ticket['mode'],  # ticket_mode
+                                            ticket['terminate'].get('type'),  # terminate_type
+                                            term_left_ohm,  # terminate_1
+                                            term_right_ohm  # terminate_2
+                                        ])
+                                # ----------------------------------------------
                                 resistance_previous = a2r(self.parent.parent.man.gain,
                                                         self.parent.parent.man.res_load,
                                                         self.parent.parent.man.vol_read,
