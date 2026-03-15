@@ -406,7 +406,7 @@ class Apply(QWidget):
         if self._plot_flag:
             # выбор отображения по осям
             y_item = self.y_value_process(value, vol, sign)
-            x_item = self.x_value_process(vol=vol, sign=sign, count=count)
+            x_item = self.x_value_process(vol, sign, count)
             size = 3000 # todo: глубина отрисовки, вынести в константы
             data_len = len(self.data_for_plot_y)
             if data_len > size:
@@ -620,7 +620,7 @@ class ApplyExp(QThread):
                                     continue
                         else:
                             self.flag_soft_cc = 1
-                            self.parent.parent.man.ap_logger.critical("Программное ограничение тока!")
+                            self.parent.parent.man.ap_logger.critical(self.lang_pack.get("prog_stop"))
                         counter += 1
                     # иначе задача не связана с подачей сигнала
                     else:

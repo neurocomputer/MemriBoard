@@ -148,6 +148,13 @@ class Connector():
                     open_flag = self.interface.check_connection(kwargs['attempts'])
                 except ModuleNotFoundError:
                     pass
+            elif self.board_type == 'rp5_rram_python':
+                try:
+                    import RRAMPiDriver.ReRAMPiDrv_GPIO as driver
+                    self.interface = driver.RPI_modes_RRAM()
+                    open_flag = True
+                except ModuleNotFoundError:
+                    pass
             # Для VISA-инструментов
             elif self.board_type == 'VISA':
                 try:
@@ -172,13 +179,6 @@ class Connector():
                 try:
                     from visa_driver import VISA_driver
                     self.interface = VISA_driver()
-                    open_flag = True
-                except ModuleNotFoundError:
-                    pass
-            elif self.board_type == 'rp5_rram_python':
-                try:
-                    import RRAMPiDriver.ReRAMPiDrv_GPIO as driver
-                    self.interface = driver.RPI_modes_RRAM()
                     open_flag = True
                 except ModuleNotFoundError:
                     pass

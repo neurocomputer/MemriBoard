@@ -129,8 +129,8 @@ class Window(QMainWindow):
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(self.show_math_dialog)
-        self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.read_language_json))
+        self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # хоткей
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
