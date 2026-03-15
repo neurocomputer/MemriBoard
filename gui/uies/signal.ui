@@ -149,14 +149,14 @@
                  </widget>
                 </item>
                 <item row="2" column="6">
-                 <widget class="QLineEdit" name="forward_limiter">
+                 <widget class="ScientificQLineEdit" name="forward_limiter">
                   <property name="text">
                    <string>0</string>
                   </property>
                  </widget>
                 </item>
                 <item row="3" column="6">
-                 <widget class="QLineEdit" name="backward_limiter">
+                 <widget class="ScientificQLineEdit" name="backward_limiter">
                   <property name="text">
                    <string>0</string>
                   </property>
@@ -259,6 +259,9 @@
                  <widget class="QLabel" name="label_14">
                   <property name="text">
                    <string>Повторить:</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                   </property>
                  </widget>
                 </item>

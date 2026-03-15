@@ -131,13 +131,17 @@ class SignalMod(QDialog):
         self.ui.menu_combobox.clear()
         self.ui.menu_combobox.addItems(self.parent.man.menu.keys())
         # Set units for scientific lines
-        for widget, unit in zip([self.ui.forward_start,
-                                 self.ui.forward_step,
-                                 self.ui.forward_stop,
-                                 self.ui.backward_start,
-                                 self.ui.backward_step,
-                                 self.ui.backward_stop],
-                                ['V', 'V', 'V', 'V', 'V', 'V']):
+        self.scientific_widgets = {  # {widget: unit}
+            self.ui.forward_start: 'V',
+            self.ui.forward_step: 'V',
+            self.ui.forward_stop: 'V',
+            self.ui.backward_start: 'V',
+            self.ui.backward_step: 'V',
+            self.ui.backward_stop: 'V',
+            self.ui.forward_limiter: 'A',
+            self.ui.backward_limiter: 'A',
+        }
+        for widget, unit in self.scientific_widgets.items():
             widget.set_unit(unit)
             widget.bad_value.connect(lambda text: show_warning_messagebox(
                 self.lang_pack.get("symbol_incorrect") + f'\n"{text}"', rlj=self.parent.read_language_json))
@@ -200,14 +204,7 @@ class SignalMod(QDialog):
         status = False
         try:
             # Check if data in scientific lines is correct
-            for widget in [
-                self.ui.forward_start,
-                self.ui.forward_step,
-                self.ui.forward_stop,
-                self.ui.backward_start,
-                self.ui.backward_step,
-                self.ui.backward_stop
-            ]:
+            for widget in self.scientific_widgets:
                 if widget.get_value() is None:
                     raise ValueError
                 
@@ -221,7 +218,7 @@ class SignalMod(QDialog):
             self.base_json['params']['t_dir_msec_inc'] = int(self.ui.forward_ms.text())
             self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
             self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
-            self.base_json['params']['dir_cc'] = float(self.ui.forward_limiter.text())
+            self.base_json['params']['dir_cc'] = self.ui.forward_limiter.get_value()
             # чекбокс dir dec
             if self.ui.forward_dec.isChecked():
                 self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
@@ -244,7 +241,7 @@ class SignalMod(QDialog):
             self.base_json['params']['t_rev_msec_inc'] = int(self.ui.backward_ms.text())
             self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
             self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
-            self.base_json['params']['rev_cc'] = float(self.ui.backward_limiter.text())
+            self.base_json['params']['rev_cc'] = self.ui.backward_limiter.get_value()
             # чекбокс rev dec
             if self.ui.backward_dec.isChecked():
                 self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
@@ -357,7 +354,7 @@ class SignalMod(QDialog):
         self.ui.forward_ms.setText(str(self.base_json['params']['t_dir_msec_inc']))
         self.ui.forward_mcs.setText(str(self.base_json['params']['t_dir_usec_inc']))
         self.ui.forward_count.setValue(self.base_json['params']['dir_inc_countr'])
-        self.ui.forward_limiter.setText(str(self.base_json['params']['dir_cc']))
+        self.ui.forward_limiter.set_value(self.base_json['params']['dir_cc'])
 
         if self.base_json['params']['dir_dec_countr'] != 0:
             self.ui.forward_dec.setCheckState(2)
@@ -370,7 +367,7 @@ class SignalMod(QDialog):
         self.ui.backward_ms.setText(str(self.base_json['params']['t_rev_msec_inc']))
         self.ui.backward_mcs.setText(str(self.base_json['params']['t_rev_usec_inc']))
         self.ui.backward_count.setValue(self.base_json['params']['rev_inc_countr'])
-        self.ui.backward_limiter.setText(str(self.base_json['params']['rev_cc']))
+        self.ui.backward_limiter.set_value(self.base_json['params']['rev_cc'])
 
         if self.base_json['params']['rev_dec_countr'] != 0:
             self.ui.backward_dec.setCheckState(2)
