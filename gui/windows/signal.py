@@ -112,6 +112,7 @@ class SignalMod(QDialog):
             self.ui.shutdown_enc_label.setText(self.lang_pack.get("accumulator"))
             self.ui.terminator_measure_combobox_label.setText(self.lang_pack.get("measure"))
             self.ui.label_17.setText(self.lang_pack.get("current"))
+            self.ui.label_mode.setText(self.lang_pack.get("mode"))
             self.ui.button_graph.setText(self.lang_pack.get("graphic"))
             self.ui.label_16.setText(self.lang_pack.get("board_req"))
             self.ui.label.setText(self.lang_pack.get("exp_name"))

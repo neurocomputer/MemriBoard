@@ -143,7 +143,8 @@
         "file_name_wrong":"File name is wrong!",
         "ohm":"Ohm",
         "hold_path":"hold.png",
-        "compliance": "Compliance"
+        "compliance": "Compliance",
+        "mode": "Mode:"
     },
     "cell_info":{
         "name":"Cell Info",

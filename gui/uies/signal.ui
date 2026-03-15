@@ -458,7 +458,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="label_19">
+              <widget class="QLabel" name="label_mode">
                <property name="text">
                 <string>Режим работы:</string>
                </property>

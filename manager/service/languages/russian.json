@@ -143,7 +143,8 @@
         "file_name_wrong":"Неверное имя файла!",
         "ohm":"Ом",
         "hold_path":"hold_rus.png",
-        "compliance": "Огран. Тока"
+        "compliance": "Огран. Тока",
+        "mode": "Режим работы:"
     },
     "cell_info":{
         "name":"Информация о ячейке",
