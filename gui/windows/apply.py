@@ -584,10 +584,17 @@ class ApplyExp(QThread):
                                 if self.parent.parent.man.apply_save_csv:
                                     with open(csv_path, 'a', newline='', encoding='utf-8') as file:
                                         file_wr = csv.writer(file, delimiter=';')
+                                        res_ohm = a2r(self.parent.parent.man.gain,
+                                                      self.parent.parent.man.res_load,
+                                                      self.parent.parent.man.vol_read,
+                                                      self.parent.parent.man.adc_bit,
+                                                      self.parent.parent.man.vol_ref_adc,
+                                                      self.parent.parent.man.res_switches,
+                                                      result[0])
                                         file_wr.writerow([
                                             task[0]['sign'],
                                             task[0]['vol'],
-                                            result[0],  # res
+                                            res_ohm,  # res
                                             result[2],  # timestamp
                                             result[5],  # temperature(C)
                                             result[6],  # V_temp
