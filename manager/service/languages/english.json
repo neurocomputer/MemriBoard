@@ -426,5 +426,13 @@
         "send":"Send",
         "no_answer":"Didn't get any answer!",
         "req_inc":"Incorrect request!"
+    },
+    "filter":{
+        "name":"Filter",
+        "apply":"Apply",
+        "clear":"Clear"
+    },
+    "map":{
+        "name":"Crossbar map"
     }
 }
