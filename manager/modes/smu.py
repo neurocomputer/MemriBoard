@@ -307,6 +307,9 @@ def _smu_pulsed_retention_gen(params, n_points, v_arrays, double, terminator, bl
         if 'wl' in params and 'bl' in params:
             data['wl'] = params['wl']
             data['bl'] = params['bl']
+        if 'dir_interval' in params and 'rev_interval' in params:
+            data['dir_interval'] = params['dir_interval']
+            data['rev_interval'] = params['rev_interval']
         yield [data, terminator]  # Config task
         sense_data = {'mode_flag': 'sense',
                       'vol': 0,

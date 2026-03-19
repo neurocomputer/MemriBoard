@@ -497,12 +497,19 @@ class Connector():
                         self.logger.critical(f'Could not configure instruments: {response}')
                     res = int(flag)
                 elif task['mode_flag'] == 'config_pulsed_retention':
+                    # TODO: remove trig interval check (?)
+                    if 'dir_interval' in task:
+                        trigger_interval = task['dir_interval']
+                    else:
+                        trigger_interval = 5 * (task['t_us'] * 1e-6 + task['t_ms'] * 1e-3)
+                    print(trigger_interval)
                     flag, response = self.interface.config_pulsed_retention(
                         pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
                         current_compliance = task['current_compliance'],
                         n_pulses = task['n_pulses'],
                         read_voltage = self.config['board']['vol_read'],
-                        sign = 1  # Reset
+                        sign = 1,  # Reset
+                        trigger_interval = trigger_interval
                     )
                     if flag and not self.silent:
                         self.logger.info(response)

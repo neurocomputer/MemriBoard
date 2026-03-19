@@ -51,6 +51,7 @@ class SignalMod(QDialog):
         self.ui.button_cancel.clicked.connect(self.close)
         # другие события
         self.ui.terminator_combobox.activated.connect(self._choose_terminator)
+        self.ui.menu_combobox.activated.connect(self._choose_time_setting)
         # начальные значения
         self.set_up_init_values()
         # режим
@@ -98,6 +99,7 @@ class SignalMod(QDialog):
             self.ui.label_11.setText(self.lang_pack.get("backward"))
             self.ui.label_8.setText(self.lang_pack.get("ms"))
             self.ui.label_9.setText(self.lang_pack.get("mcs"))
+            self.ui.label_trig_interval.setText(self.lang_pack.get("trigger_interval"))
             self.ui.label_2.setText(self.lang_pack.get("sending_order"))
             self.ui.label_13.setText(self.lang_pack.get("times"))
             self.ui.label_14.setText(self.lang_pack.get("repeat"))
@@ -140,11 +142,15 @@ class SignalMod(QDialog):
             self.ui.backward_stop: 'V',
             self.ui.forward_limiter: 'A',
             self.ui.backward_limiter: 'A',
+            self.ui.forward_trig_interval: 's',
+            self.ui.backward_trig_interval: 's'
         }
         for widget, unit in self.scientific_widgets.items():
             widget.set_unit(unit)
             widget.bad_value.connect(lambda text: show_warning_messagebox(
                 self.lang_pack.get("symbol_incorrect") + f'\n"{text}"', rlj=self.parent.read_language_json))
+        # Modes for which setting trigger interval is needed
+        self.trigger_interval_modes = ['smu_pulsed_retention']
 
     def _plot_ticket(self) -> None:
         """
@@ -166,33 +172,6 @@ class SignalMod(QDialog):
         """
         pixmap = QPixmap(self.IMG_PATH)
         self.ui.label_png.setPixmap(pixmap)
-
-    def _get_scaling_unit(self, text:str):
-        """
-        Изменить число в соответствии с единицей измерения
-        """
-        result = 0
-        status = False
-        try:
-            text = text.replace(' ', '')
-            data = re.match(r"([0-9.]+)(.*)", text)
-            if data:
-                num = data.group(1)
-                unit = data.group(2)
-                if unit == 'мкВ':
-                    result = float(num) / 1000000
-                elif unit == 'кВ':
-                    result = float(num) * 1000
-                elif unit == 'мВ':
-                    result = float(num) / 1000
-                elif unit == 'В' or unit == '':
-                    result = float(num)
-            status = True
-        except ValueError:
-            show_warning_messagebox('Некорректный символ!')
-        except Exception as e:
-            print("Ошибка: ", e)
-        return status, result
 
     def _make_json(self) -> bool:
         """
@@ -219,6 +198,7 @@ class SignalMod(QDialog):
             self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
             self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
             self.base_json['params']['dir_cc'] = self.ui.forward_limiter.get_value()
+            self.base_json['params']['dir_interval'] = self.ui.forward_trig_interval.get_value()
             # чекбокс dir dec
             if self.ui.forward_dec.isChecked():
                 self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
@@ -242,6 +222,7 @@ class SignalMod(QDialog):
             self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
             self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
             self.base_json['params']['rev_cc'] = self.ui.backward_limiter.get_value()
+            self.base_json['params']['rev_interval'] = self.ui.backward_trig_interval.get_value()
             # чекбокс rev dec
             if self.ui.backward_dec.isChecked():
                 self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
@@ -375,6 +356,13 @@ class SignalMod(QDialog):
             self.ui.backward_dec.setCheckState(0)
 
         self.ui.direction_combobox.setCurrentIndex(self.base_json['params']['reverse'])
+        
+        self._choose_time_setting()
+        if self.base_json['mode'] in self.trigger_interval_modes:
+            if 'dir_interval' in self.base_json['params']:
+                self.ui.forward_trig_interval.set_value(self.base_json['params']['dir_interval'])
+            if 'rev_interval' in self.base_json['params']:
+                self.ui.backward_trig_interval.set_value(self.base_json['params']['rev_interval'])
 
         # терминаторы
         self.ui.terminator_combobox.setCurrentText(self.base_json['terminate']['type'])
@@ -455,6 +443,25 @@ class SignalMod(QDialog):
         """
         self.ui.shutdown_value.show()
         self.ui.shutdown_value_label.show()
+    
+    def _choose_time_setting(self) -> None:
+        """Choose time settings area: show or hide trigger interval"""
+        if self.menu_combobox.currentText() in self.trigger_interval_modes:
+            self._show_trig_interval()
+        else:
+            self._hide_trig_interval()
+        
+    def _show_trig_interval(self) -> None:
+        """Show widgets for setting trigger interval"""
+        self.ui.label_trig_interval.show()
+        self.ui.forward_trig_interval.show()
+        self.ui.backward_trig_interval.show()
+        
+    def _hide_trig_interval(self) -> None:
+        """Hide widgets for setting trigger interval"""
+        self.ui.label_trig_interval.hide()
+        self.ui.forward_trig_interval.hide()
+        self.ui.backward_trig_interval.hide()
 
     def closeEvent(self, event):
         """

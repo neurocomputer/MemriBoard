@@ -144,7 +144,8 @@
         "ohm":"Ohm",
         "hold_path":"hold.png",
         "compliance": "Compliance",
-        "mode": "Mode:"
+        "mode": "Mode:",
+        "trigger_interval": "Interval"
     },
     "cell_info":{
         "name":"Cell Info",

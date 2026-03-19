@@ -144,7 +144,8 @@
         "ohm":"Ом",
         "hold_path":"hold_rus.png",
         "compliance": "Огран. Тока",
-        "mode": "Режим работы:"
+        "mode": "Режим работы:",
+        "trigger_interval": "Интервал"
     },
     "cell_info":{
         "name":"Информация о ячейке",
