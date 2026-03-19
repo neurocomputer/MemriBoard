@@ -45,6 +45,7 @@ from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
+from gui.windows.help import Help
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -89,6 +90,7 @@ class Window(QMainWindow):
     new_ann_dialog: NewAnn
     wait_dialog: Wait
     math_dialog = Math
+    help_dialog: Help = None
     opener: str = ''
     extra = []
     coordinate_error = False
@@ -149,12 +151,14 @@ class Window(QMainWindow):
         self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
         self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
         self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_menu.addAction('', self.show_help, QKeySequence("F1"))
         self.tool_button_actions_text = ['info', 
                                          'terminal', 
                                          'filter', 
                                          'show_weights', 
                                          'write', 
-                                         'read_all_btn']
+                                         'read_all_btn',
+                                         'help']
         self.ui.tool_button.setMenu(self.tool_button_menu)
         self.ui.tool_button.setPopupMode(2)
 
@@ -197,6 +201,8 @@ class Window(QMainWindow):
             self.ui.button_settings.setText(self.lang_pack.get("settings"))
             for action, text in zip(self.tool_button_menu.actions(), self.tool_button_actions_text):
                 action.setText(self.lang_pack.get(text))
+            if self.help_dialog is not None:
+                self.help_dialog.change_language()
 
     # методы открытия диалоговых окон
 
@@ -385,6 +391,16 @@ class Window(QMainWindow):
             self.snapshot_dialog.data = self.all_resistances
             self.snapshot_dialog.plot_matrix()
             self.snapshot_dialog.showNormal()      
+            
+    def show_help(self) -> None:
+        """
+        Окно со справкой
+        """
+        if self.help_dialog is None:
+            self.help_dialog = Help(self)
+            self.help_dialog.show()
+        else:
+            self.help_dialog.activateWindow()  # TODO This might not work on wayland (Raspberry Pi)
 
     # обработчики кнопок
 
@@ -665,6 +681,8 @@ class Window(QMainWindow):
         # closing snapshot window
         if self.snapshot_dialog is not None:
             self.snapshot_dialog.safe_close() 
+        if self.help_dialog is not None:
+            self.help_dialog.close()
         # закрытие программы
         self.man.abort()
         self.man.close()

@@ -60,7 +60,8 @@
         "filter":"Filter",
         "show_weights":"Show Weights",
         "write":"Write Weights",
-        "read_all_btn":"Read All"
+        "read_all_btn":"Read All",
+        "help":"Help"
     },
     "rram":{
         "name":"RRAM",
@@ -434,5 +435,9 @@
     },
     "map":{
         "name":"Crossbar map"
+    },
+    "help":{
+        "name":"Help",
+        "path":"docs/README.md"
     }
 }
