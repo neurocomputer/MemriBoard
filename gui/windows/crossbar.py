@@ -16,7 +16,7 @@ import numpy as np
 from numpy import inf
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QShortcut
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
@@ -119,6 +119,9 @@ class Window(QMainWindow):
         self.man.blank_type = 'mode_7'
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        # Меню с действиями и шорткатами
+        self.set_shortcuts()
+        # Смена языка
         self.change_language()
         # параметры кроссбара
         self.ui.crossbar_progress.setVisible(False)
@@ -132,21 +135,28 @@ class Window(QMainWindow):
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.read_language_json))
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
-        # хоткей
-        shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        shortcut.activated.connect(self.show_terminal_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
-        shortcut.activated.connect(self.show_filter_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
-        shortcut.activated.connect(self.show_crossbar_weights_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
-        shortcut.activated.connect(self.show_cb_info_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
-        shortcut.activated.connect(self.show_new_ann_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
-        shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # диалоговое окно подключения
         self.show_connect_dialog()
+        
+    def set_shortcuts(self):
+        """
+        Настройка меню с шорткатами
+        """
+        self.tool_button_menu = QMenu(self)
+        self.tool_button_menu.addAction('', self.show_cb_info_dialog, QKeySequence("Ctrl+I"))
+        self.tool_button_menu.addAction('', self.show_terminal_dialog, QKeySequence("Ctrl+T"))
+        self.tool_button_menu.addAction('', self.show_filter_dialog, QKeySequence("Ctrl+F"))
+        self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
+        self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
+        self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_actions_text = ['info', 
+                                         'terminal', 
+                                         'filter', 
+                                         'show_weights', 
+                                         'write', 
+                                         'read_all_btn']
+        self.ui.tool_button.setMenu(self.tool_button_menu)
+        self.ui.tool_button.setPopupMode(2)
 
     def read_language_json(self, window: str):
         """
@@ -185,6 +195,8 @@ class Window(QMainWindow):
             self.ui.button_tests.setText(self.lang_pack.get("tests"))
             self.ui.button_snapshot.setText(self.lang_pack.get("snapshot"))
             self.ui.button_settings.setText(self.lang_pack.get("settings"))
+            for action, text in zip(self.tool_button_menu.actions(), self.tool_button_actions_text):
+                action.setText(self.lang_pack.get(text))
 
     # методы открытия диалоговых окон
 
