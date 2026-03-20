@@ -181,3 +181,6 @@ tickets/blank_1913.json
 tickets/iv-curve-reversed_1914.json
 writtable_cells.csv
 *.csv
+RRAMPiDriver/
+RRAM_VISA_Drivers/
+MemriNeurons/
