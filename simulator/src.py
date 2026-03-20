@@ -160,9 +160,9 @@ class BoardSimulator():
         """
         Запрос к плате в режиме 9
         """
-        v_dac = abs(v_dac)
-        vol = d2v(self.config['board']['dac_bit'],
-                  self.config['board']['vol_ref_dac'],
+        v_dac = int(abs(v_dac))
+        vol = d2v(int(self.config['board']['dac_bit']),
+                  float(self.config['board']['vol_ref_dac']),
                   v_dac)
         if vol >= 0.3:
             vol = 0.3

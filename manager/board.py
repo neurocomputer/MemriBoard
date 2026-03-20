@@ -8,8 +8,6 @@ import time
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
-from manager.service import d2v
-from simulator.src import BoardSimulator
 
 class Connector():
     """
@@ -74,6 +72,7 @@ class Connector():
         open_flag = False
         if self.cb_type == 'simulator':
             # загрузка симулятора
+            from simulator.src import BoardSimulator
             self.interface = BoardSimulator()
             open_flag = self.interface.connect(self.crossbar_serial)
         elif self.cb_type == 'real':
