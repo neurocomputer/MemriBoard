@@ -388,9 +388,14 @@ class Window(QMainWindow):
             self.snapshot_dialog = Snapshot(parent=self, data=self.all_resistances)
             self.snapshot_dialog.show()
         else:
-            self.snapshot_dialog.data = self.all_resistances
-            self.snapshot_dialog.plot_matrix()
-            self.snapshot_dialog.showNormal()      
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.snapshot_dialog.safe_close()
+                self.show_snapshot()
+            else:
+                self.snapshot_dialog.data = self.all_resistances
+                self.snapshot_dialog.plot_matrix()
+                self.snapshot_dialog.activateWindow()     
             
     def show_help(self) -> None:
         """
@@ -400,7 +405,12 @@ class Window(QMainWindow):
             self.help_dialog = Help(self)
             self.help_dialog.show()
         else:
-            self.help_dialog.activateWindow()  # TODO This might not work on wayland (Raspberry Pi)
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.help_dialog.close()
+                self.show_help()
+            else:
+                self.help_dialog.activateWindow()
 
     # обработчики кнопок
 
