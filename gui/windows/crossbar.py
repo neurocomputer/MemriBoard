@@ -553,6 +553,10 @@ class Window(QMainWindow):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
                         item.setBackground(colors[i][j])
+                        if colors[i][j].black() < 127:
+                            item.setForeground(QColor(0, 0, 0))
+                        else:
+                            item.setForeground(QColor(230, 230, 230))
                 # Updating snapshot window
                 if self.snapshot_dialog is not None:
                     self.snapshot_dialog.data = self.all_resistances
