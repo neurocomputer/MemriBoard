@@ -322,7 +322,7 @@ class ConnectDialog(QDialog):
                         if answer:
                             self.accept_connect()
                         else:
-                            return
+                            self.parent.man.conn.close_port()
                     else:
                         message = self.lang_pack.get("board_error") + str(combo_board_type)
                         self.ui.label_status.setText(message)
