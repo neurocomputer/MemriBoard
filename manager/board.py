@@ -78,6 +78,7 @@ class Connector():
         """
 
         open_flag = False
+        simulation_fallback = False
         if self.cb_type == 'simulator':
             # загрузка симулятора
             open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
@@ -156,33 +157,41 @@ class Connector():
                 except ModuleNotFoundError:
                     pass
             # Для VISA-инструментов
-            elif self.board_type == 'VISA':
+            elif self.board_type == 'ITC_1T1R_32x8_switched':
                 try:
-                    from RRAM_VISA_Drivers import ITC_1T1R_32x8_probe_station # pylint: disable=C0415
-                    # A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'
+                    from RRAM_VISA_Drivers import ITC_1T1R_32x8_switched  # type: ignore
+                    # A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'  # TODO remove
                     # B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
                     # switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
-                    A_address = None
-                    B_address = None
-                    switch_address = None
-                    self.interface = ITC_1T1R_32x8_probe_station(  # TODO fix addresses
-                        B2902B_1_address=A_address,
-                        B2902B_2_address=B_address,
-                        VISA_library_path = ''
+                    self.interface = ITC_1T1R_32x8_switched(
+                        B2902B_1_address=kwargs['visa_addresses'][0],
+                        B2902B_2_address=kwargs['visa_addresses'][1],
+                        Switch_address=kwargs['visa_addresses'][2],
+                        VISA_library_path=kwargs['visa_library_path']
                     )
                     open_flag = True
+                    if self.interface.sim:
+                        simulation_fallback = True  # Что-то не так с адресами, драйвер упал в режим симуляции
                 except ModuleNotFoundError:
                     pass
                 except ConnectionError:
                     open_flag = False
-            elif self.board_type == 'VISA_test':
+            elif self.board_type == 'ITC_1T1R_32x8_probe_station':
                 try:
-                    from visa_driver import VISA_driver
-                    self.interface = VISA_driver()
+                    from RRAM_VISA_Drivers import ITC_1T1R_32x8_probe_station  # type: ignore
+                    self.interface = ITC_1T1R_32x8_probe_station(
+                        B2902B_1_address=kwargs['visa_addresses'][0],
+                        B2902B_2_address=kwargs['visa_addresses'][1],
+                        VISA_library_path=kwargs['visa_library_path']
+                    )
                     open_flag = True
+                    if self.interface.sim:
+                        simulation_fallback = True
                 except ModuleNotFoundError:
                     pass
-        return open_flag
+                except ConnectionError:
+                    open_flag = False
+        return open_flag, simulation_fallback
 
     def close_port(self) -> bool:
         """
@@ -204,11 +213,11 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'VISA_test']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
                 # todo: может нужно что-то еще
                 close_flag = True
             # Для VISA-инструментов
-            elif self.board_type in ['VISA']:
+            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station']:
                 flag, response = self.interface.disconnect()
                 if flag:
                     self.logger.info('VISA-instruments disconnected')
@@ -299,7 +308,7 @@ class Connector():
                 send_flag = True
                 rec_data = ['elbear_nano']
                 # todo: добавить служебную инфу в драйвер
-            elif self.board_type in ['VISA']:
+            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station']:
                 send_flag = True
                 rec_data = self.interface.get_tech_data()
         # режим симулятор
@@ -393,7 +402,7 @@ class Connector():
                                                     task['wl'],
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
-            elif self.board_type in ['VISA']:  # Работа с VISA-инструментами
+            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station']:  # Работа с VISA-инструментами
                 self.interface.logger.info(f'Task: {task}')
                 if not isinstance(task['mode_flag'], str) and task['mode_flag'] not in [7]:
                     self.logger.critical('Wrong task for VISA-driver!')
@@ -502,7 +511,6 @@ class Connector():
                         trigger_interval = task['dir_interval']
                     else:
                         trigger_interval = 5 * (task['t_us'] * 1e-6 + task['t_ms'] * 1e-3)
-                    print(trigger_interval)
                     flag, response = self.interface.config_pulsed_retention(
                         pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
                         current_compliance = task['current_compliance'],
@@ -555,10 +563,6 @@ class Connector():
                         self.logger.info(response)
                     res = int(flag)
                 self.interface.logger.info(f'Impact: res = {res}')
-            elif self.board_type in ['VISA_test', ]:
-                print(task)
-                res = (random.randint(20, 10000), 0)
-                time.sleep(0.2)
             # можно добавить работу с другими платами
             # time.sleep(55/1000)
         # режим симулятор

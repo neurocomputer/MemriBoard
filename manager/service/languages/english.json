@@ -36,8 +36,21 @@
         "status_3":"An error occured when adding a crossbar! The database may already already have one.",
         "status_4":"Choose a crossbar!",
         "status_5":"Can't make a simulator!",
+        "status_visa":"Fill the VISA-addresses or leave them empty for simulation.",
         "board_error":"No connection to ",
-        "quit_now":"Quit now?"
+        "quit_now":"Quit now?",
+        "connecting_to_visa":"Connecting to VISA-instruments",
+        "update_resources":"Update VISA-resources",
+        "check":"Check",
+        "reset":"Reset",
+        "basic_response":"Connection has not been verified",
+        "no_rram_visa_drivers":"Didn't find module RRAM_VISA_Drivers! Add it to the MemriBoard folder.",
+        "exception":"An error occured:\n",
+        "cant_connect":"Can't connect to the instrument.",
+        "wrong_instrument":"Wrong instrument!",
+        "was_reset":"Instrument was reset.",
+        "cant_reset":"Can't reset the instrument! Error:\n",
+        "simulation_fallback":"The driver fell back to the simulation mode: one of the VISA-addresses is not filled in.\n\nContinue?"
     },
     "crossbar":{
         "name":"Crossbar",

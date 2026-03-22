@@ -97,6 +97,14 @@ class Application():
         if (hasattr(self, 'conn') and hasattr(self.conn, 'interface') and 
             hasattr(self.conn.interface, 'update_settings') and callable(self.conn.interface.update_settings)):
             self.conn.interface.update_settings()
+        # VISA config
+        self.visa_addresses = [self.ap_config['connector']['visa_address_0'],
+                               self.ap_config['connector']['visa_address_1'],
+                               self.ap_config['connector']['visa_address_2'],
+                               self.ap_config['connector']['visa_address_3'],
+                               self.ap_config['connector']['visa_address_4']]
+        self.visa_library_path = self.ap_config['connector']['visa_library_path']
+        
 
     def save_settings(self, **kwargs):
         """
@@ -122,6 +130,9 @@ class Application():
             self.ap_config['gui']['language'] = kwargs["language"]
         if "lock_board_type" in kwargs:
             self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
+        if 'visa_addresses' in kwargs:
+            for i in range(5):
+                self.ap_config['connector'][f'visa_address_{i}'] = kwargs['visa_addresses'][i] 
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)

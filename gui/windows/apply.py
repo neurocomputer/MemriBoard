@@ -52,11 +52,6 @@ class Apply(QWidget):
         """
         super().__init__(parent)
         self.parent = parent
-        # Флаг для VISA-инструментов
-        if self.parent.man.conn.board_type in ['VISA',]:
-            self.on_VISA = True
-        else:
-            self.on_VISA = False
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
         self.ui.change_language()
@@ -283,8 +278,6 @@ class Apply(QWidget):
         """
         Блокировка кнопок
         """
-        if self.on_VISA:
-            flags[2] = True  # Блокировка кнопки Пауза для VISA-инструментов
         self.ui.button_start.setDisabled(flags[0])
         self.ui.button_graph_settings.setDisabled(flags[1])
         self.ui.button_pause.setDisabled(True)

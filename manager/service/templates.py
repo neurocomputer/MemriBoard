@@ -57,6 +57,14 @@ read_time=1200
 blank_time=5
 ; время простоя между запросами (мкс)
 blank_time_between=55000
+; путь к библиотеке VISA (опционально, можно оставить пустым)
+visa_library_path=
+; адреса последнего подключения visa-инструментов
+visa_address_0=
+visa_address_1=
+visa_address_2=
+visa_address_3=
+visa_address_4=
 ; параметры ограничения тока
 cc_type=soft
 

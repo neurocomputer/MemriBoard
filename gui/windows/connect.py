@@ -7,10 +7,10 @@
 import os
 from sys import platform
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QMessageBox
 from PyQt5.QtSerialPort import QSerialPortInfo
 
-from gui.src import show_choose_window, show_warning_messagebox
+from gui.src import show_choose_window
 from manager.menu import get_menu
 
 class ConnectDialog(QDialog):
@@ -29,6 +29,7 @@ class ConnectDialog(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.init_VISA_layout()
         self.change_language()
         self.setModal(True)
         # обработки кнопок
@@ -37,15 +38,12 @@ class ConnectDialog(QDialog):
         self.ui.button_quit.clicked.connect(self.close)
         self.ui.button_settings.clicked.connect(self._settings)
         self.ui.button_new_crossbar.clicked.connect(lambda: self.show_new_cb_layout(True))
-        self.ui.button_conn_1.clicked.connect(lambda: self.check_VISA_connection(1))
-        self.ui.button_conn_2.clicked.connect(lambda: self.check_VISA_connection(2))
-        self.ui.button_conn_3.clicked.connect(lambda: self.check_VISA_connection(3))
         # обработка комбо
         self.ui.combo_com_name.currentIndexChanged.connect(self.on_com_name_changed)
         self.ui.edit_com_name.textChanged.connect(self.on_com_name_changed)
         self.ui.combo_board_type.currentIndexChanged.connect(self.on_combo_board_type_changed)
         # обновление отображения
-        self.show_VISA_layout(False)
+        self.hide_VISA_layout()
         self.show_new_cb_layout(False)
         self.update_crossbar_list()
         self.update_board_list()
@@ -75,6 +73,55 @@ class ConnectDialog(QDialog):
             self.ui.button_settings.setText(self.lang_pack.get("settings"))
             self.ui.button_quit.setText(self.lang_pack.get("quit"))
             self.ui.label_status.setText(self.lang_pack.get("status"))
+            # VISA connection widgets
+            self.ui.label_connecting_to_visa.setText(self.lang_pack.get('connecting_to_visa'))
+            self.ui.button_update_visa_resources.setText(self.lang_pack.get('update_resources'))
+            for check, reset, response in zip(self.visa_check_btns, self.visa_reset_btns, self.visa_response):
+                check.setText(self.lang_pack.get("check"))
+                reset.setText(self.lang_pack.get("reset"))
+                response.setText('  ' + self.lang_pack.get("basic_response"))
+            
+    def init_VISA_layout(self) -> None:
+        self.visa_labels = [self.ui.label_visa_0,  # Labels with names of the instruments
+                            self.ui.label_visa_1, 
+                            self.ui.label_visa_2, 
+                            self.ui.label_visa_3, 
+                            self.ui.label_visa_4]
+        self.visa_response = [self.ui.label_visa_response_0,  # Response labels
+                              self.ui.label_visa_response_1,
+                              self.ui.label_visa_response_2,
+                              self.ui.label_visa_response_3,
+                              self.ui.label_visa_response_4]
+        self.visa_combo = [self.ui.combo_visa_0,  # Comboboxes with addresses
+                           self.ui.combo_visa_1,
+                           self.ui.combo_visa_2,
+                           self.ui.combo_visa_3,
+                           self.ui.combo_visa_4]
+        self.visa_check_btns = [self.ui.button_visa_check_0,  # Check buttons
+                                self.ui.button_visa_check_1,
+                                self.ui.button_visa_check_2,
+                                self.ui.button_visa_check_3,
+                                self.ui.button_visa_check_4]
+        self.visa_reset_btns = [self.ui.button_visa_reset_0,  # Reset buttons
+                                self.ui.button_visa_reset_1,
+                                self.ui.button_visa_reset_2,
+                                self.ui.button_visa_reset_3,
+                                self.ui.button_visa_reset_4]
+        # Connecting buttons
+        self.ui.button_update_visa_resources.clicked.connect(self.update_VISA_resources)
+        self.ui.button_visa_check_0.clicked.connect(lambda: self.check_VISA_connection(0))
+        self.ui.button_visa_check_1.clicked.connect(lambda: self.check_VISA_connection(1))
+        self.ui.button_visa_check_2.clicked.connect(lambda: self.check_VISA_connection(2))
+        self.ui.button_visa_check_3.clicked.connect(lambda: self.check_VISA_connection(3))
+        self.ui.button_visa_check_4.clicked.connect(lambda: self.check_VISA_connection(4))
+        self.ui.button_visa_reset_0.clicked.connect(lambda: self.reset_VISA_instrument(0))
+        self.ui.button_visa_reset_1.clicked.connect(lambda: self.reset_VISA_instrument(1))
+        self.ui.button_visa_reset_2.clicked.connect(lambda: self.reset_VISA_instrument(2))
+        self.ui.button_visa_reset_3.clicked.connect(lambda: self.reset_VISA_instrument(3))
+        self.ui.button_visa_reset_4.clicked.connect(lambda: self.reset_VISA_instrument(4))
+        # Setting last connected addresses
+        for i in range(5):
+            self.visa_combo[i].setEditText(self.parent.man.visa_addresses[i])
 
     def on_com_name_changed(self) -> None:
         """
@@ -87,19 +134,6 @@ class ConnectDialog(QDialog):
             self.com_port = combo_com_name
         else: # адрес в списке
             self.com_port = combo_com_name
-
-    def show_VISA_layout(self, state) -> None:
-        """
-        Показать устройства VISA
-        """
-        for i in range(self.gridLayout_2.count()):
-            item = self.gridLayout_2.itemAt(i)
-            widget = item.widget()
-            if widget:
-                widget.setVisible(state)
-        self.ui.combo_visa_1.setVisible(state)
-        self.ui.combo_visa_2.setVisible(state)
-        self.ui.combo_visa_3.setVisible(state)
         
     def show_new_cb_layout(self, state) -> None:
         """
@@ -172,6 +206,8 @@ class ConnectDialog(QDialog):
         """
         Обновить список плат
         """
+        self.visa_drivers = ['ITC_1T1R_32x8_switched',
+                             'ITC_1T1R_32x8_probe_station']
         board_list = ['offline',
                       'memardboard_single',
                       'memardboard_crossbar',
@@ -182,9 +218,7 @@ class ConnectDialog(QDialog):
                       'elbear_nano',
                       'rp5_rram_elbear_nano',
                       'rp5_rram_python',
-                      'rp5_rram_c',
-                      'VISA',
-                      'VISA_test']
+                      'rp5_rram_c'] + self.visa_drivers
         try:
             last_board = self.parent.man.ap_config["board"]["board_type"]
             if last_board:
@@ -211,14 +245,17 @@ class ConnectDialog(QDialog):
         """
         combo_board_type = self.ui.combo_board_type.currentText()
         if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano']:
+            self.hide_VISA_layout()
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText(self.lang_pack.get("status_1"))
-        elif combo_board_type == 'VISA':
-            self.show_VISA_layout(True)
+        elif combo_board_type in self.visa_drivers:
+            self.show_VISA_layout(combo_board_type)
+            self.show_com_settings_layout(False)
+            self.ui.label_status.setText(self.lang_pack.get("status_visa"))
         else:
-            self.show_VISA_layout(False)
+            self.hide_VISA_layout()
             self.show_com_settings_layout(False)
             self.ui.label_status.setText(self.lang_pack.get("status"))
         self.update_window_size()
@@ -269,50 +306,36 @@ class ConnectDialog(QDialog):
                     self.parent.ui.button_net.setEnabled(False)
                     self.parent.ui.button_tests.setEnabled(False)
                     self.parent.ui.button_math.setEnabled(False)
-                    self.accept_connet()
+                    self.accept_connect()
                 else:
                     if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano']:
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
+                    elif combo_board_type in self.visa_drivers:
+                        connected_flag = self.parent.man.connect(visa_addresses=[self.visa_combo[i].currentText().strip() for i in range(5)])
                     else:
                         connected_flag = self.parent.man.connect()
                     if connected_flag:
-                        self.accept_connet()
+                        # Если драйвер упал в режим симуляции, убеждаемся, что продолжаем
+                        answer = True
+                        if hasattr(self.parent.man, 'simulation_fallback') and self.parent.man.simulation_fallback:
+                            answer = show_choose_window(self, self.lang_pack.get('simulation_fallback'), rlj=self.parent.read_language_json)
+                        if answer:
+                            self.accept_connect()
+                        else:
+                            return
                     else:
                         message = self.lang_pack.get("board_error") + str(combo_board_type)
                         self.ui.label_status.setText(message)
             else:
                 connected_flag = self.parent.man.connect()
                 if connected_flag:
-                    self.accept_connet()
+                    self.accept_connect()
                 else:
                     self.ui.label_status.setText(self.lang_pack.get("status_5"))
         else:    
             self.ui.label_status.setText('Не могу получить данные из БД!')
-    
-    def check_VISA_connection(self, visa_addr: int):
-        """
-        Проверка ВИЗА-адреса
-        """
-        if visa_addr == 1:
-            address = self.ui.combo_visa_1.currentText()
-            if address == "":
-                show_warning_messagebox("Адрес пуст!")
-            else:
-                self.ui.label_11.setText("Подключено")
-        elif visa_addr == 2:
-            address = self.ui.combo_visa_2.currentText()
-            if address == "":
-                show_warning_messagebox("Адрес пуст!")
-            else:
-                self.ui.label_12.setText("Подключено")
-        elif visa_addr == 3:
-            address = self.ui.combo_visa_3.currentText()
-            if address == "":
-                show_warning_messagebox("Адрес пуст!")
-            else:
-                self.ui.label_13.setText("Подключено")
 
-    def accept_connet(self) -> None:
+    def accept_connect(self) -> None:
         """
         Успешный коннект
         """
@@ -320,7 +343,8 @@ class ConnectDialog(QDialog):
         # обновляем конфиг
         self.parent.man.save_settings(last_crossbar_serial = self.cb_serial,
                                       com_port = self.com_port,
-                                      board_type = self.parent.man.board_type)
+                                      board_type = self.parent.man.board_type,
+                                      visa_addresses = [self.visa_combo[i].currentText().strip() for i in range(5)])
         # продолжим работу
         self.connect_flag = True
         self.ui.label_status.setText("Успешно!")
@@ -328,6 +352,91 @@ class ConnectDialog(QDialog):
         self.parent.number_cells = self.parent.man.col_num*self.parent.man.row_num
         self.parent.all_resistances = [[0 for _ in range(self.parent.man.col_num)] for _ in range(self.parent.man.row_num)]
         self.close()
+        
+    def show_VISA_layout(self, driver: str) -> None:
+        """Show VISA ui depending on the driver"""
+        warn = self.parent.read_language_json("src")[1].get("warn")
+        try:
+            from RRAM_VISA_Drivers import get_driver_instruments # type: ignore
+            instruments = list(get_driver_instruments(self.ui.combo_board_type.currentText()).keys())
+            for i in range(len(instruments)):
+                self.visa_labels[i].setText(instruments[i])
+                self.visa_labels[i].show()
+                self.visa_combo[i].show()
+                self.visa_check_btns[i].show()
+                self.visa_reset_btns[i].show()
+                self.visa_response[i].show()
+            for i in range(len(instruments), 5):
+                self.visa_labels[i].hide()
+                self.visa_combo[i].hide()
+                self.visa_check_btns[i].hide()
+                self.visa_reset_btns[i].hide()
+                self.visa_response[i].hide()
+            self.ui.groupBox_visa.show()
+        except ModuleNotFoundError:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+            self.ui.groupBox_visa.show()
+        except Exception as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
+            self.ui.groupBox_visa.show()
+        
+    def hide_VISA_layout(self) -> None:
+        """Hide VISA ui"""
+        self.ui.groupBox_visa.hide()
+        
+    def update_VISA_resources(self) -> None:
+        """Update VISA resources and put them in the comboboxes"""
+        warn = self.parent.read_language_json("src")[1].get("warn")
+        try:
+            from RRAM_VISA_Drivers import update_visa_instruments_list  # type: ignore
+            resources = update_visa_instruments_list(self.parent.man.visa_library_path)
+            for combobox in self.visa_combo:
+                text = combobox.currentText()
+                combobox.clear()
+                combobox.addItems(resources)
+                combobox.setEditText(text)
+        except ModuleNotFoundError:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+        except Exception as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
+    
+    def check_VISA_connection(self, index: int) -> None:
+        warn = self.parent.read_language_json("src")[1].get("warn")
+        try:
+            from RRAM_VISA_Drivers import get_driver_instruments   # type: ignore
+            instrument_check_funcs = get_driver_instruments(self.ui.combo_board_type.currentText())
+            instruments = list(instrument_check_funcs.keys())
+            flag, response = instrument_check_funcs[instruments[index]](visa_address=self.visa_combo[index].currentText().strip(), 
+                                                                        visa_library_path=self.parent.man.visa_library_path)
+            if flag == 1:  # Подключено, но устройство неправильное
+                self.visa_response[index].setText('  ' + response + ' 🞩')
+                QMessageBox.warning(self, warn, self.lang_pack.get('wrong_instrument'), QMessageBox.Ok)
+            elif flag == 2:  # Подлкючено, правильное устройство
+                self.visa_response[index].setText('  ' + response + ' ✓')
+            else:  # Не подключено
+                self.visa_response[index].setText('  ' + self.lang_pack.get('cant_connect'))
+                raise ConnectionError(response)
+        except ModuleNotFoundError:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+        except ConnectionError as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('cant_connect') + f'\n{e}', QMessageBox.Ok)
+        except Exception as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
+    
+    def reset_VISA_instrument(self, index: int) -> None:
+        warn = self.parent.read_language_json("src")[1].get("warn")
+        try:
+            from RRAM_VISA_Drivers import reset_instrument   # type: ignore
+            flag, response = reset_instrument(visa_address=self.visa_combo[index].currentText().strip(), 
+                                              visa_library_path=self.parent.man.visa_library_path)
+            if flag:
+                self.visa_response[index].setText('  ' + self.lang_pack.get('was_reset'))
+            else:
+                QMessageBox.warning(self, warn, self.lang_pack.get('cant_reset') + response, QMessageBox.Ok)
+        except ModuleNotFoundError:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+        except Exception as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
 
     def closeEvent(self, event): # pylint: disable=C0103,W0613
         """

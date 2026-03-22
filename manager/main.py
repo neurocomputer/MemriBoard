@@ -141,12 +141,15 @@ class Manager(Application):
         # подключаемся к плате
         if 'com_port' in kwargs:
             # подключение по COM порту
-            self.connected_flag = self.conn.open_port(com_port=kwargs['com_port'],
+            self.connected_flag, self.simulation_fallback = self.conn.open_port(com_port=kwargs['com_port'],
                                                       attempts = int(self.ap_config['connector']['attempts_to_kick']),
                                                       timeout = float(self.ap_config["connector"]["timeout"]))
+        elif 'visa_addresses' in kwargs:  # Подключение к VISA
+            self.connected_flag, self.simulation_fallback = self.conn.open_port(visa_addresses=kwargs['visa_addresses'], 
+                                                                                visa_library_path = self.visa_library_path)
         else:
             # другое подключение
-            self.connected_flag = self.conn.open_port()
+            self.connected_flag, self.simulation_fallback = self.conn.open_port()
         return self.connected_flag
 
     def _admin(self) -> None:
