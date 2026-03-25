@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1230</width>
+    <width>1293</width>
     <height>521</height>
    </rect>
   </property>
@@ -110,7 +110,7 @@
                 <item row="2" column="4">
                  <widget class="QSpinBox" name="forward_count">
                   <property name="maximum">
-                   <number>9999</number>
+                   <number>99999</number>
                   </property>
                  </widget>
                 </item>
@@ -124,7 +124,7 @@
                 <item row="3" column="4">
                  <widget class="QSpinBox" name="backward_count">
                   <property name="maximum">
-                   <number>9999</number>
+                   <number>99999</number>
                   </property>
                  </widget>
                 </item>
