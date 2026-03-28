@@ -553,10 +553,14 @@ class Rram(QWidget):
             self.parent.snapshot_dialog = Snapshot(self.parent, self.snapshot_binary, mode='binary')
             self.parent.snapshot_dialog.show()
         else:
-            self.parent.snapshot_dialog.data = self.snapshot_binary
-            self.parent.snapshot_dialog.plot_matrix(mode='binary')
-            self.parent.snapshot_dialog.showNormal()
-            self.parent.snapshot_dialog.activateWindow()
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.parent.snapshot_dialog.safe_close()
+                self.show_snapshot()
+            else:
+                self.parent.snapshot_dialog.data = self.snapshot_binary
+                self.parent.snapshot_dialog.plot_matrix(mode='binary')
+                self.parent.snapshot_dialog.activateWindow()  
 
     def closeEvent(self, event):
         """

@@ -16,7 +16,7 @@ import numpy as np
 from numpy import inf
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QShortcut
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
@@ -45,6 +45,7 @@ from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
+from gui.windows.help import Help
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -89,6 +90,7 @@ class Window(QMainWindow):
     new_ann_dialog: NewAnn
     wait_dialog: Wait
     math_dialog = Math
+    help_dialog: Help = None
     opener: str = ''
     extra = []
     coordinate_error = False
@@ -119,6 +121,9 @@ class Window(QMainWindow):
         self.man.blank_type = 'mode_7'
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        # Меню с действиями и шорткатами
+        self.set_shortcuts()
+        # Смена языка
         self.change_language()
         # параметры кроссбара
         self.ui.crossbar_progress.setVisible(False)
@@ -132,21 +137,30 @@ class Window(QMainWindow):
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.read_language_json))
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
-        # хоткей
-        shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        shortcut.activated.connect(self.show_terminal_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
-        shortcut.activated.connect(self.show_filter_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
-        shortcut.activated.connect(self.show_crossbar_weights_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
-        shortcut.activated.connect(self.show_cb_info_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
-        shortcut.activated.connect(self.show_new_ann_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
-        shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # диалоговое окно подключения
         self.show_connect_dialog()
+        
+    def set_shortcuts(self):
+        """
+        Настройка меню с шорткатами
+        """
+        self.tool_button_menu = QMenu(self)
+        self.tool_button_menu.addAction('', self.show_cb_info_dialog, QKeySequence("Ctrl+I"))
+        self.tool_button_menu.addAction('', self.show_terminal_dialog, QKeySequence("Ctrl+T"))
+        self.tool_button_menu.addAction('', self.show_filter_dialog, QKeySequence("Ctrl+F"))
+        self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
+        self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
+        self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_menu.addAction('', self.show_help, QKeySequence("F1"))
+        self.tool_button_actions_text = ['info', 
+                                         'terminal', 
+                                         'filter', 
+                                         'show_weights', 
+                                         'write', 
+                                         'read_all_btn',
+                                         'help']
+        self.ui.tool_button.setMenu(self.tool_button_menu)
+        self.ui.tool_button.setPopupMode(2)
 
     def read_language_json(self, window: str):
         """
@@ -185,6 +199,10 @@ class Window(QMainWindow):
             self.ui.button_tests.setText(self.lang_pack.get("tests"))
             self.ui.button_snapshot.setText(self.lang_pack.get("snapshot"))
             self.ui.button_settings.setText(self.lang_pack.get("settings"))
+            for action, text in zip(self.tool_button_menu.actions(), self.tool_button_actions_text):
+                action.setText(self.lang_pack.get(text))
+            if self.help_dialog is not None:
+                self.help_dialog.change_language()
             if self.snapshot_dialog is not None:
                 self.snapshot_dialog.change_language()
 
@@ -372,9 +390,29 @@ class Window(QMainWindow):
             self.snapshot_dialog = Snapshot(parent=self, data=self.all_resistances)
             self.snapshot_dialog.show()
         else:
-            self.snapshot_dialog.data = self.all_resistances
-            self.snapshot_dialog.plot_matrix()
-            self.snapshot_dialog.showNormal()      
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.snapshot_dialog.safe_close()
+                self.show_snapshot()
+            else:
+                self.snapshot_dialog.data = self.all_resistances
+                self.snapshot_dialog.plot_matrix()
+                self.snapshot_dialog.activateWindow()     
+            
+    def show_help(self) -> None:
+        """
+        Окно со справкой
+        """
+        if self.help_dialog is None:
+            self.help_dialog = Help(self)
+            self.help_dialog.show()
+        else:
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.help_dialog.close()
+                self.show_help()
+            else:
+                self.help_dialog.activateWindow()
 
     # обработчики кнопок
 
@@ -517,6 +555,10 @@ class Window(QMainWindow):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
                         item.setBackground(colors[i][j])
+                        if colors[i][j].black() < 127:
+                            item.setForeground(QColor(0, 0, 0))
+                        else:
+                            item.setForeground(QColor(230, 230, 230))
                 # Updating snapshot window
                 if self.snapshot_dialog is not None:
                     self.snapshot_dialog.data = self.all_resistances
@@ -654,6 +696,8 @@ class Window(QMainWindow):
         # closing snapshot window
         if self.snapshot_dialog is not None:
             self.snapshot_dialog.safe_close() 
+        if self.help_dialog is not None:
+            self.help_dialog.close()
         # закрытие программы
         self.man.abort()
         self.man.close()
