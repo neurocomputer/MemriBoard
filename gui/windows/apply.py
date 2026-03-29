@@ -241,6 +241,7 @@ class Apply(QWidget):
         """
         if self.application_status == "start" or "pause": # работает
             self.start_thread.need_stop = True
+            self.parent.man.conn.send_need_stop_to_driver()
             self.application_status = "stop"
         self.block_buttons([False, False, True, True])
         self.block_comdo(False)

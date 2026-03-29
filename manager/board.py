@@ -684,3 +684,10 @@ class Connector():
             self.request_id += 1
         else:
             self.request_id = 0
+            
+    def send_need_stop_to_driver(self):
+        """
+        Set driver's need stop flag to True
+        """
+        if hasattr(self.interface, 'need_stop'):
+            self.interface.need_stop = True

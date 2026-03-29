@@ -158,6 +158,10 @@ def smu_generator(
     try:
         # Генерация основных тасков
         yield from main_task_generator(params, n_points, v_arrays, double, terminator, blank_type)
+        # Отключаем все ячейки в кроссбаре от источника
+        if not ('crossbar_scan' in params and params['crossbar_scan']): # Если сканируем весь кроссбар, то не отключаем
+            task = {'mode_flag': 'standby', 'id': 0}
+            yield [task, terminator]
     except Exception as ex: # для корректного завершения работы плат
         print(ex)
         interrupt_flag = True
@@ -170,10 +174,6 @@ def smu_generator(
         else:
             task = {'mode_flag': 'panic', 'id': 0}
             yield [task, terminator]
-    # Отключаем все ячейки в кроссбаре от источника
-    if not ('crossbar_scan' in params and params['crossbar_scan']): # Если сканируем весь кроссбар, то не отключаем
-        task = {'mode_flag': 'standby', 'id': 0}
-        yield [task, terminator]
         
         
 def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
