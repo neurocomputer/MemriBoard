@@ -7,7 +7,7 @@
   - [Creating new database entry](#creating-a-database-entry-for-new-crossbar-array)
     - [Settings](#settings)
 - [**Main window**](#main-window)
-  - [Shortcuts](#other-main-window-functionality)
+  - [Additional functionality](#other-main-window-functionality)
 - [**Working with individual cells**](#working-with-individual-cells)
   - [History window](#history-window)
 - [**Configuring your experiment**](#configuring-your-experiment)
@@ -99,7 +99,7 @@ Experiment configuration window can be opened via [Cell info](#working-with-indi
 ![Experiment plan window](assets/new_exp.png)
 
 The window allows you to create a new experiment with a cell. It is made up of tickets &mdash; preset experiments, such as iv-curve, endurance, programming, etc. You can **add** multiple tickets from left side of the window to the experiment plan (**Add to plan** button), or you can create a new ticket (**New** button in the bottom left corner).
-The **Load** button on the right side of the window allows you to load a ticket that was previously applied to one of the cells. All parameters of that ticket will be loaded to the experiment.
+The **Load** button on the right side of the window allows you to load an experiment plan that was previously applied to one of the cells. All parameters of those tickets will be loaded to the experiment.
 You can also directly **import** tickets from a *.json* file.
 You can enter the experiment **name** in the lower right part of the window.
 
@@ -123,6 +123,7 @@ The signal window is opened via [Experiment plan](#configuring-your-experiment) 
 ![Signal Setup Window](assets/signal.png)
 
 Set and reset signals can be controlled independently in the top half of the window: the pulse amplitudes (in volts) and widths (**Time: ms and μs**) can be adjusted. The **Amount** field specifies the amount of set or reset sweeps in a set-reset cycle, the **Repeat** fields specifies the total number of set-reset cycles. If the **Dec** flag is off, the voltage sweeps from **Start** to **Stop** with the specified **Step**. If the **Dec** flag is on, the voltage also sweeps from **Stop** to **Start**.
+The **Show** button shows the signal plot.
 For example, measuring 10 IV curves requires the following parameters:
 
 |            |Start| Stop| Step | Quantity |Decrement| Time, ms| Time, μs |
@@ -130,11 +131,11 @@ For example, measuring 10 IV curves requires the following parameters:
 | **Reset**  | 0.0 | 1.6 | 0.05 |     1    |    +    |    0    |    100   |
 |  **Set**   | 0.0 | 1.2 | 0.05 |     1    |    +    |    0    |    100   |
 
-**Sending order:** Reset-Set; **Repeat**: 10 times
+**Sending order**: Reset-Set; **Repeat**: 10 times
 
 #### Standard pulse sequence
 
-Each measurement point consists of two parts &mdash; a voltage pulse with the adjustable amplitude for changing the resistive state of the cell, and a read pulse that always follows it. The amplitude of the reading pulse is fixed in the *settings.ini* file.
+Each measurement point consists of two parts &mdash; a voltage pulse with the adjustable amplitude for changing the resistive state of the cell, and a read pulse that always follows it. The amplitude of the reading pulse is fixed in the *settings.ini* file. The amplitude of the pulse that changes the resistive state is controlled in the [signal editing window](#signal-editing-window).
 During the experiment, the resistive state of the cell is controlled only via read pulses with constant amplitude.
 
 #### Terminate condition
