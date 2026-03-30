@@ -191,6 +191,20 @@ class Connector():
                     pass
                 except ConnectionError:
                     open_flag = False
+            elif self.board_type == 'ITC_probe_station':
+                try:
+                    from RRAM_VISA_Drivers import ITC_probe_station  # type: ignore
+                    self.interface = ITC_probe_station(
+                        B2902B_address=kwargs['visa_addresses'][0],
+                        VISA_library_path=kwargs['visa_library_path']
+                    )
+                    open_flag = True
+                    if self.interface.sim:
+                        simulation_fallback = True
+                except ModuleNotFoundError:
+                    pass
+                except ConnectionError:
+                    open_flag = False
         return open_flag, simulation_fallback
 
     def close_port(self) -> bool:
@@ -217,7 +231,7 @@ class Connector():
                 # todo: может нужно что-то еще
                 close_flag = True
             # Для VISA-инструментов
-            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station']:
+            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
                 flag, response = self.interface.disconnect()
                 if flag:
                     self.logger.info('VISA-instruments disconnected')
@@ -308,7 +322,7 @@ class Connector():
                 send_flag = True
                 rec_data = ['elbear_nano']
                 # todo: добавить служебную инфу в драйвер
-            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station']:
+            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
                 send_flag = True
                 rec_data = self.interface.get_tech_data()
         # режим симулятор
@@ -402,7 +416,7 @@ class Connector():
                                                     task['wl'],
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
-            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station']:  # Работа с VISA-инструментами
+            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:  # Работа с VISA-инструментами
                 self.interface.logger.info(f'Task: {task}')
                 if not isinstance(task['mode_flag'], str) and task['mode_flag'] not in [7]:
                     self.logger.critical('Wrong task for VISA-driver!')
@@ -444,8 +458,12 @@ class Connector():
                         )
                         res = (int(adc), task['id'], *sense_data[1:])
                 elif task['mode_flag'] == 'trigger':
-                    self.interface.trigger()
-                    res = 1
+                    flag, response = self.interface.trigger()
+                    if flag:
+                        self.logger.debug(response)
+                    else:
+                        self.logger.critical(f'Could not send trigger: {response}')
+                    res = int(flag)
                 elif task['mode_flag'] == 'config_iv_dc':
                     # Отправка конфигурации на инструменты
                     flag, response = self.interface.config_iv_dc(
@@ -459,7 +477,7 @@ class Connector():
                         current_compliance = task['current_compliance'],
                         sign = task['sign']
                     )
-                    if flag and not self.silent:
+                    if flag:
                         self.logger.info(response)
                     else:
                         # Останавливаем эксперимент
@@ -475,7 +493,7 @@ class Connector():
                         current_compliance = task['current_compliance'],
                         sign = 1  # Reset
                     )
-                    if flag and not self.silent:
+                    if flag:
                         self.logger.info(response)
                     else:
                         # Останавливаем эксперимент
@@ -499,7 +517,7 @@ class Connector():
                         current_compliance = task['current_compliance'],
                         sign = task['sign']
                     )
-                    if flag and not self.silent:
+                    if flag:
                         self.logger.info(response)
                     else:
                         # Останавливаем эксперимент
@@ -519,7 +537,7 @@ class Connector():
                         sign = 1,  # Reset
                         trigger_interval = trigger_interval
                     )
-                    if flag and not self.silent:
+                    if flag:
                         self.logger.info(response)
                     else:
                         # Останавливаем эксперимент
@@ -551,7 +569,7 @@ class Connector():
                 elif task['mode_flag'] == 'connect_cell':
                     # Подлкючение ячейки кроссбара, нумерация wl и bl начинается с 0
                     flag, response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
-                    if flag and not self.silent:
+                    if flag:
                         self.logger.info(response)
                     else:
                         self.logger.critical('Could not connect the cell!')
@@ -559,7 +577,7 @@ class Connector():
                 elif task['mode_flag'] == 'standby':
                     # Переход в режим ожидания эксперимента
                     flag, response = self.interface.standby()
-                    if flag and not self.silent:
+                    if flag:
                         self.logger.info(response)
                     res = int(flag)
                 self.interface.logger.info(f'Impact: res = {res}')

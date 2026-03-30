@@ -207,7 +207,8 @@ class ConnectDialog(QDialog):
         Обновить список плат
         """
         self.visa_drivers = ['ITC_1T1R_32x8_switched',
-                             'ITC_1T1R_32x8_probe_station']
+                             'ITC_1T1R_32x8_probe_station',
+                             'ITC_probe_station']
         board_list = ['offline',
                       'memardboard_single',
                       'memardboard_crossbar',

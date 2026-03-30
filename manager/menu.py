@@ -28,7 +28,7 @@ def get_menu(board_type):
                 'tst': get_tst,
                 'std': get_std,
             }
-    elif board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station']:
+    elif board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
         menu: dict = {
                 'std': get_smu_std,
                 'smu_iv_dc': get_smu_iv_dc,
