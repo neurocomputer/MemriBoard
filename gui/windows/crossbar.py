@@ -45,6 +45,7 @@ from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
+from gui.windows.shortcut import Shortcut
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -89,6 +90,7 @@ class Window(QMainWindow):
     new_ann_dialog: NewAnn
     wait_dialog: Wait
     math_dialog = Math
+    shortcut_dialog: Shortcut
     opener: str = ''
     extra = []
     coordinate_error = False
@@ -132,6 +134,7 @@ class Window(QMainWindow):
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.read_language_json))
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
+        self.ui.button_shortcuts.clicked.connect(self.show_shortcuts)
         # хоткей
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         shortcut.activated.connect(self.show_terminal_dialog)
@@ -185,6 +188,14 @@ class Window(QMainWindow):
             self.ui.button_tests.setText(self.lang_pack.get("tests"))
             self.ui.button_snapshot.setText(self.lang_pack.get("snapshot"))
             self.ui.button_settings.setText(self.lang_pack.get("settings"))
+
+    def show_shortcuts(self):
+        """
+        Показать шорткаты
+        """
+        self.shortcut_dialog = Shortcut(parent=self)
+        self.shortcut_dialog.show()
+        self.showMinimized()
 
     # методы открытия диалоговых окон
 
