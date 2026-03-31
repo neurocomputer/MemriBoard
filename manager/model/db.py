@@ -6,11 +6,13 @@ import os
 import pickle
 import datetime
 import sqlalchemy as sqla
-from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean
+from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound, MultipleResultsFound
 from datetime import datetime
 from typing import Optional, List
+import pgembed as pg
+from manager.service.saves import results_from_bytes
 # from manager.service.global_settings import DB_PATH
 
 # pylint: disable=C0103,W0718
@@ -46,6 +48,7 @@ class Memristors(Base):
     bl: Mapped[int] = mapped_column(Integer, nullable=False)
     wl: Mapped[int] = mapped_column(Integer, nullable=False)
     last_resistance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tasks: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     
     # внешний ключ
     crossbar_id: Mapped[int] = mapped_column(
@@ -131,7 +134,6 @@ class DBOperate():
             if base == 'sqlite':
                 self.engine = sqla.create_engine('sqlite:///base.db')
             elif base == 'postgress':
-                import pgembed as pg
                 # поднятие сервера
                 data_dir = os.path.join(os.getcwd(), 'postgress')
                 server = pg.get_server(data_dir)
@@ -158,6 +160,7 @@ class DBOperate():
                     else:
                         new_uri = uri[:-8]+'base'
                         self.engine = sqla.create_engine(new_uri)
+            self.alter_memristors_table()
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в подключении к базе: {e}")
 
@@ -906,6 +909,116 @@ class DBOperate():
         except Exception as e:
             self.parent.db_logger.critical(f"Ошибка в ticket_id: {e}")
             return False, []
+        
+    def alter_memristors_table(self):
+        """
+        Если отсутствует поле счетчика, добавить
+        """
+        try:
+            inspector = sqla.inspect(self.engine)
+            columns = [col['name'] for col in inspector.get_columns('memristors')]
+
+            if 'tasks' not in columns:
+                # изменяем таблицу
+                with self.engine.connect() as conn:
+                    conn.execute(sqla.text(
+                        "ALTER TABLE memristors ADD COLUMN tasks INTEGER NOT NULL DEFAULT 0"
+                    ))
+                    conn.commit()
+
+                # подсчет тасков
+                with Session(self.engine) as session:
+                    stmt = select(
+                        Memristors.id,
+                        Experiments.id.label('exp_id'),
+                        Tickets.id.label('ticket_id'),
+                        Tickets.result
+                    ).outerjoin(
+                        Experiments, Experiments.memristor_id == Memristors.id
+                    ).outerjoin(
+                        Tickets, Tickets.experiment_id == Experiments.id
+                    )
+                    
+                    rows = session.execute(stmt).all()
+                    
+                    mem_tasks = {}
+                    for row in rows:
+                        if row.result:
+                            tasks_count = int(len(results_from_bytes(result=row.result)) / 3)
+                            mem_tasks[row.id] = mem_tasks.get(row.id, 0) + tasks_count
+
+                # запись подсчитанных тасков
+                with self.engine.connect() as conn:
+                    for mem_id, tasks_count in mem_tasks.items():
+                        conn.execute(
+                            sqla.text("UPDATE memristors SET tasks = :tasks WHERE id = :id"),
+                            {"tasks": tasks_count, "id": mem_id}
+                        )
+                    conn.commit()
+        except Exception as e:
+            print("Ошибка в alter_memristors_table: ", e)
+        
+    def count_tasks_on_memristor_id(self, memristor_id):
+        """
+        Посчитать таски одного мемристора
+        """
+        status = False
+        tasks = 0
+        try:
+            self.update_tasks_for_memristor(memristor_id)
+            with Session(self.engine) as session:
+                stmt = select(
+                    Tickets.result
+                ).join(
+                    Experiments, Experiments.id == Tickets.experiment_id
+                ).where(
+                    Experiments.memristor_id == memristor_id,
+                    Tickets.result.isnot(None)
+                )
+                
+                results = session.scalars(stmt).all()
+                tasks = 0
+                for result in results:
+                    if result:
+                        tasks_count = int(len(results_from_bytes(result=result)) / 3)
+                        tasks += tasks_count
+                return status, tasks
+        except Exception as e:
+            print(f"Ошибка подсчета тасков для mem_id={memristor_id}: {e}")
+            return status, tasks
+        
+    def update_tasks_for_memristor(self, memristor_id):
+        """
+        Обновить поле tasks для конкретного мемристора
+        """
+        with Session(self.engine) as session:
+            try:
+                # Подсчитываем таски
+                stmt = select(
+                    Tickets.result
+                ).join(
+                    Experiments, Experiments.id == Tickets.experiment_id
+                ).where(
+                    Experiments.memristor_id == memristor_id,
+                    Tickets.result.isnot(None)
+                )
+                
+                results = session.scalars(stmt).all()
+                tasks = 0
+                for result in results:
+                    if result:
+                        tasks_count = int(len(results_from_bytes(result=result)) / 3)
+                        tasks += tasks_count
+                
+                session.execute(
+                    sqla.text("UPDATE memristors SET tasks = :tasks WHERE id = :id"),
+                    {"tasks": tasks, "id": memristor_id}
+                )
+                session.commit()
+                
+            except Exception as e:
+                print(f"Ошибка обновления тасков для mem_id={memristor_id}: {e}")
+                session.rollback()
     
     # def db_backup(self, backup_path) -> None:
     #     """
