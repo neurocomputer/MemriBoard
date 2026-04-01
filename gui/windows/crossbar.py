@@ -212,7 +212,7 @@ class Window(QMainWindow):
                 if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
                     mode = "normal"
                 else:
-                    show_warning_messagebox(self.lang_pack.get("warn"), rlj=self.parent.read_language_json)
+                    show_warning_messagebox(self.lang_pack.get("warn"), rlj=self.read_language_json)
             elif self.man.cb_type == "simulator":
                 mode = "normal"
             if mode != '':
@@ -478,7 +478,7 @@ class Window(QMainWindow):
                     for i in range(len(cells)):
                         writable[int(cells[i][1])][int(cells[i][0])] = 1
                 else:
-                    show_warning_messagebox(self.lang_pack.get("warn_1"), rlj=self.parent.read_language_json)
+                    show_warning_messagebox(self.lang_pack.get("warn_1"), rlj=self.read_language_json)
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
@@ -495,7 +495,7 @@ class Window(QMainWindow):
                         else:
                             color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
                             color_value = int(color_value*255)
-                        if (not self.filter_rmin is None) and (not self.filter_rmax is None):
+                        if (self.filter_rmin is not None) and (self.filter_rmax is not None):
                             if self.filter_rmin < int(self.ui.table_crossbar.item(i, j).text()) < self.filter_rmax:
                                 colors[i][j] = QColor(204, 255, 229)
                             else:
@@ -585,12 +585,6 @@ class Window(QMainWindow):
             send_ticket_all_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             send_ticket_all_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
             send_ticket_all_thread.start()
-
-    def not_done(self) -> None:
-        """
-        Заглушка
-        """
-        show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.parent.read_language_json)
 
     def read_ticket_from_disk(self, ticket_name: str) -> dict:
         """
