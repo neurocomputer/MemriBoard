@@ -2,6 +2,7 @@
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
+from PyQt5.QtCore import Qt
 
 class Shortcut(QDialog):
     """
@@ -13,13 +14,16 @@ class Shortcut(QDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.parent = parent
         # загрузка ui
-        self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.setParent(parent, Qt.Window)
+        self.parent = self.parent()
+        self.setWindowFlags(Qt.Window | Qt.WindowCloseButtonHint)
+
+        uic.loadUi(self.GUI_PATH, self)
         # доп настройки
-        self.setModal(True)
+        self.setModal(Qt.WindowModal)
         # кнопки
-        self.ui.button_close.clicked.connect(self.close)
+        self.button_close.clicked.connect(self.close)
         # прочее
         self.change_language()
         
@@ -29,15 +33,15 @@ class Shortcut(QDialog):
         """
         ok, self.lang_pack = self.parent.read_language_json("shortcut")
         if ok:
-            self.ui.setWindowTitle(self.lang_pack.get("name"))
-            self.ui.label.setText(self.lang_pack.get("name"))
-            self.ui.label_3.setText(self.lang_pack.get("ctrlT"))
-            self.ui.label_5.setText(self.lang_pack.get("ctrlM"))
-            self.ui.label_7.setText(self.lang_pack.get("ctrlI"))
-            self.ui.label_10.setText(self.lang_pack.get("ctrlB"))
-            self.ui.label_11.setText(self.lang_pack.get("ctrlU"))
-            self.ui.label_13.setText(self.lang_pack.get("ctrlF"))
-            self.ui.button_close.setText(self.lang_pack.get("close"))
+            self.setWindowTitle(self.lang_pack.get("name"))
+            self.label.setText(self.lang_pack.get("name"))
+            self.label_3.setText(self.lang_pack.get("ctrlT"))
+            self.label_5.setText(self.lang_pack.get("ctrlM"))
+            self.label_7.setText(self.lang_pack.get("ctrlI"))
+            self.label_10.setText(self.lang_pack.get("ctrlB"))
+            self.label_11.setText(self.lang_pack.get("ctrlU"))
+            self.label_13.setText(self.lang_pack.get("ctrlF"))
+            self.button_close.setText(self.lang_pack.get("close"))
 
     def closeEvent(self, event):
         """

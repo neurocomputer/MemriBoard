@@ -90,7 +90,7 @@ class Window(QMainWindow):
     new_ann_dialog: NewAnn
     wait_dialog: Wait
     math_dialog = Math
-    shortcut_dialog: Shortcut
+    shortcut_dialog = None
     opener: str = ''
     extra = []
     coordinate_error = False
@@ -195,7 +195,6 @@ class Window(QMainWindow):
         """
         self.shortcut_dialog = Shortcut(parent=self)
         self.shortcut_dialog.show()
-        self.showMinimized()
 
     # методы открытия диалоговых окон
 
