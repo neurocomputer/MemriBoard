@@ -4,7 +4,6 @@
 
 # pylint: disable=E0611,W0401,W0611,R0903,R0915,R0912,C0301,C0103
 
-import re
 import os
 import json
 from PyQt5 import uic
@@ -126,6 +125,17 @@ class SignalMod(QDialog):
         self.one_value_terminators = ['==', '>', '<']
         self.base_json = {}
         self.file_saved = False
+        # Set units for scientific lines
+        for widget, unit in zip([self.ui.forward_start,
+                                 self.ui.forward_step,
+                                 self.ui.forward_stop,
+                                 self.ui.backward_start,
+                                 self.ui.backward_step,
+                                 self.ui.backward_stop],
+                                ['V', 'V', 'V', 'V', 'V', 'V']):
+            widget.set_unit(unit)
+            widget.bad_value.connect(lambda text: show_warning_messagebox(
+                self.lang_pack.get("symbol_incorrect") + f'\n"{text}"', rlj=self.parent.read_language_json))
 
     def _plot_ticket(self) -> None:
         """
@@ -148,33 +158,6 @@ class SignalMod(QDialog):
         pixmap = QPixmap(self.IMG_PATH)
         self.ui.label_png.setPixmap(pixmap)
 
-    def _get_scaling_unit(self, text:str):
-        """
-        Изменить число в соответствии с единицей измерения
-        """
-        result = 0
-        status = False
-        try:
-            text = text.replace(' ', '')
-            data = re.match(r"([0-9.]+)(.*)", text)
-            if data:
-                num = data.group(1)
-                unit = data.group(2)
-                if unit == 'мкВ':
-                    result = float(num) / 1000000
-                elif unit == 'кВ':
-                    result = float(num) * 1000
-                elif unit == 'мВ':
-                    result = float(num) / 1000
-                elif unit == 'В' or unit == '':
-                    result = float(num)
-            status = True
-        except ValueError:
-            show_warning_messagebox('Некорректный символ!')
-        except Exception as e:
-            print("Ошибка: ", e)
-        return status, result
-
     def _make_json(self) -> bool:
         """
         Создание json без сохранения
@@ -184,32 +167,30 @@ class SignalMod(QDialog):
         """
         status = False
         try:
-            ok, f_start = self._get_scaling_unit(self.ui.forward_start.text())
-            if ok:
-                ok, b_start = self._get_scaling_unit(self.ui.backward_start.text())
-            if ok:
-                ok, f_stop = self._get_scaling_unit(self.ui.forward_stop.text())
-            if ok:
-                ok, b_stop = self._get_scaling_unit(self.ui.backward_stop.text())
-            if ok:
-                ok, f_step = self._get_scaling_unit(self.ui.forward_step.text())
-            if ok:
-                ok, b_step = self._get_scaling_unit(self.ui.backward_step.text())
-            if not ok:
-                return status
+            # Check if data in scientific lines is correct
+            for widget in [
+                self.ui.forward_start,
+                self.ui.forward_step,
+                self.ui.forward_stop,
+                self.ui.backward_start,
+                self.ui.backward_step,
+                self.ui.backward_stop
+            ]:
+                if widget.get_value() is None:
+                    raise ValueError
 
             # dir inc
-            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_start)
-            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_stop)
-            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_step)
+            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
+            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
+            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
             self.base_json['params']['t_dir_msec_inc'] = int(self.ui.forward_ms.text())
             self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
             self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
             # чекбокс dir dec
             if self.ui.forward_dec.isChecked():
-                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_stop)
-                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_start)
-                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,f_step)
+                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
+                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
+                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
                 self.base_json['params']['t_dir_msec_dec'] = int(self.ui.forward_ms.text())
                 self.base_json['params']['t_dir_usec_dec'] = int(self.ui.forward_mcs.text())
                 self.base_json['params']['dir_dec_countr'] = int(self.ui.forward_count.value())
@@ -221,17 +202,17 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_dir_usec_dec'] = 0
                 self.base_json['params']['dir_dec_countr'] = 0
             # rev inc
-            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_start)
-            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_stop)
-            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_step)
+            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
+            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
+            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
             self.base_json['params']['t_rev_msec_inc'] = int(self.ui.backward_ms.text())
             self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
             self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
             # чекбокс rev dec
             if self.ui.backward_dec.isChecked():
-                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_stop)
-                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_start)
-                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,b_step)
+                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
+                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
+                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
                 self.base_json['params']['t_rev_msec_dec'] = int(self.ui.backward_ms.text())
                 self.base_json['params']['t_rev_usec_dec'] = int(self.ui.backward_mcs.text())
                 self.base_json['params']['rev_dec_countr'] = int(self.ui.backward_count.value())
@@ -331,9 +312,9 @@ class SignalMod(QDialog):
         if self.mode == "edit":
             self.json_name.setEnabled(False)
 
-        self.ui.forward_start.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc'])))
-        self.ui.forward_stop.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc'])))
-        self.ui.forward_step.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_step_inc'])))
+        self.ui.forward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc']))
+        self.ui.forward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc']))
+        self.ui.forward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_step_inc']))
         self.ui.forward_ms.setText(str(self.base_json['params']['t_dir_msec_inc']))
         self.ui.forward_mcs.setText(str(self.base_json['params']['t_dir_usec_inc']))
         self.ui.forward_count.setValue(self.base_json['params']['dir_inc_countr'])
@@ -343,9 +324,9 @@ class SignalMod(QDialog):
         else:
             self.ui.forward_dec.setCheckState(0)
 
-        self.ui.backward_start.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_strt_inc'])))
-        self.ui.backward_stop.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_stop_inc'])))
-        self.ui.backward_step.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_step_inc'])))
+        self.ui.backward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_strt_inc']))
+        self.ui.backward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_stop_inc']))
+        self.ui.backward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_step_inc']))
         self.ui.backward_ms.setText(str(self.base_json['params']['t_rev_msec_inc']))
         self.ui.backward_mcs.setText(str(self.base_json['params']['t_rev_usec_inc']))
         self.ui.backward_count.setValue(self.base_json['params']['rev_inc_countr'])
