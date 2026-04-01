@@ -24,6 +24,7 @@ class Map(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.setModal(True)
         # обработчик нажатия
@@ -32,6 +33,14 @@ class Map(QDialog):
         self.parent.current_wl = None
         self.parent.current_bl = None
         self.parent.current_last_resistance = None
+        
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("map")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
 
     def enable_cell_choosing(self):
         """
@@ -82,7 +91,7 @@ class Map(QDialog):
         """
         self.set_prompt('')
         if self.parent.opener == 'mapping':
-            if not self.parent.current_bl is None:
+            if self.parent.current_bl is not None:
                 self.parent.show_exp_settings_dialog()
         # todo: можно добавить остальные варианты для вызова из других окон
         event.accept()
