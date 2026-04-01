@@ -433,6 +433,15 @@
         "no_answer":"Didn't get any answer!",
         "req_inc":"Incorrect request!"
     },
+    "shortcut":{
+        "name":"Shortcuts",
+        "ctrlT":"Open the terminal",
+        "ctrlM":"Show the weights in the crossbar array",
+        "ctrlI":"Show information about the crossbar array",
+        "ctrlB":"Open 'Writing weight to the crossbar' window",
+        "ctrlU":"Update all resistances in the crossbar array",
+        "ctrlF":"Filter all cells",
+        "close":"Close"
     "filter":{
         "name":"Filter",
         "apply":"Apply",
