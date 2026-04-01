@@ -433,18 +433,15 @@
         "no_answer":"Didn't get any answer!",
         "req_inc":"Incorrect request!"
     },
-    "snapshot":{
-        "window_title":"Snapshot",
-        "export":"Export data",
-        "weight":"Weight",
-        "res_kOhm":"Resistance (kΩ)",
-        "txt":"Text file",
-        "csv":"Comma Separated Values",
-        "xls":"Excel Spreadsheet",
-        "json":"JSON file",
-        "ext_not_supported":"This file extension is not supported.",
-        "file_busy":"The file is in use by another program."
-    },
+    "shortcut":{
+        "name":"Shortcuts",
+        "ctrlT":"Open the terminal",
+        "ctrlM":"Show the weights in the crossbar array",
+        "ctrlI":"Show information about the crossbar array",
+        "ctrlB":"Open 'Writing weight to the crossbar' window",
+        "ctrlU":"Update all resistances in the crossbar array",
+        "ctrlF":"Filter all cells",
+        "close":"Close"
     "filter":{
         "name":"Filter",
         "apply":"Apply",
