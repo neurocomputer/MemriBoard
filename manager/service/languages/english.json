@@ -247,7 +247,7 @@
         "quick":"Brief overview:",
         "exp_history":"Plan of the experiment:",
         "csv":"Export results to csv file",
-        "json":"Export experiment plan to json file",
+        "json":"Export ticket",
         "exported":"Exported to ",
         "pick_ticket":"Choose a ticket!",
         "data":"Data: ",
@@ -273,10 +273,10 @@
         "ent_val":"Entry values",
         "result":"Result",
         "save":"Save",
-        "upload":"Upload",
-        "nums":"Numbers",
+        "upload":"Load",
+        "nums":"Values",
         "ress":"Resistances",
-        "input_nums":"Input one number per string",
+        "input_nums":"Input one value per row",
         "exec":"Execution",
         "ent_scale":"Entry scale",
         "weights_scale":"Weights scale",
@@ -310,12 +310,17 @@
         "correction":"Correction",
         "minimum":"Minimum",
         "maximum":"Maximum",
-        "neg_nums":"All negative numbers are taken modulo",
+        "neg_nums":"All negative values were substituted with their absolute values",
         "incorrect_file":"File is incorrect!",
         "incorrect":"Incorrect!",
         "vals_inputed":" values inputed",
         "max_unset":"Maximum is unset!",
-        "ohm":" Ohm"
+        "ohm":" Ohm",
+        "saving_dir":"Choose a directory for saving",
+        "saved_to":"Saved to ",
+        "saving_error":"Error while saving!",
+        "prediction":"Prediction",
+        "model":"Model"
     },
     "apply":{
         "name":"Apply",
@@ -420,5 +425,17 @@
         "send":"Send",
         "no_answer":"Didn't get any answer!",
         "req_inc":"Incorrect request!"
+    },
+    "snapshot":{
+        "window_title":"Snapshot",
+        "export":"Export data",
+        "weight":"Weight",
+        "res_kOhm":"Resistance (kΩ)",
+        "txt":"Text file",
+        "csv":"Comma Separated Values",
+        "xls":"Excel Spreadsheet",
+        "json":"JSON file",
+        "ext_not_supported":"This file extention is not supported.",
+        "file_busy":"The file is in use by another program."
     }
 }
