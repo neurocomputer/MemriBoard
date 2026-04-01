@@ -42,7 +42,7 @@
         "quit_now":"Quit now?"
     },
     "crossbar":{
-        "name":"Crossbar",
+        "name":"MemriBoard",
         "rram":"RRAM",
         "math":"Math",
         "ann":"ANN",
@@ -54,7 +54,14 @@
         "warn_1":"Working cells file is incorrect!",
         "read_all":"Read all cells?",
         "not_done":"This feature is under development!",
-        "quit_now":"Quit now?"
+        "quit_now":"Quit now?",
+        "info":"Crossbar Information",
+        "terminal":"Terminal",
+        "filter":"Filter",
+        "show_weights":"Show Weights",
+        "write":"Write Weights",
+        "read_all_btn":"Read All",
+        "help":"Help"
     },
     "rram":{
         "name":"RRAM",
@@ -437,5 +444,17 @@
         "json":"JSON file",
         "ext_not_supported":"This file extention is not supported.",
         "file_busy":"The file is in use by another program."
+    },
+    "filter":{
+        "name":"Filter",
+        "apply":"Apply",
+        "clear":"Clear"
+    },
+    "map":{
+        "name":"Crossbar map"
+    },
+    "help":{
+        "name":"Help",
+        "path":"docs/README.md"
     }
 }

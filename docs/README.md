@@ -17,9 +17,6 @@
 - [**Applying the experiment**](#applying-the-experiment)
 - [**Testing multiple cells**](#testsing-multiple-cells)
 
-<!-- - [Инференс нейросети](#инференс-нейросети)
-- [Демо нейросети](#демо-нейросети)  -->
-
 ## Product Overview
 
 The program can run on any operating system with python 3.9 or higher support.
@@ -192,8 +189,3 @@ After the experiment is done, you can automatically generate plots of the result
 2. Choose which data will be displayed on X-axis and Y-axis.
 3. Press **Generate plots** button.
 4. In the experiment folder, a new folder with images will be created.
-
-<!-- 
-### Инференс нейросети
-
-### Демо нейросети -->
