@@ -374,8 +374,8 @@ class ConnectDialog(QDialog):
                 self.visa_reset_btns[i].hide()
                 self.visa_response[i].hide()
             self.ui.groupBox_visa.show()
-        except ModuleNotFoundError:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+        except ModuleNotFoundError as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
             self.ui.groupBox_visa.show()
         except Exception as e:
             QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
@@ -396,8 +396,8 @@ class ConnectDialog(QDialog):
                 combobox.clear()
                 combobox.addItems(resources)
                 combobox.setEditText(text)
-        except ModuleNotFoundError:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+        except ModuleNotFoundError as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
         except Exception as e:
             QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
     
@@ -417,8 +417,8 @@ class ConnectDialog(QDialog):
             else:  # Не подключено
                 self.visa_response[index].setText('  ' + self.lang_pack.get('cant_connect'))
                 raise ConnectionError(response)
-        except ModuleNotFoundError:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+        except ModuleNotFoundError as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
         except ConnectionError as e:
             QMessageBox.warning(self, warn, self.lang_pack.get('cant_connect') + f'\n{e}', QMessageBox.Ok)
         except Exception as e:
@@ -434,8 +434,8 @@ class ConnectDialog(QDialog):
                 self.visa_response[index].setText('  ' + self.lang_pack.get('was_reset'))
             else:
                 QMessageBox.warning(self, warn, self.lang_pack.get('cant_reset') + response, QMessageBox.Ok)
-        except ModuleNotFoundError:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers'), QMessageBox.Ok)
+        except ModuleNotFoundError as e:
+            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
         except Exception as e:
             QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
 
