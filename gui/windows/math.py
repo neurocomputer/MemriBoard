@@ -1121,13 +1121,17 @@ class Math(QWidget):
         Окно со снапшотом
         """
         if self.parent.snapshot_dialog is None:
-            self.parent.snapshot_dialog = Snapshot(self.parent, data, mode=mode)
+            self.parent.snapshot_dialog = Snapshot(parent=self.parent, data=data, mode=mode)
             self.parent.snapshot_dialog.show()
         else:
-            self.parent.snapshot_dialog.data = data
-            self.parent.snapshot_dialog.plot_matrix(mode=mode)
-            self.parent.snapshot_dialog.showNormal()
-            self.parent.snapshot_dialog.activateWindow()
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.parent.snapshot_dialog.safe_close()
+                self.show_snapshot(data, mode)
+            else:
+                self.parent.snapshot_dialog.data = data
+                self.parent.snapshot_dialog.plot_matrix(mode=mode)
+                self.parent.snapshot_dialog.activateWindow()  
 
 class MakeMult(QThread):
     """
