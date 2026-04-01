@@ -3,25 +3,25 @@
 ## Table of contents
 
 - [**Product Overview**](#product-overview)
-- [**Connecting the crossbar array**](#connecting-the-crossbar-array)
+- [**Connecting the measurement device**](#connecting-the-measurement-device)
   - [Creating new database entry](#creating-a-database-entry-for-new-crossbar-array)
     - [Settings](#settings)
 - [**Main window**](#main-window)
-  - [Shortcuts](#shortcuts)
+  - [Additional functionality](#other-main-window-functionality)
 - [**Working with individual cells**](#working-with-individual-cells)
   - [History window](#history-window)
 - [**Configuring your experiment**](#configuring-your-experiment)
   - [Signal editing](#signal-editing-window)
-    - [Standart pulse sequence](#standart-pulse-sequence)
+    - [Standard pulse sequence](#standard-pulse-sequence)
     - [Terminate condition](#terminate-condition)
 - [**Applying the experiment**](#applying-the-experiment)
-- [**Testing multiple cells**](#testsing-multiple-cells)
+- [**Testing multiple cells**](#testing-multiple-cells)
 
 ## Product Overview
 
 The program can run on any operating system with python 3.9 or higher support.
 
-### Connecting the crossbar array
+### Connecting the measurement device
 
 The connection window appears at startup. Here you can select a crossbar you are working with, COM-port to which the device is connected, or choose the simulation mode.
 
@@ -42,7 +42,7 @@ After connecting, a new crossbar is created in memory, or an existing one is loa
 
 ![Settings window](assets/settings.png)
 
-- **Update** the configutation from settings.ini.
+- **Update** the configuration from settings.ini.
 - Selection of **ADC bit depth**: 10 bits (Arduino ADC) or 14 bits (external ADC, oversampling).
 - Adjustment of **calibration coefficient**.
 - Adjustment of the software **current compliance (CC)** (works by predicting the current of the next pulse, based on last measured resistance).
@@ -56,19 +56,21 @@ Main window has a table which displays resistances of the memory cells. At the t
 - **RRAM** for working with the crossbar array as a memory bank.
 - **Math** for matrix multiplication.
 - **ANN** for working with neural networks (WIP).
-- [**Tests**](#testsing-multiple-cells) to conduct general crossbar testing on multiple cells.
-- **Snapshot** shows a color map of the resistances.
+- [**Tests**](#testing-multiple-cells) to conduct general crossbar testing on multiple cells.
+- **Snapshot** shows a color map of the resistances. You can **export** the matrix with crossbar resistances from that window via **Export data** button.
 - [**Settings**](#settings).
+- **Other (...)** button shows [other available functionality](#other-main-window-functionality) of the main window.
 
-### Shortcuts
+### Other main window functionality
 
-There are several shortcuts available on the main window:
+By clicking on the `...` button in the top right corner of the window you can use one of the following functions (shortcuts are available for them):
 
 - `Ctrl+T` &mdash; open the terminal.
 - `Ctrl+M` &mdash; show the weights in the crossbar array.
-- `Ctrl+I` &mdash; show information abot the crossbar array.
+- `Ctrl+I` &mdash; show information about the crossbar array.
 - `Ctrl+B` &mdash; open **Writing weight to the crossbar** window.
 - `Ctrl+U` &mdash; **update all resistances** in the crossbar array.
+- `F1` &mdash; open this manual.
 
 ## Working with individual cells
 
@@ -92,19 +94,19 @@ You can **Load the experiment** to repeat it: [Experiment configuration](#config
 
 ## Configuring your experiment
 
-Experiment configuration window can be opened via [Cell info](#working-with-individual-cells) window or via [Tests](#testsing-multiple-cells) window.
+Experiment configuration window can be opened via [Cell info](#working-with-individual-cells) window or via [Tests](#testing-multiple-cells) window.
 
 ![Experiment plan window](assets/new_exp.png)
 
 The window allows you to create a new experiment with a cell. It is made up of tickets &mdash; preset experiments, such as iv-curve, endurance, programming, etc. You can **add** multiple tickets from left side of the window to the experiment plan (**Add to plan** button), or you can create a new ticket (**New** button in the bottom left corner).
-The **Load** button on the right side of the window allows you to load a ticket that was previously applied to one of the cells. All parameters of that ticket will be loaded to the experiment.
+The **Load** button on the right side of the window allows you to load an experiment plan that was previously applied to one of the cells. All parameters of those tickets will be loaded to the experiment.
 You can also directly **import** tickets from a *.json* file.
 You can enter the experiment **name** in the lower right part of the window.
 
 Preset tickets, available by default, are:
 
 - *blank* &mdash; empty ticket.
-- *endurance* &mdash; standart endurance test for RRAM cells.
+- *endurance* &mdash; standard endurance test for RRAM cells.
 - *iv-curve*, *iv-curve-set*, *iv-curve-reset*, *iv-curve-reversed* &mdash; tickets for measuring pulsed IV-curves.
 - *measure* &mdash; ticket for measuring cell resistance.
 - *programming*, *programming-reversed* &mdash; for programming specific resistance (see [Terminate condition](#terminate-condition)).
@@ -121,6 +123,7 @@ The signal window is opened via [Experiment plan](#configuring-your-experiment) 
 ![Signal Setup Window](assets/signal.png)
 
 Set and reset signals can be controlled independently in the top half of the window: the pulse amplitudes (in volts) and widths (**Time: ms and μs**) can be adjusted. The **Amount** field specifies the amount of set or reset sweeps in a set-reset cycle, the **Repeat** fields specifies the total number of set-reset cycles. If the **Dec** flag is off, the voltage sweeps from **Start** to **Stop** with the specified **Step**. If the **Dec** flag is on, the voltage also sweeps from **Stop** to **Start**.
+The **Show** button shows the signal plot.
 For example, measuring 10 IV curves requires the following parameters:
 
 |            |Start| Stop| Step | Quantity |Decrement| Time, ms| Time, μs |
@@ -128,17 +131,17 @@ For example, measuring 10 IV curves requires the following parameters:
 | **Reset**  | 0.0 | 1.6 | 0.05 |     1    |    +    |    0    |    100   |
 |  **Set**   | 0.0 | 1.2 | 0.05 |     1    |    +    |    0    |    100   |
 
-**Sending order:** Reset-Set; **Repeat**: 10 times
+**Sending order**: Reset-Set; **Repeat**: 10 times
 
-#### Standart pulse sequence
+#### Standard pulse sequence
 
-Each measurement point consists of two parts &mdash; a voltage pulse with the adjustable amplitude for changing the resistive state of the cell, and a read pulse that always follows it. The amplitude of the reading pulse is fixed in the *settings.ini* file.
+Each measurement point consists of two parts &mdash; a voltage pulse with the adjustable amplitude for changing the resistive state of the cell, and a read pulse that always follows it. The amplitude of the reading pulse is fixed in the *settings.ini* file. The amplitude of the pulse that changes the resistive state is controlled in the [signal editing window](#signal-editing-window).
 During the experiment, the resistive state of the cell is controlled only via read pulses with constant amplitude.
 
 #### Terminate condition
 
 The terminate condition can be specified in the [Signal editing window](#signal-editing-window) and ***it is checked after every measurement point is acquired***. The **pass** condition turns the terminator off. For other condition values, you need to enter the resistance in the **Value** field (or **Min** and **Max** fields), and it will be compared to the acquired resistance.
-For example, the [Signal editing window figure](#signal-editing-window) shows standart terminate condition for programming resistive states via ***write-verify algorithm***: the **condition** is set to **><**. The experiment (for this ticket only) will automatically stop when the resistance of the memory cell will be from 5000 to 5500 Ohm.
+For example, the [Signal editing window figure](#signal-editing-window) shows standard terminate condition for programming resistive states via ***write-verify algorithm***: the **condition** is set to **><**. The experiment (for this ticket only) will automatically stop when the resistance of the memory cell will be from 5000 to 5500 Ohm.
 You can increase the amount of set-reset cycles to ensure that the memristive cell reaches the desired resistance range.
 You can add other tickets after the programming ticket (for example, a retention ticket) to create an autonomous experiment.
 
@@ -148,14 +151,14 @@ The **Apply** window can be opened from [Experiment configuration window](#confi
 
 ![Experiment Window](assets/apply.png)
 
-In the Apply window, there is a **Visualizaion** field where the data acquired during the experiment is displayed. You can adjust the figure via left-click (moves the plot) and right-click (opens plot settings menu).
+In the Apply window, there is a **Visualization** field where the data acquired during the experiment is displayed. You can adjust the figure via left-click (moves the plot) and right-click (opens plot settings menu).
 For example, you can set the **logarithmic scale** for the plot by opening plot menu (right-click) &rarr; Plot Options &rarr; Transforms &rarr; log Y.
 In the bottom part of the window, you can set the data which will be displayed during the experiment: **X-axis** can display *Counts* (number of pulses applied to the cell) or *Voltage*. **Y-axis** can display *resistance*, *current* or *ADC values*. You can scroll through the display options via scroll wheel on your mouse.
 The line style of the plot can be selected from *Line*, *Dots* or *Stars*.
 In the bottom of the window there is an **Experiment control** panel. You can **Start**, **Pause** or **Stop** the experiment from there.
 After the experiment is completed, a notification of completion will be shown. In the event of reaching the [software current compliance](#settings), warning will be shown.
 
-## Testsing multiple cells
+## Testing multiple cells
 
 The **Testing window** is opened via **Tests** button on the [Main window](#main-window). In it, you can configure an experiment and apply it to multiple cells.
 
@@ -174,7 +177,7 @@ Example of a file specifying the cells for which the experiment is applied:
 
 ### Result analysis
 
-After the experiment is done, you can analyse the results:
+After the experiment is done, you can analyze the results:
 
 1. Open **Result analysis** tab on the **Testing** window.
 2. The program calculates maximum (**Rmax**) and minimum (**Rmin**) resistance recorded during the experiment for each cell. Choose one or several conditions (logical *and* is applied when choosing multiple conditions) for the resistances or their ratio and press **Calculate**.
