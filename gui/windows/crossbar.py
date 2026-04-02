@@ -45,7 +45,6 @@ from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
-from gui.windows.shortcut import Shortcut
 from gui.windows.help import Help
 from gui.src import show_choose_window, show_warning_messagebox
 
@@ -91,7 +90,6 @@ class Window(QMainWindow):
     new_ann_dialog: NewAnn
     wait_dialog: Wait
     math_dialog = Math
-    shortcut_dialog = None
     help_dialog: Help = None
     opener: str = ''
     extra = []
@@ -139,20 +137,6 @@ class Window(QMainWindow):
         self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.read_language_json))
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
-        self.ui.button_shortcuts.clicked.connect(self.show_shortcuts)
-        # хоткей
-        shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        shortcut.activated.connect(self.show_terminal_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
-        shortcut.activated.connect(self.show_filter_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
-        shortcut.activated.connect(self.show_crossbar_weights_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
-        shortcut.activated.connect(self.show_cb_info_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
-        shortcut.activated.connect(self.show_new_ann_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
-        shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # диалоговое окно подключения
         self.show_connect_dialog()
         
@@ -219,13 +203,8 @@ class Window(QMainWindow):
                 action.setText(self.lang_pack.get(text))
             if self.help_dialog is not None:
                 self.help_dialog.change_language()
-
-    def show_shortcuts(self):
-        """
-        Показать шорткаты
-        """
-        self.shortcut_dialog = Shortcut(parent=self)
-        self.shortcut_dialog.show()
+            if self.snapshot_dialog is not None:
+                self.snapshot_dialog.change_language()
 
     # методы открытия диалоговых окон
 

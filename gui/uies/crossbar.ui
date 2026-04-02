@@ -33,13 +33,6 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="6">
-          <widget class="QPushButton" name="button_settings">
-           <property name="text">
-            <string>Настройки</string>
-           </property>
-          </widget>
-         </item>
          <item row="0" column="4">
           <widget class="QPushButton" name="button_tests">
            <property name="text">
@@ -57,6 +50,13 @@
          <item row="0" column="3">
           <widget class="QPushButton" name="button_net">
            <property name="text">
+            <string>ИНС</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QPushButton" name="button_rram">
+           <property name="text">
             <string>RRAM</string>
            </property>
           </widget>
@@ -69,9 +69,9 @@
           </widget>
          </item>
          <item row="0" column="7">
-          <widget class="QToolButton" name="button_shortcuts">
+          <widget class="QToolButton" name="tool_button">
            <property name="text">
-            <string>?</string>
+            <string>...</string>
            </property>
           </widget>
          </item>
@@ -106,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>769</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
