@@ -111,6 +111,24 @@ class Connector():
                     open_flag = self.interface.check_connection(kwargs['attempts'])
                 except ModuleNotFoundError:
                     pass
+            elif self.board_type == 'elbear_multimode_WR':
+                try:
+                    self.portnum = kwargs['com_port']
+                    self.attempts = kwargs['attempts']
+                    from MemriCORE.elbear_multimode.elbear_controller import ElbearController
+                    self.interface = ElbearController(kwargs['com_port'], mode=1)
+                    open_flag = self.interface.check_connection(kwargs['attempts'])
+                except ModuleNotFoundError as ex:
+                    print(ex)
+            elif self.board_type == 'elbear_multimode_MVM':
+                try:
+                    self.portnum = kwargs['com_port']
+                    self.attempts = kwargs['attempts']
+                    from MemriCORE.elbear_multimode.elbear_controller import ElbearController
+                    self.interface = ElbearController(kwargs['com_port'], mode=2)
+                    open_flag = self.interface.check_connection(kwargs['attempts'])
+                except ModuleNotFoundError:
+                    pass
             # для плат на базе Raspberry Pi 5
             elif self.board_type == 'rp5_python':
                 try:
@@ -219,7 +237,7 @@ class Connector():
             close_flag = True
         elif self.cb_type == 'real':
             # для плат на базе Arduino
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano', 'rp5_rram_elbear_nano']:
+            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano', 'rp5_rram_elbear_nano',  'elbear_multimode_WR', 'elbear_multimode_MVM']:
                 self.interface.com_close()
                 if self.interface.com_is_open():
                     self.logger.info('Fail to close')
@@ -318,7 +336,7 @@ class Connector():
             elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
                 send_flag = True
                 rec_data = ['raspberry pi 5']
-            elif self.board_type == 'elbear_nano':
+            elif self.board_type in ['elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
                 send_flag = True
                 rec_data = ['elbear_nano']
                 # todo: добавить служебную инфу в драйвер
@@ -360,7 +378,7 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.board_type in ['elbear_nano', ]:
+            elif self.board_type in ['elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
                 status = False
                 for _ in range(100):
                     try:
@@ -679,7 +697,7 @@ class Connector():
                     attempts -= 1
                     if attempts == 0:
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
+            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
