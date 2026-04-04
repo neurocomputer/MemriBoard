@@ -140,7 +140,7 @@ class ExpSettings(QDialog):
         """
         # получаем имя файла
         file_name = self.ui.exp_list.currentIndex().data()
-        if file_name and not file_name in self.parent.protected_modes: # защита .json
+        if file_name and file_name not in self.parent.protected_modes: # защита .json
             answer = show_choose_window(self, self.lang_pack.get("delete_file"))
             if answer:
                 os.remove(os.path.join(TICKET_PATH,
@@ -339,7 +339,7 @@ class ExpSettings(QDialog):
                 for i in range(len(tickets)):
                     self._add_exp_to_list(ticket=tickets.get(str(i)))
                 self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
-        except:
+        except Exception:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
 
     def duplicate_ticket(self) -> None:

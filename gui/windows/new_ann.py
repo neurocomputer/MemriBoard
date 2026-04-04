@@ -314,7 +314,7 @@ class NewAnn(QDialog):
         """
         bl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 4)
         wl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 5)
-        if bl_item == None or wl_item == None:
+        if bl_item is None or wl_item is None:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("missing_coor"))
             self.parent.coordinate_error = True
             self.parent.extra = []

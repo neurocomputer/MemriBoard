@@ -30,7 +30,7 @@ class Snapshot(QWidget):
     lang_pack: dict
      
     def __init__(self, parent=None, data: list = None, mode: str = 'resistances') -> None:
-        """Snapshot windown
+        """Snapshot window
 
         Args:
             parent (optional): Parent class. Defaults to None.
@@ -118,18 +118,18 @@ class Snapshot(QWidget):
             f'{self.lang_pack["xls"]} (*.xlsx)': save_matrix_xlsx,
             f'{self.lang_pack["json"]} (*.json)': save_matrix_json
         }
-        filename, extention = QFileDialog.getSaveFileName(self, 
+        filename, extension = QFileDialog.getSaveFileName(self, 
             filter=';;'.join(save_funcs))
         if filename == '':
             return
-        if extention not in save_funcs:
+        if extension not in save_funcs:
             show_warning_messagebox(parent=self, message=self.lang_pack['ext_not_supported'])
             return
         try:
-            ext = extention.split('*')[1].split(')')[0]
+            ext = extension.split('*')[1].split(')')[0]
             if not filename.endswith(ext):
                 filename += ext
-            save_funcs[extention](filename, self.data)
+            save_funcs[extension](filename, self.data)
         except PermissionError:
             show_warning_messagebox(parent=self, message=self.lang_pack['file_busy'])
         except Exception as e:

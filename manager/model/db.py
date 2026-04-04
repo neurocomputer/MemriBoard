@@ -28,7 +28,7 @@ class DBOperate():
         try:
             self.db_connection.cursor()
             return True
-        except Exception as ex:
+        except Exception:
             return False
 
     def db_connect(self, func_name):

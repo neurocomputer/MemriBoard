@@ -35,7 +35,7 @@ class CellInfo(QDialog):
         self.ui.button_read_one_cells.clicked.connect(self.read_one_cell)
         self.ui.button_history.clicked.connect(lambda: self.parent.show_history_dialog(mode="single"))
         self.ui.button_cancel.clicked.connect(self.close)
-        if self.parent.man.board_type == 'offline' or self.parent.coordinate_error == True:
+        if self.parent.man.board_type == 'offline' or self.parent.coordinate_error:
             self.ui.button_new_exp.setEnabled(False)
             self.ui.button_read_one_cells.setEnabled(False)
 

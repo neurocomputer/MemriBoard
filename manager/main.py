@@ -15,7 +15,7 @@ from manager.board import Connector
 from manager.service.saves import save_list_to_bytearray
 from manager.service import a2r
 from manager.model.src import create_empty_db_crossbar
-from manager.service.global_settings import *
+from manager.service.global_settings import DB_PATH
 from manager.model.db import DBOperate
 from simulator.src import create_crossbar_array
 
@@ -31,7 +31,7 @@ class Manager(Application):
         save_flag -- флаг сохранения результатов
         connected_flag -- флаг подключения к порту
         crossbar_id -- id подключенного кроссбара
-        conn -- конектор к плате
+        conn -- коннектор к плате
         _admin_thread -- поток администратора
         _worker_thread -- поток рабочего
         _save_thread -- поток сохранения результата

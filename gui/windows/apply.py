@@ -362,8 +362,8 @@ class Apply(QWidget):
         Завершение выполнения
         """
         value = value.split(",")
-        exp_status = int(value[1])
-        flag_soft_cc = int(value[2])
+        # exp_status = int(value[1])
+        # flag_soft_cc = int(value[2])
         # рисунок для базы в matplotlib
         plt.clf()
         plt.plot(self.data_for_plot_x, self.data_for_plot_y, marker='o', linewidth=0.5)
