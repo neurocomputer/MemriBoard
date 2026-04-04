@@ -4,14 +4,15 @@ Application
 
 # pylint: disable=W0401,W0614,R0902,C0321
 
-import os
-import json
 import logging
 from copy import deepcopy
 from configparser import ConfigParser
 from logging import Logger
+from io import StringIO
+from typing import Union
 from manager.menu import menu
 from manager.model.db import DBOperate
+from manager.service.templates import TEMPLATE_INI
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
 
@@ -42,6 +43,7 @@ class Application():
     writable_cells: str
     language: str
     lock_board_type: bool
+    new_config_keys: Union[None, list] = None
 
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
@@ -77,10 +79,12 @@ class Application():
         Прочитать настройки платы
         """
         self.ap_config.read(self.ap_config_path, encoding="utf-8")  # читаем конфиг
+        # Сравниваем с template
+        self.compare_settings_with_template()
+        # для отдельных настроек создаем алиасы
         self.connected_port = self.ap_config['connector']['com_port']
         self.board_type = self.ap_config['board']['board_type']
         self.backup = self.ap_config['backup']['backup_path']
-        # для отдельных настроек создаем алиасы
         self.dac_bit = int(self.ap_config['board']['dac_bit'])
         self.vol_ref_dac = float(self.ap_config['board']['vol_ref_dac'])
         self.res_load = int(self.ap_config['board']['res_load'])
@@ -125,6 +129,31 @@ class Application():
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
         self.read_settings()
+        
+    def compare_settings_with_template(self) -> None:
+        """
+        Сравниваем настройки с template и дополняем, если не хватает
+        """
+        # Creating config object from template
+        buffer = StringIO(TEMPLATE_INI)
+        template_config = ConfigParser()
+        template_config.read_file(buffer)
+        buffer.close()
+        # Comparing configs
+        new_keys = []  # List of new keys to put in the warning
+        for section in template_config.sections():
+            if section not in self.ap_config.sections():
+                self.ap_config.add_section(section)
+            for key in template_config[section]:
+                if key not in self.ap_config[section]:
+                    val = template_config[section][key]
+                    self.ap_config[section][key] = val
+                    new_keys.append(f'[{section}] {key} = {val}')
+        if len(new_keys) != 0:
+            self.new_config_keys = new_keys
+            # Перезаписываем settings.ini
+            with open(self.ap_config_path, 'w', encoding='utf-8') as file:
+                self.ap_config.write(file)
 
     def get_meta_info(self):
         """

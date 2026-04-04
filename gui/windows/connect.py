@@ -7,7 +7,7 @@
 import os
 from sys import platform
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QMessageBox
 from PyQt5.QtSerialPort import QSerialPortInfo
 
 from gui.src import show_choose_window
@@ -47,6 +47,10 @@ class ConnectDialog(QDialog):
         self.on_combo_board_type_changed()
         # блокировка выбора плат
         self.ui.combo_board_type.setDisabled(self.parent.man.get_meta_info()["lock_board_type"])
+        # Предупреждаем, если изменились настройки в settings.ini
+        if self.parent.man.new_config_keys is not None:
+            warn = self.parent.read_language_json("src")[1].get("warn")
+            QMessageBox.warning(self, warn, self.lang_pack.get('new_settings') + '\n'.join(self.parent.man.new_config_keys), QMessageBox.Ok)
 
     def change_language(self):
         """

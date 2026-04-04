@@ -39,7 +39,8 @@
         "status_4":"Choose a crossbar!",
         "status_5":"Can't make a simulator!",
         "board_error":"No connection to ",
-        "quit_now":"Quit now?"
+        "quit_now":"Quit now?",
+        "new_settings":"New settings added to settings.ini.\nDefault values were set:\n\n"
     },
     "crossbar":{
         "name":"MemriBoard",
