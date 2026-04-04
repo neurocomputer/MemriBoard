@@ -79,8 +79,8 @@ class Settings(QDialog):
             self.ui.choose_language.setCurrentText(app_meta_info["language"])
         self.ui.comboBox_app_log.setCurrentText(app_meta_info["app_logging_level"])
         self.ui.comboBox_db_log.setCurrentText(app_meta_info["db_logging_level"])
-        self.ui.checkBox_app_log.setChecked(bool(app_meta_info["app_log_rewrite_on_start"]))
-        self.ui.checkBox_app_log.setChecked(bool(app_meta_info["db_log_rewrite_on_start"]))
+        self.ui.checkBox_app_log.setChecked(bool(int(app_meta_info["app_log_rewrite_on_start"])))
+        self.ui.checkBox_app_log.setChecked(bool(int(app_meta_info["db_log_rewrite_on_start"])))
 
     def save_settings(self) -> None:
         """
