@@ -5,6 +5,7 @@ Application
 # pylint: disable=W0401,W0614,R0902,C0321
 
 import logging
+import os
 from copy import deepcopy
 from configparser import ConfigParser
 from logging import Logger
@@ -55,15 +56,27 @@ class Application():
         # настраиваем логгер приложения
         self.ap_log_path = LOG_PATH
         self.ap_logger = logging.getLogger(__name__)
-        self.ap_logger.setLevel(logging.WARNING)
-        handler = logging.FileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"])
+        self.ap_logger.setLevel(self.ap_config['logging']['app_logging_level'].rstrip().upper())
+        if eval(self.ap_config['logging']['app_log_rewrite_on_start']):  # Rewrite mode
+            if os.path.isfile(self.ap_log_path):
+                os.remove(self.ap_log_path)
+            ap_log_path = self.ap_log_path
+        else:
+            ap_log_path = self.new_log_path(self.ap_log_path)
+        handler = logging.FileHandler(ap_log_path, mode='w')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.ap_logger.addHandler(handler)
         # настраиваем логгер базы данных
         self.db_log_path = DB_LOG_PATH
         self.db_logger = logging.getLogger('db_logger')
-        self.db_logger.setLevel(logging.WARNING)
-        handler = logging.FileHandler(self.db_log_path, mode=self.ap_config["logging"]["filemode"])
+        self.db_logger.setLevel(self.ap_config['logging']['database_logging_level'].rstrip().upper())
+        if eval(self.ap_config['logging']['database_log_rewrite_on_start']):  # Rewrite mode
+            if os.path.isfile(self.db_log_path):
+                os.remove(self.db_log_path)
+            db_log_path = self.db_log_path    
+        else:
+            db_log_path = self.new_log_path(self.db_log_path)
+        handler = logging.FileHandler(db_log_path, mode='w')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки
@@ -125,6 +138,14 @@ class Application():
             self.ap_config['gui']['language'] = kwargs["language"]
         if "lock_board_type" in kwargs:
             self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
+        if 'app_logging_level' in kwargs:
+            self.ap_config['logging']['app_logging_level'] = kwargs['app_logging_level']
+        if 'db_logging_level' in kwargs:
+            self.ap_config['logging']['database_logging_level'] = kwargs['db_logging_level']
+        if 'app_log_rewrite_on_start' in kwargs:
+            self.ap_config['logging']['app_log_rewrite_on_start'] = kwargs['app_log_rewrite_on_start']
+        if 'db_log_rewrite_on_start' in kwargs:
+            self.ap_config['logging']['database_log_rewrite_on_start'] = kwargs['db_log_rewrite_on_start']
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
@@ -176,4 +197,25 @@ class Application():
         meta_info['writable_cells'] = self.writable_cells
         meta_info['language'] = self.language
         meta_info['lock_board_type'] = self.lock_board_type
+        meta_info['app_logging_level'] = self.ap_config['logging']['app_logging_level']
+        meta_info['db_logging_level'] = self.ap_config['logging']['database_logging_level']
+        meta_info['app_log_rewrite_on_start'] = self.ap_config['logging']['app_log_rewrite_on_start']
+        meta_info['db_log_rewrite_on_start'] = self.ap_config['logging']['database_log_rewrite_on_start']
         return deepcopy(meta_info)
+    
+    def new_log_path(self, log_path: str) -> str:
+        """
+        Find last log index and return index of the new log
+        """
+        last_name = 0
+        keyword = os.path.basename(log_path).rsplit('.', 1)[0]
+        for name in os.listdir(os.path.dirname(log_path)):
+            if name.endswith('.log') and name.startswith(keyword):
+                name_spl = name.rsplit('.', 2)  # ['app', '2', 'log'] or ['app', 'log']
+                if len(name_spl) == 3:
+                    try:
+                        if int(name_spl[1]) > last_name:
+                            last_name = int(name_spl[1])
+                    except Exception:
+                        pass
+        return os.path.join(os.path.dirname(log_path), f'{keyword}.{last_name+1}.log')
