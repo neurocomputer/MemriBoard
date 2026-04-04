@@ -6,6 +6,7 @@
 
 import os
 import json
+from functools import partial
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtGui import QPixmap
@@ -126,16 +127,22 @@ class SignalMod(QDialog):
         self.base_json = {}
         self.file_saved = False
         # Set units for scientific lines
-        for widget, unit in zip([self.ui.forward_start,
-                                 self.ui.forward_step,
-                                 self.ui.forward_stop,
-                                 self.ui.backward_start,
-                                 self.ui.backward_step,
-                                 self.ui.backward_stop],
-                                ['V', 'V', 'V', 'V', 'V', 'V']):
+        self.scientific_widgets = {  # {widget: unit}
+            self.ui.forward_start: 'V',
+            self.ui.forward_step: 'V',
+            self.ui.forward_stop: 'V',
+            self.ui.backward_start: 'V',
+            self.ui.backward_step: 'V',
+            self.ui.backward_stop: 'V',
+        }
+        def warn(widget, text):  # Warning for ScientificQLineEdit
+            if not widget.isModified(): # Avoiding Qt bug where warning is shown twice
+                return
+            widget.setModified(False)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"')
+        for widget, unit in self.scientific_widgets.items():
             widget.set_unit(unit)
-            widget.bad_value.connect(lambda text: 
-                show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"'))
+            widget.bad_value.connect(partial(warn, widget))
 
     def _plot_ticket(self) -> None:
         """
@@ -168,14 +175,7 @@ class SignalMod(QDialog):
         status = False
         try:
             # Check if data in scientific lines is correct
-            for widget in [
-                self.ui.forward_start,
-                self.ui.forward_step,
-                self.ui.forward_stop,
-                self.ui.backward_start,
-                self.ui.backward_step,
-                self.ui.backward_stop
-            ]:
+            for widget in self.scientific_widgets:
                 if widget.get_value() is None:
                     raise ValueError
 
