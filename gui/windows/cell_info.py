@@ -77,7 +77,7 @@ class CellInfo(QDialog):
                         self.parent.man.vol_ref_adc,
                         current_adc)
         if adc_vol > 3.5: # todo: вынести 3.5 в константы
-            show_warning_messagebox(self.lang_pack.get("high_adc"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("high_adc"))
 
     def fill_info(self) -> None:
         """

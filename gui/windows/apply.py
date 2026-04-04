@@ -250,7 +250,7 @@ class Apply(QWidget):
         """
         Окно настройки графика
         """
-        show_warning_messagebox(self.lang_pack.get("not_done"), self.parent.read_language_json)
+        show_warning_messagebox(parent=self, message=self.lang_pack.get("not_done"))
 
     def update_label_total_count(self) -> None:
         """
@@ -287,7 +287,7 @@ class Apply(QWidget):
         Закрытие
         """
         if self.application_status in ["start", "pause"]: # работает
-            answer = show_choose_window(self, self.lang_pack.get("stop_exp"), rlj=self.parent.read_language_json)
+            answer = show_choose_window(self, self.lang_pack.get("stop_exp"))
             if answer:
                 self.stop_exp()
                 event.accept()
@@ -326,13 +326,13 @@ class Apply(QWidget):
         flag_soft_cc = int(value[1])
         # блочим запуск
         if exp_status == 1:
-            show_warning_messagebox(self.lang_pack.get("done"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("done"))
         elif exp_status == 2:
-            show_warning_messagebox(self.lang_pack.get("stopped"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("stopped"))
         elif exp_status == 3:
-            show_warning_messagebox(self.lang_pack.get("voltage_high"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("voltage_high"))
         if flag_soft_cc:
-            show_warning_messagebox(self.lang_pack.get("prog_stop"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("prog_stop"))
         self.application_status = "stop"
         self.stop_exp()
 
