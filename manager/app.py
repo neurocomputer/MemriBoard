@@ -56,7 +56,7 @@ class Application():
         # настраиваем логгер приложения
         self.ap_log_path = LOG_PATH
         self.ap_logger = logging.getLogger(__name__)
-        self.ap_logger.setLevel(self.ap_config['logging']['app_logging_level'].rstrip().upper())
+        self.ap_logger.setLevel(self.ap_config['logging']['app_logging_level'].strip().upper())
         if eval(self.ap_config['logging']['app_log_rewrite_on_start']):  # Rewrite mode
             if os.path.isfile(self.ap_log_path):
                 os.remove(self.ap_log_path)
@@ -69,7 +69,7 @@ class Application():
         # настраиваем логгер базы данных
         self.db_log_path = DB_LOG_PATH
         self.db_logger = logging.getLogger('db_logger')
-        self.db_logger.setLevel(self.ap_config['logging']['database_logging_level'].rstrip().upper())
+        self.db_logger.setLevel(self.ap_config['logging']['database_logging_level'].strip().upper())
         if eval(self.ap_config['logging']['database_log_rewrite_on_start']):  # Rewrite mode
             if os.path.isfile(self.db_log_path):
                 os.remove(self.db_log_path)
@@ -140,8 +140,12 @@ class Application():
             self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
         if 'app_logging_level' in kwargs:
             self.ap_config['logging']['app_logging_level'] = kwargs['app_logging_level']
+            if hasattr(self, 'ap_logger'):
+                self.ap_logger.setLevel(kwargs['app_logging_level'])
         if 'db_logging_level' in kwargs:
             self.ap_config['logging']['database_logging_level'] = kwargs['db_logging_level']
+            if hasattr(self, 'db_logger'):
+                self.db_logger.setLevel(kwargs['db_logging_level'])
         if 'app_log_rewrite_on_start' in kwargs:
             self.ap_config['logging']['app_log_rewrite_on_start'] = kwargs['app_log_rewrite_on_start']
         if 'db_log_rewrite_on_start' in kwargs:
