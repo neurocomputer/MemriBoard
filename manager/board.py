@@ -24,6 +24,7 @@ class Connector():
     cb_type: str
     board_type: str
     request_id: int = 0
+    meta_info = {'task_time': 0.0}
 
     serial = None # COM порт
     rasp_driver = None # драйвер для распберри плат
@@ -80,6 +81,7 @@ class Connector():
         if self.cb_type == 'simulator':
             # загрузка симулятора
             open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
+            self.meta_info['task_time'] = 60
         elif self.cb_type == 'real':
             # для плат на базе Arduino
             if self.board_type in ['memardboard_single', 'memardboard_crossbar']:

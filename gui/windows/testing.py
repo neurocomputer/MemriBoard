@@ -467,7 +467,8 @@ class Testing(QWidget):
         Обновить время выполнения
         """
         num_cells = len(self.coordinates)
-        self.exp_time_estimated = round((((self.parent.exp_list_params['total_tasks'] * num_cells) * 60) / 1000) / 60, 0) # todo: скорректировать время
+        # self.exp_time_estimated = round((((self.parent.exp_list_params['total_tasks'] * num_cells) * 60) / 1000) / 60, 0) # todo: скорректировать время
+        self.exp_time_estimated = round((((self.parent.exp_list_params['total_tasks'] * num_cells) * self.parent.man.conn.meta_info['task_time']) / 1000) / 60, 0)
         self.ui.label_time_status.setText(self.lang_pack.get("exec_time") + str(self.exp_time_estimated))
 
     def update_label_start_time(self) -> None: # +
