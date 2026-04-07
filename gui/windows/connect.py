@@ -9,7 +9,7 @@ from sys import platform
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
-
+import requests
 from gui.src import show_choose_window
 
 class ConnectDialog(QDialog):
@@ -36,12 +36,14 @@ class ConnectDialog(QDialog):
         self.ui.button_quit.clicked.connect(self.close)
         self.ui.button_settings.clicked.connect(self._settings)
         self.ui.button_new_crossbar.clicked.connect(lambda: self.show_new_cb_layout(True))
+        self.ui.button_ping.clicked.connect(self.ping_server)
         # обработка комбо
         self.ui.combo_com_name.currentIndexChanged.connect(self.on_com_name_changed)
         self.ui.edit_com_name.textChanged.connect(self.on_com_name_changed)
         self.ui.combo_board_type.currentIndexChanged.connect(self.on_combo_board_type_changed)
         # обновление отображения
         self.show_new_cb_layout(False)
+        self.show_server_layout(False)
         self.update_crossbar_list()
         self.update_board_list()
         self.on_combo_board_type_changed()
@@ -108,6 +110,15 @@ class ConnectDialog(QDialog):
         self.ui.label_com_entry.setVisible(state)
         self.ui.edit_com_name.setVisible(state)
 
+    def show_server_layout(self, state):
+        """
+        Показать параметры подключения к серверу
+        """
+        self.ui.label_3.setVisible(state)
+        self.ui.edit_server.setVisible(state)
+        self.ui.button_ping.setVisible(state)
+        self.update_window_size()
+
     def _settings(self) -> None:
         """
         Настройки
@@ -162,11 +173,10 @@ class ConnectDialog(QDialog):
                       'rp5_fpga_python',
                       'rp5_fpga_c',
                       'elbear_nano',
-                      'elbear_multimode_WR',
-                      'elbear_multimode_MVM',
                       'rp5_rram_elbear_nano',
                       'rp5_rram_python',
-                      'rp5_rram_c']
+                      'rp5_rram_c',
+                      'remote']
         try:
             last_board = self.parent.man.ap_config["board"]["board_type"]
             if last_board:
@@ -175,6 +185,32 @@ class ConnectDialog(QDialog):
             pass
         self.ui.combo_board_type.clear()
         self.ui.combo_board_type.addItems(board_list)
+
+    def ping_server(self):
+        """
+        Пинг сервера
+        """
+        url_raw = self.ui.edit_server.text()
+        if url_raw.startswith("http://"):
+            url_raw = url_raw.replace("http://","")
+        if len(url_raw.split(":")) == 2:
+            url = 'http://' + url_raw + '/echo'
+        else:
+            url = 'http://' + url_raw + ':5000/echo' # http://172.19.0.1:5000/echo
+        data = {"text": ""}
+        try:
+            response = requests.post(url, json=data)
+            if response.status_code == 200:
+                self.ui.button_ping.setStyleSheet("background-color: lime;")
+            else:
+                print(f"Ошибка сервера: {response.status_code}")
+                print(response.text)
+                self.ui.button_ping.setStyleSheet("background-color: red;")
+        except requests.exceptions.ConnectionError:
+            print(f"Ошибка: Не удалось подключиться к серверу по адресу {url}")
+            self.ui.button_ping.setStyleSheet("background-color: red;")
+        except Exception as e:
+            print(f"Произошла ошибка: {e}")
 
     def update_window_size(self):
         """
@@ -192,12 +228,17 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
-        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
+        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano']:
+            self.show_server_layout(False)
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText(self.lang_pack.get("status_1"))
+        elif combo_board_type == 'remote':
+            self.show_server_layout(True)
+            self.show_com_settings_layout(False)
         else:
+            self.show_server_layout(False)
             self.show_com_settings_layout(False)
             self.ui.label_status.setText(self.lang_pack.get("status"))
         self.update_window_size()

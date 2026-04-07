@@ -1,0 +1,88 @@
+from flask import Flask, request, jsonify
+
+server = Flask(__name__)
+tasks = []
+results = []
+
+@server.route('/')
+def home():
+    """
+    Базовый минимум
+    """
+    return 'Сервер готов к работе!'
+
+@server.route('/echo', methods=['POST'])
+def echo():
+    """
+    Эхо
+    """
+    data = request.get_json()
+    return jsonify({
+        "received": data
+    })
+
+@server.route('/ping', methods=['GET'])
+def ping():
+    """
+    Пинг сервера
+    """
+    return jsonify({"status": "ok"})
+
+@server.route('/put_task', methods=['POST'])
+def put_task():
+    """
+    Положить данные на сервер
+    """
+    data = request.get_json()
+    #tasks.clear()
+    print(data)
+    tasks.append(data)
+
+    results.append((1,1))
+
+    return jsonify({"status": "saved"})
+
+@server.route('/check_tasks_storage', methods=['GET'])
+def check_tasks_storage():
+    """
+    Проверить, есть ли данные на сервере
+    """
+    if tasks:
+        return jsonify({"status": "ok"})
+    return jsonify({"status":"empty"})
+
+@server.route('/get_task', methods=['GET'])
+def get_task():
+    """
+    Забрать все данные с сервера
+    """
+    return jsonify({"data": tasks.pop()})
+
+@server.route('/put_result', methods=['POST'])
+def put_answer():
+    """
+    Положить данные на сервер
+    """
+    data = request.get_json()
+    results.clear()
+    results.append(data)
+    return jsonify({"status": "saved"})
+
+@server.route('/check_results_storage', methods=['GET'])
+def check_answers_storage():
+    """
+    Проверить, есть ли данные на сервере
+    """
+    if results:
+        return jsonify({"status": "ok"})
+    return jsonify({"status":"empty"})
+
+@server.route('/get_result', methods=['GET'])
+def get_answer():
+    """
+    Забрать все данные с сервера
+    """
+    return jsonify({"data": results.pop()})
+
+if __name__ == '__main__':
+    server.run(host='0.0.0.0', port=5000)

@@ -46,6 +46,7 @@ from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
 from gui.windows.help import Help
+from gui.windows.http import HTTPServer
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Window(QMainWindow):
@@ -91,6 +92,8 @@ class Window(QMainWindow):
     wait_dialog: Wait
     math_dialog = Math
     help_dialog: Help = None
+    http_dialog: HTTPServer
+
     opener: str = ''
     extra = []
     coordinate_error = False
@@ -413,6 +416,13 @@ class Window(QMainWindow):
                 self.show_help()
             else:
                 self.help_dialog.activateWindow()
+
+    def show_http_dialog(self):
+        """
+        Показать http-сервер
+        """
+        self.http_dialog = HTTPServer(parent=self)
+        self.http_dialog.show()
 
     # обработчики кнопок
 

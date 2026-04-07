@@ -6,6 +6,7 @@
 
 import os
 import platform
+import requests
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
 
@@ -31,6 +32,7 @@ class Settings(QDialog):
         self.ui.button_update.clicked.connect(self.update_settings)
         self.ui.button_add_path.clicked.connect(self.add_path)
         self.ui.button_add_writable_cells_csv.clicked.connect(self.get_writable_cells)
+        self.ui.button_connect.clicked.connect(self.connect)
         # заполнение параметров
         self.fill_settings()
 
