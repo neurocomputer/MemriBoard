@@ -13,13 +13,13 @@ fastest=0
 
 ; Application logging
 ; logging levels: debug | info | warning | error | critical
-app_logging_level=warning
+app_logging_level=WARNING
 ; Whether to rewrite log file on start or create new each time
 app_log_rewrite_on_start=1
 
 ; Database logging
 ; logging levels: debug | info | warning | error | critical
-database_logging_level=warning
+database_logging_level=WARNING
 ; Whether to rewrite log file on start or create new each time
 database_log_rewrite_on_start=1
 

@@ -201,8 +201,8 @@ class Application():
         meta_info['writable_cells'] = self.writable_cells
         meta_info['language'] = self.language
         meta_info['lock_board_type'] = self.lock_board_type
-        meta_info['app_logging_level'] = self.ap_config['logging']['app_logging_level']
-        meta_info['db_logging_level'] = self.ap_config['logging']['database_logging_level']
+        meta_info['app_logging_level'] = self.ap_config['logging']['app_logging_level'].strip().upper()
+        meta_info['db_logging_level'] = self.ap_config['logging']['database_logging_level'].strip().upper()
         meta_info['app_log_rewrite_on_start'] = self.ap_config['logging']['app_log_rewrite_on_start']
         meta_info['db_log_rewrite_on_start'] = self.ap_config['logging']['database_log_rewrite_on_start']
         return deepcopy(meta_info)
