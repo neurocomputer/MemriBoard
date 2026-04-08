@@ -45,6 +45,7 @@ class SignalMod(QDialog):
         self.ui = uic.loadUi(self.GUI_PATH, self)
         self.change_language()
         self.setModal(True)
+        self.adjustSize()
         # обработчики кнопок
         self.ui.button_graph.clicked.connect(self._plot_ticket)
         self.ui.button_save.clicked.connect(self._save_json)

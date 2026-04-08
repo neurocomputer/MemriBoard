@@ -25,6 +25,7 @@ class Settings(QDialog):
         self.change_language()
         # доп настройки
         self.setModal(True)
+        self.adjustSize()
         # logging levels
         log_items = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
         self.ui.comboBox_app_log.addItems(log_items)
