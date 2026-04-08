@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from random import randint
 
 server = Flask(__name__)
 tasks = []
@@ -11,14 +12,10 @@ def home():
     """
     return 'Сервер готов к работе!'
 
-@server.route('/echo', methods=['POST'])
-def echo():
-    """
-    Эхо
-    """
-    data = request.get_json()
+@server.route('/get_all', methods=['GET'])
+def get_all():
     return jsonify({
-        "received": data
+        'data': (tasks, results)
     })
 
 @server.route('/ping', methods=['GET'])
@@ -34,11 +31,10 @@ def put_task():
     Положить данные на сервер
     """
     data = request.get_json()
-    #tasks.clear()
-    print(data)
     tasks.append(data)
 
-    results.append((1,1))
+    # results.append((1,1))
+    results.append(((randint(1, 5)), (randint(1, 5))))
 
     return jsonify({"status": "saved"})
 
@@ -64,7 +60,6 @@ def put_answer():
     Положить данные на сервер
     """
     data = request.get_json()
-    results.clear()
     results.append(data)
     return jsonify({"status": "saved"})
 

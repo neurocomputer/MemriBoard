@@ -173,12 +173,14 @@ class Connector():
                 except ModuleNotFoundError:
                     pass
             elif self.board_type == 'remote':
-                from manager.remote import RemoteConnect
-
-
-                self.interface = RemoteConnect()
-                open_flag = self.interface.connect("127.0.0.1", "5000")
-                
+                try:
+                    from manager.remote import RemoteConnect
+                    self.interface = RemoteConnect()
+                    open_flag = self.interface.connect("127.0.0.1", "5000")
+                except ModuleNotFoundError:
+                    pass
+                except Exception as e:
+                    print("Ошибка при подключении интерфейса RemoteConnect")
         return open_flag
 
     def close_port(self) -> bool:
@@ -379,10 +381,11 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             elif self.board_type == 'remote':
+                status = self.interface.send_task(task)
                 print(task)
-                self.interface.send_task(task)
-                res = self.interface.get_answer()
-                print(res)
+                if status:
+                    _, res = self.interface.get_result()
+                    print(res)
             # можно добавить работу с другими платами
             # time.sleep(55/1000)
         # режим симулятор

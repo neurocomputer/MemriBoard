@@ -17,6 +17,7 @@ class Settings(QDialog):
 
     GUI_PATH = os.path.join("gui","uies","settings.ui")
     lang_pack = {}
+    uri: str
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -33,8 +34,55 @@ class Settings(QDialog):
         self.ui.button_add_path.clicked.connect(self.add_path)
         self.ui.button_add_writable_cells_csv.clicked.connect(self.get_writable_cells)
         self.ui.button_connect.clicked.connect(self.connect)
+        self.ui.button_get_all.clicked.connect(self.get_all)
+        self.ui.button_get_task.clicked.connect(self.get_task)
+        self.ui.button_get_result.clicked.connect(self.get_result)
+        self.ui.button_disconnect.clicked.connect(self.disconnect)
         # заполнение параметров
+        self.uri = '127.0.0.1:5000'
         self.fill_settings()
+        self.activate_buttons(False)
+
+    def activate_buttons(self, mode):
+        self.ui.button_get_task.setEnabled(mode)
+        self.ui.button_get_result.setEnabled(mode)
+        self.ui.button_get_all.setEnabled(mode)
+
+    def connect(self):
+        self.uri = 'http://' + self.ui.lineedit_uri.text()
+        try:
+            self.ui.text_log.append(f'Подключение к {self.uri}')
+            response = requests.get(self.uri + '/ping')
+            if response.status_code == 200:
+                self.ui.text_log.append(f'Успех')
+                self.activate_buttons(True)
+            else:
+                self.ui.text_log.append(f'Ошибка')
+                self.activate_buttons(False)
+        except Exception as e:
+            self.ui.text_log.append(f'Ошибка: {e}')
+
+    def get_all(self):
+        response = requests.get(self.uri + "/get_all")
+        if response.status_code == 200:
+            data = response.json()
+            self.ui.text_log.append(f"Data: {data.get('data', [])}")
+
+    def get_task(self):
+        response = requests.get(self.uri + "/get_task")
+        if response.status_code == 200:
+            data = response.json()
+            self.ui.text_log.append(f'Task: {data.get('data', [])}')
+
+    def get_result(self):
+        response = requests.get(self.uri + "/get_result")
+        if response.status_code == 200:
+            data = response.json()
+            self.ui.text_log.append(f'Result: {data.get('data', [])}')
+    
+    def disconnect(self):
+        self.ui.text_log.clear()
+        self.close()
 
     def change_language(self):
         """
