@@ -33,8 +33,7 @@ def put_task():
     data = request.get_json()
     tasks.append(data)
 
-    # results.append((1,1))
-    results.append(((randint(1, 5)), (randint(1, 5))))
+    #results.append((randint(0, 2**14-1), 1))
 
     return jsonify({"status": "saved"})
 
@@ -60,7 +59,7 @@ def put_answer():
     Положить данные на сервер
     """
     data = request.get_json()
-    results.append(data)
+    results.append(data.get('result'))
     return jsonify({"status": "saved"})
 
 @server.route('/check_results_storage', methods=['GET'])

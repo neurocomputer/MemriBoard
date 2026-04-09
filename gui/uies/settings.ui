@@ -261,31 +261,6 @@
          <widget class="QTextBrowser" name="text_log"/>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <widget class="QPushButton" name="button_get_task">
-            <property name="text">
-             <string>Получить таск</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="button_get_result">
-            <property name="text">
-             <string>Получить ответ</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <widget class="QPushButton" name="button_get_all">
-          <property name="text">
-           <string>Получить все</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QPushButton" name="button_disconnect">
           <property name="text">
            <string>Отключиться</string>

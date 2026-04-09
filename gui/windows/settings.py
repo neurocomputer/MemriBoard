@@ -9,6 +9,9 @@ import platform
 import requests
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex
+from manager.remote import RemoteConnect
+from flask import jsonify
 
 class Settings(QDialog):
     """
@@ -34,19 +37,11 @@ class Settings(QDialog):
         self.ui.button_add_path.clicked.connect(self.add_path)
         self.ui.button_add_writable_cells_csv.clicked.connect(self.get_writable_cells)
         self.ui.button_connect.clicked.connect(self.connect)
-        self.ui.button_get_all.clicked.connect(self.get_all)
-        self.ui.button_get_task.clicked.connect(self.get_task)
-        self.ui.button_get_result.clicked.connect(self.get_result)
         self.ui.button_disconnect.clicked.connect(self.disconnect)
         # заполнение параметров
         self.uri = '127.0.0.1:5000'
+        self.ui.lineedit_uri.setText('127.0.0.1:5000')
         self.fill_settings()
-        self.activate_buttons(False)
-
-    def activate_buttons(self, mode):
-        self.ui.button_get_task.setEnabled(mode)
-        self.ui.button_get_result.setEnabled(mode)
-        self.ui.button_get_all.setEnabled(mode)
 
     def connect(self):
         self.uri = 'http://' + self.ui.lineedit_uri.text()
@@ -55,33 +50,27 @@ class Settings(QDialog):
             response = requests.get(self.uri + '/ping')
             if response.status_code == 200:
                 self.ui.text_log.append(f'Успех')
-                self.activate_buttons(True)
+                self.start_thread()
             else:
                 self.ui.text_log.append(f'Ошибка')
-                self.activate_buttons(False)
         except Exception as e:
             self.ui.text_log.append(f'Ошибка: {e}')
 
-    def get_all(self):
-        response = requests.get(self.uri + "/get_all")
-        if response.status_code == 200:
-            data = response.json()
-            self.ui.text_log.append(f"Data: {data.get('data', [])}")
+    def start_thread(self):
+        self.start_thread = RemoteThread(parent=self, interface=RemoteConnect())
+        # self.start_thread._mutex = mt
+        self.start_thread.logging.connect(self.on_logging)
+        self.start_thread.start()
 
-    def get_task(self):
-        response = requests.get(self.uri + "/get_task")
-        if response.status_code == 200:
-            data = response.json()
-            self.ui.text_log.append(f'Task: {data.get('data', [])}')
+    def on_logging(self, value):
+        """
+        Выводить в текстовое поле активность
+        """
+        self.ui.text_log.append(f'Статус: {value}')
 
-    def get_result(self):
-        response = requests.get(self.uri + "/get_result")
-        if response.status_code == 200:
-            data = response.json()
-            self.ui.text_log.append(f'Result: {data.get('data', [])}')
-    
     def disconnect(self):
         self.ui.text_log.clear()
+        self.start_thread.need_stop = True
         self.close()
 
     def change_language(self):
@@ -177,3 +166,35 @@ class Settings(QDialog):
         """
         event.ignore()
         self.hide()
+
+class RemoteThread(QThread):
+
+    logging = pyqtSignal(str)
+
+    def __init__(self, parent=None, interface=None):
+        QThread.__init__(self, parent)
+        self.parent = parent
+        self.interface = interface
+        self.need_stop = False # нужна остановка
+
+    def run(self):
+        """
+        Запуск потока посылки тикета
+        """
+        self.logging.emit('Поток запущен.')
+        while not self.need_stop:
+            status = self.interface.check_data(mode='task')
+            if not status:
+                continue
+            status, task = self.interface.get_task()
+            if status:
+                self.logging.emit('Данные получены.')
+                result = self.parent.parent.man.conn.impact(task)
+                status = self.interface.send_result(result)
+                if status:
+                    self.logging.emit('Результат отправлен.')
+                else:
+                    self.logging.emit('Результат не отправлен')
+            else:
+                self.logging.emit('Данные не получены.')
+        self.logging.emit('Поток остановлен.')

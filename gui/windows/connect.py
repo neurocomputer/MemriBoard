@@ -47,6 +47,7 @@ class ConnectDialog(QDialog):
         self.update_crossbar_list()
         self.update_board_list()
         self.on_combo_board_type_changed()
+        self.ui.edit_server.setText('127.0.0.1:5000')
         # блокировка выбора плат
         self.ui.combo_board_type.setDisabled(self.parent.man.get_meta_info()["lock_board_type"])
 
@@ -194,17 +195,15 @@ class ConnectDialog(QDialog):
         if url_raw.startswith("http://"):
             url_raw = url_raw.replace("http://","")
         if len(url_raw.split(":")) == 2:
-            url = 'http://' + url_raw + '/echo'
+            url = 'http://' + url_raw + '/ping'
         else:
-            url = 'http://' + url_raw + ':5000/echo' # http://172.19.0.1:5000/echo
-        data = {"text": ""}
+            url = 'http://' + url_raw + ':5000/ping' # http://172.19.0.1:5000/ping
         try:
-            response = requests.post(url, json=data)
+            response = requests.get(url)
             if response.status_code == 200:
                 self.ui.button_ping.setStyleSheet("background-color: lime;")
             else:
                 print(f"Ошибка сервера: {response.status_code}")
-                print(response.text)
                 self.ui.button_ping.setStyleSheet("background-color: red;")
         except requests.exceptions.ConnectionError:
             print(f"Ошибка: Не удалось подключиться к серверу по адресу {url}")
@@ -292,6 +291,8 @@ class ConnectDialog(QDialog):
                 else:
                     if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
+                    elif combo_board_type == 'remote':
+                        connected_flag = self.parent.man.connect(address = self.ui.edit_server.text())
                     else:
                         connected_flag = self.parent.man.connect()
                     if connected_flag:

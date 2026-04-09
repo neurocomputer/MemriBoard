@@ -144,6 +144,8 @@ class Manager(Application):
             self.connected_flag = self.conn.open_port(com_port=kwargs['com_port'],
                                                       attempts = int(self.ap_config['connector']['attempts_to_kick']),
                                                       timeout = float(self.ap_config["connector"]["timeout"]))
+        elif 'address' in kwargs:
+            self.connected_flag = self.conn.open_port(address = kwargs['address'])
         else:
             # другое подключение
             self.connected_flag = self.conn.open_port()
