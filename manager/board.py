@@ -5,7 +5,6 @@
 # pylint: disable=no-name-in-module
 
 import time
-import random
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
@@ -599,6 +598,11 @@ class Connector():
                     if flag:
                         self.logger.info(response)
                     res = int(flag)
+                elif task['mode_flag'] == 'need_stop':
+                    # Посылаем флаг need_stop драйверу, если он завис
+                    self.interface.stop_experiment()
+                    self.logger.info('Need stop sent to driver')
+                    res = 1
                 self.interface.logger.info(f'Impact: res = {res}')
             # можно добавить работу с другими платами
             # time.sleep(55/1000)
@@ -721,10 +725,3 @@ class Connector():
             self.request_id += 1
         else:
             self.request_id = 0
-            
-    def send_need_stop_to_driver(self):
-        """
-        Set driver's need stop flag to True
-        """
-        if hasattr(self.interface, 'need_stop'):
-            self.interface.need_stop = True

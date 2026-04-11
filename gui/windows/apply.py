@@ -20,7 +20,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
-from manager.service import d2v, a2r, a2c, r2a, a2v
+from manager.service import d2v, a2r, a2c
 from manager.service.saves import save_list_to_bytearray, init_csv_apply
 import csv
 from gui.src import show_choose_window, show_warning_messagebox
@@ -241,7 +241,7 @@ class Apply(QWidget):
         """
         if self.application_status == "start" or "pause": # работает
             self.start_thread.need_stop = True
-            self.parent.man.conn.send_need_stop_to_driver()
+            self.parent.man.conn.impact({'mode_flag': 'need_stop'})
             self.application_status = "stop"
         self.block_buttons([False, False, True, True])
         self.block_comdo(False)

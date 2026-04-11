@@ -7,7 +7,7 @@
 import os
 from sys import platform
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QMessageBox
+from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
 from gui.src import show_choose_window, show_warning_messagebox
@@ -361,7 +361,6 @@ class ConnectDialog(QDialog):
         
     def show_VISA_layout(self, driver: str) -> None:
         """Show VISA ui depending on the driver"""
-        warn = self.parent.read_language_json("src")[1].get("warn")
         try:
             from RRAM_VISA_Drivers import get_driver_instruments # type: ignore
             instruments = list(get_driver_instruments(self.ui.combo_board_type.currentText()).keys())
@@ -378,13 +377,11 @@ class ConnectDialog(QDialog):
                 self.visa_check_btns[i].hide()
                 self.visa_reset_btns[i].hide()
                 self.visa_response[i].hide()
-            self.ui.groupBox_visa.show()
         except ModuleNotFoundError as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
-            self.ui.groupBox_visa.show()
+            show_warning_messagebox(self, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}')
         except Exception as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
-            self.ui.groupBox_visa.show()
+            show_warning_messagebox(self, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}')
+        self.ui.groupBox_visa.show()
         
     def hide_VISA_layout(self) -> None:
         """Hide VISA ui"""
@@ -392,7 +389,6 @@ class ConnectDialog(QDialog):
         
     def update_VISA_resources(self) -> None:
         """Update VISA resources and put them in the comboboxes"""
-        warn = self.parent.read_language_json("src")[1].get("warn")
         try:
             from RRAM_VISA_Drivers import update_visa_instruments_list  # type: ignore
             resources = update_visa_instruments_list(self.parent.man.visa_library_path)
@@ -402,12 +398,14 @@ class ConnectDialog(QDialog):
                 combobox.addItems(resources)
                 combobox.setEditText(text)
         except ModuleNotFoundError as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
+            show_warning_messagebox(self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}')
         except Exception as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
+            show_warning_messagebox(self.lang_pack.get('exception') + f'{type(e).__name__}: {e}')
     
     def check_VISA_connection(self, index: int) -> None:
-        warn = self.parent.read_language_json("src")[1].get("warn")
+        """
+        Check connection with an instrument
+        """
         try:
             from RRAM_VISA_Drivers import get_driver_instruments   # type: ignore
             instrument_check_funcs = get_driver_instruments(self.ui.combo_board_type.currentText())
@@ -416,21 +414,23 @@ class ConnectDialog(QDialog):
                                                                         visa_library_path=self.parent.man.visa_library_path)
             if flag == 1:  # Подключено, но устройство неправильное
                 self.visa_response[index].setText('  ' + response + ' 🞩')
-                QMessageBox.warning(self, warn, self.lang_pack.get('wrong_instrument'), QMessageBox.Ok)
+                show_warning_messagebox(self.lang_pack.get('wrong_instrument'))
             elif flag == 2:  # Подлкючено, правильное устройство
                 self.visa_response[index].setText('  ' + response + ' ✓')
             else:  # Не подключено
                 self.visa_response[index].setText('  ' + self.lang_pack.get('cant_connect'))
                 raise ConnectionError(response)
         except ModuleNotFoundError as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
+            show_warning_messagebox(self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}')
         except ConnectionError as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('cant_connect') + f'\n{e}', QMessageBox.Ok)
+            show_warning_messagebox(self.lang_pack.get('cant_connect') + f'\n{e}')
         except Exception as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
+            show_warning_messagebox(self.lang_pack.get('exception') + f'{type(e).__name__}: {e}')
     
     def reset_VISA_instrument(self, index: int) -> None:
-        warn = self.parent.read_language_json("src")[1].get("warn")
+        """
+        Reset instrument's volatile memory
+        """
         try:
             from RRAM_VISA_Drivers import reset_instrument   # type: ignore
             flag, response = reset_instrument(visa_address=self.visa_combo[index].currentText().strip(), 
@@ -438,11 +438,11 @@ class ConnectDialog(QDialog):
             if flag:
                 self.visa_response[index].setText('  ' + self.lang_pack.get('was_reset'))
             else:
-                QMessageBox.warning(self, warn, self.lang_pack.get('cant_reset') + response, QMessageBox.Ok)
+                show_warning_messagebox(self.lang_pack.get('cant_reset') + response)
         except ModuleNotFoundError as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}', QMessageBox.Ok)
+            show_warning_messagebox(self.lang_pack.get('no_rram_visa_drivers') + f'\n{e}')
         except Exception as e:
-            QMessageBox.warning(self, warn, self.lang_pack.get('exception') + f'{type(e).__name__}: {e}', QMessageBox.Ok)
+            show_warning_messagebox(self.lang_pack.get('exception') + f'{type(e).__name__}: {e}')
 
     def closeEvent(self, event): # pylint: disable=C0103,W0613
         """
