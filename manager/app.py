@@ -4,13 +4,15 @@ Application
 
 # pylint: disable=W0401,W0614,R0902,C0321
 
-import os
-import json
 import logging
+import os
 from copy import deepcopy
 from configparser import ConfigParser
 from logging import Logger
+from io import StringIO
+from typing import Union
 from manager.model.db import DBOperate
+from manager.service.templates import TEMPLATE_INI
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
 
@@ -40,6 +42,7 @@ class Application():
     writable_cells: str
     language: str
     lock_board_type: bool
+    new_config_keys: Union[None, list] = None
 
     def __init__(self) -> None:
         # это выполняется везде где есть наследование от Application и super().__init__()
@@ -51,15 +54,27 @@ class Application():
         # настраиваем логгер приложения
         self.ap_log_path = LOG_PATH
         self.ap_logger = logging.getLogger(__name__)
-        self.ap_logger.setLevel(logging.INFO)
-        handler = logging.FileHandler(self.ap_log_path, mode=self.ap_config["logging"]["filemode"])
+        self.ap_logger.setLevel(self.ap_config['logging']['app_logging_level'].strip().upper())
+        if eval(self.ap_config['logging']['app_log_rewrite_on_start']):  # Rewrite mode
+            if os.path.isfile(self.ap_log_path):
+                os.remove(self.ap_log_path)
+            ap_log_path = self.ap_log_path
+        else:
+            ap_log_path = self.new_log_path(self.ap_log_path)
+        handler = logging.FileHandler(ap_log_path, mode='w')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.ap_logger.addHandler(handler)
         # настраиваем логгер базы данных
         self.db_log_path = DB_LOG_PATH
         self.db_logger = logging.getLogger('db_logger')
-        self.db_logger.setLevel(logging.WARNING)
-        handler = logging.FileHandler(self.db_log_path, mode=self.ap_config["logging"]["filemode"])
+        self.db_logger.setLevel(self.ap_config['logging']['database_logging_level'].strip().upper())
+        if eval(self.ap_config['logging']['database_log_rewrite_on_start']):  # Rewrite mode
+            if os.path.isfile(self.db_log_path):
+                os.remove(self.db_log_path)
+            db_log_path = self.db_log_path    
+        else:
+            db_log_path = self.new_log_path(self.db_log_path)
+        handler = logging.FileHandler(db_log_path, mode='w')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки
@@ -74,10 +89,12 @@ class Application():
         Прочитать настройки платы
         """
         self.ap_config.read(self.ap_config_path, encoding="utf-8")  # читаем конфиг
+        # Сравниваем с template
+        self.compare_settings_with_template()
+        # для отдельных настроек создаем алиасы
         self.connected_port = self.ap_config['connector']['com_port']
         self.board_type = self.ap_config['board']['board_type']
         self.backup = self.ap_config['backup']['backup_path']
-        # для отдельных настроек создаем алиасы
         self.dac_bit = int(self.ap_config['board']['dac_bit'])
         self.vol_ref_dac = float(self.ap_config['board']['vol_ref_dac'])
         self.res_load = int(self.ap_config['board']['res_load'])
@@ -130,6 +147,18 @@ class Application():
             self.ap_config['gui']['language'] = kwargs["language"]
         if "lock_board_type" in kwargs:
             self.ap_config['gui']['lock_board_type'] = kwargs["lock_board_type"]
+        if 'app_logging_level' in kwargs:
+            self.ap_config['logging']['app_logging_level'] = kwargs['app_logging_level']
+            if hasattr(self, 'ap_logger'):
+                self.ap_logger.setLevel(kwargs['app_logging_level'])
+        if 'db_logging_level' in kwargs:
+            self.ap_config['logging']['database_logging_level'] = kwargs['db_logging_level']
+            if hasattr(self, 'db_logger'):
+                self.db_logger.setLevel(kwargs['db_logging_level'])
+        if 'app_log_rewrite_on_start' in kwargs:
+            self.ap_config['logging']['app_log_rewrite_on_start'] = kwargs['app_log_rewrite_on_start']
+        if 'db_log_rewrite_on_start' in kwargs:
+            self.ap_config['logging']['database_log_rewrite_on_start'] = kwargs['db_log_rewrite_on_start']
         if 'visa_addresses' in kwargs:
             for i in range(5):
                 self.ap_config['connector'][f'visa_address_{i}'] = kwargs['visa_addresses'][i] 
@@ -137,6 +166,31 @@ class Application():
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
         self.read_settings()
+        
+    def compare_settings_with_template(self) -> None:
+        """
+        Сравниваем настройки с template и дополняем, если не хватает
+        """
+        # Creating config object from template
+        buffer = StringIO(TEMPLATE_INI)
+        template_config = ConfigParser()
+        template_config.read_file(buffer)
+        buffer.close()
+        # Comparing configs
+        new_keys = []  # List of new keys to put in the warning
+        for section in template_config.sections():
+            if section not in self.ap_config.sections():
+                self.ap_config.add_section(section)
+            for key in template_config[section]:
+                if key not in self.ap_config[section]:
+                    val = template_config[section][key]
+                    self.ap_config[section][key] = val
+                    new_keys.append(f'[{section}] {key} = {val}')
+        if len(new_keys) != 0:
+            self.new_config_keys = new_keys
+            # Перезаписываем settings.ini
+            with open(self.ap_config_path, 'w', encoding='utf-8') as file:
+                self.ap_config.write(file)
 
     def get_meta_info(self):
         """
@@ -158,4 +212,25 @@ class Application():
         meta_info['writable_cells'] = self.writable_cells
         meta_info['language'] = self.language
         meta_info['lock_board_type'] = self.lock_board_type
+        meta_info['app_logging_level'] = self.ap_config['logging']['app_logging_level'].strip().upper()
+        meta_info['db_logging_level'] = self.ap_config['logging']['database_logging_level'].strip().upper()
+        meta_info['app_log_rewrite_on_start'] = self.ap_config['logging']['app_log_rewrite_on_start']
+        meta_info['db_log_rewrite_on_start'] = self.ap_config['logging']['database_log_rewrite_on_start']
         return deepcopy(meta_info)
+    
+    def new_log_path(self, log_path: str) -> str:
+        """
+        Find last log index and return index of the new log
+        """
+        last_name = 0
+        keyword = os.path.basename(log_path).rsplit('.', 1)[0]
+        for name in os.listdir(os.path.dirname(log_path)):
+            if name.endswith('.log') and name.startswith(keyword):
+                name_spl = name.rsplit('.', 2)  # ['app', '2', 'log'] or ['app', 'log']
+                if len(name_spl) == 3:
+                    try:
+                        if int(name_spl[1]) > last_name:
+                            last_name = int(name_spl[1])
+                    except Exception:
+                        pass
+        return os.path.join(os.path.dirname(log_path), f'{keyword}.{last_name+1}.log')

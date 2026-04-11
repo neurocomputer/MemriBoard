@@ -4,9 +4,9 @@
 
 # pylint: disable=E0611,W0401,W0611,R0903,R0915,R0912,C0301,C0103
 
-import re
 import os
 import json
+from functools import partial
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtGui import QPixmap
@@ -145,10 +145,14 @@ class SignalMod(QDialog):
             self.ui.forward_trig_interval: 's',
             self.ui.backward_trig_interval: 's'
         }
+        def warn(widget, text):  # Warning for ScientificQLineEdit
+            if not widget.isModified(): # Avoiding Qt bug where warning is shown twice
+                return
+            widget.setModified(False)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"')
         for widget, unit in self.scientific_widgets.items():
             widget.set_unit(unit)
-            widget.bad_value.connect(lambda text: show_warning_messagebox(
-                self.lang_pack.get("symbol_incorrect") + f'\n"{text}"', rlj=self.parent.read_language_json))
+            widget.bad_value.connect(partial(warn, widget))
         # Modes for which setting trigger interval is needed
         self.trigger_interval_modes = ['smu_pulsed_retention']
 
@@ -277,7 +281,7 @@ class SignalMod(QDialog):
 
             status = True
         except ValueError:
-            show_warning_messagebox(self.lang_pack.get("symbol_incorrect"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect"))
         return status
 
     def _save_json(self) -> None:
@@ -288,9 +292,9 @@ class SignalMod(QDialog):
         answer = None
         if self._make_json():
             if self.mode == "create":
-                answer = show_choose_window(self, self.lang_pack.get("save_file"), rlj=self.parent.read_language_json)
+                answer = show_choose_window(self, self.lang_pack.get("save_file"))
             elif self.mode == "edit" or self.mode == "edit_for_programming":
-                answer = show_choose_window(self, self.lang_pack.get("save_changes"), rlj=self.parent.read_language_json)
+                answer = show_choose_window(self, self.lang_pack.get("save_changes"))
             if answer:
                 try:
                     if self.mode == "create":
@@ -313,7 +317,7 @@ class SignalMod(QDialog):
                         json.dump(self.base_json, outfile)
                     self.file_saved = True
                 except ValueError:
-                    show_warning_messagebox(self.lang_pack.get("file_name_wrong"), rlj=self.parent.read_language_json)
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("file_name_wrong"))
             if self.file_saved:
                 self.close()
 

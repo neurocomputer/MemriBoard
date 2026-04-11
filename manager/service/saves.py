@@ -13,7 +13,7 @@ def save_list_to_bytearray(file: BinaryIO, sign: int, dac: int, adc: int, bts: i
 
     Arguments:
         file -- открытый файл для записи
-        data -- список данных (функция расчитана на 3 числа и 6 байт)
+        data -- список данных (функция рассчитана на 3 числа и 6 байт)
 
     Keyword Arguments:
         bts -- размер одного числа в байтах (default: {2})

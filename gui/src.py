@@ -7,26 +7,31 @@
 import csv
 import pandas as pd  # TODO: add to requirements + xlsxwriter for save_xlsx
 import json
-from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog
+from PyQt5.QtWidgets import QMessageBox, QFileDialog
 
-def show_warning_messagebox(message: str, rlj) -> None:
+
+lang_pack: dict = {}  # Language for src functions
+
+def change_src_language(new_lang_pack) -> None:
+    """
+    Change lang pack, called from crossbar window on language change.
+    """
+    global lang_pack
+    lang_pack = new_lang_pack
+
+def show_warning_messagebox(parent = None, message: str = None) -> None:
     """
     Оповещение
     """
-    msg = QMessageBox()
-    msg.setIcon(QMessageBox.Warning)
-    msg.setText(message)
-    msg.setWindowTitle(rlj("src")[1].get("warn"))
-    msg.setStandardButtons(QMessageBox.Ok)
-    _ = msg.exec_()
+    QMessageBox.warning(parent, lang_pack.get('warn'), message, QMessageBox.Ok)
 
-def show_choose_window(parent: QMainWindow, message: str, rlj) -> bool:
+def show_choose_window(parent = None, message: str = None) -> bool:
     """
     Окно выбора
     """
     answer = 0
     reply = QMessageBox.question(parent,
-                                 rlj("src")[1].get("confirm"),
+                                 lang_pack.get("confirm"),
                                  message,
                                  QMessageBox.Yes | QMessageBox.No,
                                  QMessageBox.No)
@@ -34,30 +39,30 @@ def show_choose_window(parent: QMainWindow, message: str, rlj) -> bool:
         answer = 1
     return answer
 
-def bool_to_label(value, rlj):
+def bool_to_label(value):
     """
     Преобразование логики в текст для вывода в таблице
     """
     answer = None
     if value == 1 or value is True:
-        answer = rlj("src")[1].get("done")
+        answer = lang_pack.get("done")
     elif value == 2:
-        answer = rlj("src")[1].get("interrupted")
+        answer = lang_pack.get("interrupted")
     elif value == 0 or value is False:
-        answer = rlj("src")[1].get("not_done")
+        answer = lang_pack.get("not_done")
     return answer
 
-def open_file_dialog(parent, rlj, file_types="All Files (*);;Text Files (*.txt);;CSV Files (*.csv)"):
+def open_file_dialog(parent, file_types="All Files (*);;Text Files (*.txt);;CSV Files (*.csv)"):
     """
     Окно выбора файлов
     """
     file_path, _ = QFileDialog.getOpenFileName(parent,
-                                               rlj("src")[1].get("pick_file"),
+                                               lang_pack.get("pick_file"),
                                                "",
                                                file_types)
     return file_path
 
-def choose_cells(filepath, wl_max, bl_max, rlj):
+def choose_cells(filepath, wl_max, bl_max):
     """
     Выбор ячеек
     """
@@ -68,22 +73,22 @@ def choose_cells(filepath, wl_max, bl_max, rlj):
         header = next(reader)  # Пропускаем заголовок
         # Проверяем, что в заголовке есть нужные колонки.
         if header != ['wl', 'bl']:
-            raise ValueError(rlj("src")[1].get("wl_bl_order_wrong"))
+            raise ValueError(lang_pack.get("wl_bl_order_wrong"))
         for row in reader:
             try:
                 if len(row) > 2:
-                    raise ArithmeticError(rlj("src")[1].get("more_than_2_values"))
+                    raise ArithmeticError(lang_pack.get("more_than_2_values"))
                 else:
                     wl = int(row[0]) # Преобразуем в число
                     bl = int(row[1])
                     if wl > wl_max or bl > bl_max:
-                        raise ArithmeticError(rlj("src")[1].get("wl_bl_incorrect"))
+                        raise ArithmeticError(lang_pack.get("wl_bl_incorrect"))
                     if [wl, bl] not in cells: # Без дубликатов
                         cells.append((wl, bl)) # Заполняем список
             except (ValueError, IndexError):
-                message = rlj("src")[1].get("string_to_int_error") + str(row)
+                message = lang_pack.get("string_to_int_error") + str(row)
             except ArithmeticError as e:
-                message = rlj("src")[1].get("error") + e
+                message = lang_pack.get("error") + e
             continue # переходим к следующей строке
     return cells, message
 

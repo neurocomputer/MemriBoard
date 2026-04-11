@@ -180,7 +180,7 @@ class Testing(QWidget):
         """
         Выбрать ячейки для эксперимента
         """
-        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
+        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)")
         if filepath:
             # нужно сформировать список кортежей
             cells = []
@@ -188,7 +188,7 @@ class Testing(QWidget):
             wl_max = self.parent.man.col_num
             bl_max = self.parent.man.row_num
             try:
-                cells, message = choose_cells(filepath, wl_max, bl_max, rlj=self.parent.read_language_json)
+                cells, message = choose_cells(filepath, wl_max, bl_max)
             except FileNotFoundError:
                 message = self.lang_pack.get("error_file") + filepath
             except ValueError as e:
@@ -196,16 +196,16 @@ class Testing(QWidget):
             except Exception as e:
                 message = self.lang_pack.get("error") + e
             if message:
-                show_warning_messagebox(message, rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=message)
             if cells:
                 self.coordinates = cells
                 self.cell_list_from_file = True
-                show_warning_messagebox(self.lang_pack.get("tested_cells") + str(len(cells)), rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("tested_cells") + str(len(cells)))
             else:
-                show_warning_messagebox(self.lang_pack.get("all_cells"), rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("all_cells"))
                 self.cell_list_from_file = False
         else:
-            show_warning_messagebox(self.lang_pack.get("all_cells"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("all_cells"))
             self.cell_list_from_file = False
         self.update_label_all_cells_count()
 
@@ -221,7 +221,7 @@ class Testing(QWidget):
         Старт обработки
         """
         message = str(len(self.coordinates)) + self.lang_pack.get("tested_for") + str(self.exp_time_estimated) + self.lang_pack.get("continue")
-        answer = show_choose_window(self, message, rlj=self.parent.read_language_json)
+        answer = show_choose_window(self, message)
         if answer:
             wl = self.parent.man.col_num
             bl = self.parent.man.row_num
@@ -269,9 +269,9 @@ class Testing(QWidget):
         stop_reason = int(value[0])
         self.ui.progress_all.setValue(0)
         if stop_reason == 1:
-            show_warning_messagebox(self.lang_pack.get("tested") + str(round(time.time() - self.start_time,2)) + self.lang_pack.get("sec"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("tested") + str(round(time.time() - self.start_time,2)) + self.lang_pack.get("sec"))
         elif stop_reason == 2:
-            show_warning_messagebox(self.lang_pack.get("exp_interrupted"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("exp_interrupted"))
         time.sleep(1) # чтобы всё успело сохраниться на диск
         self.application_status = 'stop'
         # сохраняем список результатов
@@ -527,7 +527,7 @@ class Testing(QWidget):
             self.parent.showNormal()        
             event.accept()
         elif self.application_status == 'work':
-            show_warning_messagebox(self.lang_pack.get("wait_or_interrupt"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("wait_or_interrupt"))
             event.ignore()
 
     def button_result_clicked(self) -> None: # +
@@ -667,7 +667,7 @@ class Testing(QWidget):
         """
         self.ui.progress_images.setValue(0)
         self.ui.button_generate_images.setEnabled(True)
-        show_warning_messagebox(self.lang_pack.get("pics_done"), rlj=self.parent.read_language_json)
+        show_warning_messagebox(parent=self, message=self.lang_pack.get("pics_done"))
 
     def on_need_image(self, value):
         """

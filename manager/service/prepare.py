@@ -5,7 +5,7 @@
 # pylint: disable=W0401
 
 import os
-from manager.service.global_settings import SETTINGS_PATH, DB_PATH, RESULTS_PATH
+from manager.service.global_settings import SETTINGS_PATH, DB_PATH
 from manager.model.src import create_empty_db
 from manager.service.templates import TEMPLATE_INI
 
@@ -20,5 +20,3 @@ def prepare():
         create_empty_db(DB_PATH)
     if not os.path.exists(DB_PATH):
         raise FileNotFoundError
-    # if not os.path.exists(RESULTS_PATH):
-    #     os.mkdir(RESULTS_PATH)

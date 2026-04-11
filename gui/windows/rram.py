@@ -214,7 +214,7 @@ class Rram(QWidget):
         if save_file:
             save_file = os.path.join(save_file, "rram.bin")
             save_binary_string_to_file(binary_string, save_file)
-            show_warning_messagebox(save_file + self.lang_pack.get("saved"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=save_file + self.lang_pack.get("saved"))
 
     def load_text(self) -> None: #+
         """
@@ -231,7 +231,7 @@ class Rram(QWidget):
             if text:
                 self.ui.text_write.insertPlainText(text)
             else:
-                show_warning_messagebox(load_file + self.lang_pack.get("empty_file"), self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=load_file + self.lang_pack.get("empty_file"))
 
     def text_to_binary(self) -> None:
         """
@@ -285,11 +285,11 @@ class Rram(QWidget):
         def double_click(current_row):
             if settable:
                 self.experiment_1 = self.parent.history_dialog.experiments[current_row]
-                show_warning_messagebox(self.lang_pack.get("exp_chosen"), self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("exp_chosen"))
                 self.ui.label_exp1_name.setText(f'{self.experiment_1[2]}')
             else:
                 self.experiment_0 = self.parent.history_dialog.experiments[current_row]
-                show_warning_messagebox(self.lang_pack.get("exp_chosen"), self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("exp_chosen"))
                 self.ui.label_exp0_name.setText(f'{self.experiment_0[2]}')
                 self.ui.button_clear.setEnabled(True)
             if self.experiment_1 is not None and self.experiment_0 is not None:
@@ -311,7 +311,7 @@ class Rram(QWidget):
         """
         self.set_up_init_values_exp()
         message = str(len(self.binary)) + self.lang_pack.get("rewritten")
-        answer = show_choose_window(self, message, rlj=self.parent.read_language_json)
+        answer = show_choose_window(self, message)
         if answer:
             wl = self.parent.man.col_num
             bl = self.parent.man.row_num
@@ -354,7 +354,7 @@ class Rram(QWidget):
                 self.start_thread.finished_exp.connect(self.on_finished_exp)
                 self.start_thread.start()
             else:
-                show_warning_messagebox(self.lang_pack.get("tickets_unreachable"), self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("tickets_unreachable"))
                 self.lock_buttons(True)
 
     def write_ones(self) -> None: #+
@@ -396,7 +396,7 @@ class Rram(QWidget):
             self.lock_buttons(False)
             self.start_thread.start()
         else:
-            show_warning_messagebox(self.lang_pack.get("tickets_unreachable"), self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("tickets_unreachable"))
             self.lock_buttons(True)
 
     def erase_all_cells(self) -> None: #+
@@ -505,11 +505,11 @@ class Rram(QWidget):
         value = value.split(',')
         stop_reason = int(value[0])
         if stop_reason == 1 and self.all_done:
-            show_warning_messagebox(str(len(self.coordinates)) + self.lang_pack.get("rewritten_1"), self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=str(len(self.coordinates)) + self.lang_pack.get("rewritten_1"))
         elif stop_reason == 1 and self.ones_done:
-            show_warning_messagebox(str(len(self.binary)) + self.lang_pack.get("rewritten_1"), self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=str(len(self.binary)) + self.lang_pack.get("rewritten_1"))
         elif stop_reason == 2:
-            show_warning_messagebox(self.lang_pack.get("recording_interrupted"), self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("recording_interrupted"))
             self.ones_writable = False
         # запись единиц
         if self.ones_writable:

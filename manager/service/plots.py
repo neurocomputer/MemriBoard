@@ -135,7 +135,7 @@ def plot_input_signal_stem(parent,
     for tsk in task[0](*task[1]):
         count += 1
         vol = d2v(parent.dac_bit, parent.vol_ref_dac, tsk[0]['vol'])
-        t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
+        # t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
         sign = tsk[0]['sign']
         if sign:
             vol = -vol

@@ -46,7 +46,7 @@ from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
 from gui.windows.help import Help
-from gui.src import show_choose_window, show_warning_messagebox
+from gui.src import show_choose_window, show_warning_messagebox, change_src_language
 
 class Window(QMainWindow):
     """
@@ -134,7 +134,7 @@ class Window(QMainWindow):
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(self.show_math_dialog)
-        self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.read_language_json))
+        self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(parent=self, message=self.lang_pack.get("not_done")))
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # диалоговое окно подключения
@@ -205,6 +205,10 @@ class Window(QMainWindow):
                 self.help_dialog.change_language()
             if self.snapshot_dialog is not None:
                 self.snapshot_dialog.change_language()
+            # Set language for Messages in src.py
+            _, src_lang_pack = self.read_language_json('src')
+            change_src_language(src_lang_pack)
+            
 
     # методы открытия диалоговых окон
 
@@ -230,7 +234,7 @@ class Window(QMainWindow):
                 if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
                     mode = "normal"
                 else:
-                    show_warning_messagebox(self.lang_pack.get("warn"), rlj=self.read_language_json)
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("warn"))
             elif self.man.cb_type == "simulator":
                 mode = "normal"
             if mode != '':
@@ -516,7 +520,7 @@ class Window(QMainWindow):
                     for i in range(len(cells)):
                         writable[int(cells[i][1])][int(cells[i][0])] = 1
                 else:
-                    show_warning_messagebox(self.lang_pack.get("warn_1"), rlj=self.read_language_json)
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("warn_1"))
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
@@ -546,7 +550,6 @@ class Window(QMainWindow):
                         else:
                             colors[i][j] = QColor(color_value, color_value, color_value)
         except ValueError:
-            #show_warning_messagebox("Не возможно корректно задать цвета!")
             pass
         else:
             if sum_values != 0:
@@ -615,7 +618,7 @@ class Window(QMainWindow):
         """
         Прочитать все
         """
-        answer = show_choose_window(self, self.lang_pack.get("read_all"), rlj=self.read_language_json)
+        answer = show_choose_window(self, self.lang_pack.get("read_all"))
         if answer:
             self.button_all_set_enabled(False)
             # окно
@@ -631,6 +634,9 @@ class Window(QMainWindow):
             send_ticket_all_thread = SendTicketAll(ticket, parent=self)
             send_ticket_all_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             send_ticket_all_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+            def stop_experiment():  # Останавливаем эксперимент по закрытии окна Wait
+                send_ticket_all_thread.need_stop = True
+            self.wait_dialog.stop_experiment.connect(stop_experiment)
             send_ticket_all_thread.start()
 
     def read_ticket_from_disk(self, ticket_name: str) -> dict:
@@ -672,7 +678,7 @@ class Window(QMainWindow):
             self.safe_close()
             event.accept()
         else:
-            answer = show_choose_window(self, self.lang_pack.get("quit_now"), rlj=self.read_language_json)
+            answer = show_choose_window(self, self.lang_pack.get("quit_now"))
             if answer:
                 self.safe_close()
                 event.accept()
@@ -714,6 +720,7 @@ class SendTicketAll(QThread):
         QThread.__init__(self, parent)
         self.parent = parent
         self.ticket = ticket
+        self.need_stop = False
 
     def run(self):
         """
@@ -721,7 +728,11 @@ class SendTicketAll(QThread):
         """
         counter = 0
         for i in range(self.parent.man.col_num):
+            if self.need_stop:
+                break
             for j in range(self.parent.man.row_num):
+                if self.need_stop: 
+                    break
                 self.ticket["params"]["wl"] = i
                 self.ticket["params"]["bl"] = j
                 # Флаг для экспериментов, в которых сканируется весь кроссбар

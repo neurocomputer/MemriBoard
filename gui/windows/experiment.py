@@ -140,8 +140,8 @@ class ExpSettings(QDialog):
         """
         # получаем имя файла
         file_name = self.ui.exp_list.currentIndex().data()
-        if file_name and not file_name in self.parent.protected_modes: # защита .json
-            answer = show_choose_window(self, self.lang_pack.get("delete_file"), rlj=self.parent.read_language_json)
+        if file_name and file_name not in self.parent.protected_modes: # защита .json
+            answer = show_choose_window(self, self.lang_pack.get("delete_file"))
             if answer:
                 os.remove(os.path.join(TICKET_PATH,
                           file_name+'.json'))
@@ -182,7 +182,7 @@ class ExpSettings(QDialog):
             self.import_experiment_json(mode='dblclick')
             if not self.importing_experiment:
                 self.importing_experiment = False
-                show_warning_messagebox(self.lang_pack.get("ticket_unreadable"), rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
 
     def _refresh_exp_list(self) -> None:
         """
@@ -206,7 +206,7 @@ class ExpSettings(QDialog):
             # обновляем список
             self._refresh_exp_list()
         except IndexError:
-            show_warning_messagebox(self.lang_pack.get("nothing_to_remove"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("nothing_to_remove"))
 
     def _exp_list_up_exp(self, direction: int) -> None:
         """
@@ -218,7 +218,7 @@ class ExpSettings(QDialog):
             self._refresh_exp_list()
             self.ui.plan_list.setCurrentIndex(self.ui.plan_list.model().index(exp_index + direction,0))
         except IndexError:
-            show_warning_messagebox(self.lang_pack.get("list_empty"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("list_empty"))
 
     def _edit_ticket(self) -> None:
         """
@@ -260,9 +260,9 @@ class ExpSettings(QDialog):
                 self.parent.exp_name = exp_name
                 self.parent.show_apply_dialog()
             else:
-                show_warning_messagebox(self.lang_pack.get("exp_name_expected"), rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("exp_name_expected"))
         else:
-            show_warning_messagebox(self.lang_pack.get("fill_plan"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("fill_plan"))
 
     def apply_exp_all(self) -> None:
         """
@@ -309,7 +309,7 @@ class ExpSettings(QDialog):
         """
         Проверить эксперимент
         """
-        show_warning_messagebox(self.lang_pack.get("not_done"), rlj=self.parent.read_language_json)
+        show_warning_messagebox(parent=self, message=self.lang_pack.get("not_done"))
 
     def load_tickets(self, exp_name: str, tickets: list) -> None:
         """
@@ -330,7 +330,7 @@ class ExpSettings(QDialog):
                 self.importing_experiment = True
                 filepath = os.path.join(os.getcwd(), "tickets", self.ui.exp_list.currentIndex().data()) + ".json"
             if not filepath:
-                filepath = open_file_dialog(self, file_types="JSON Files (*.json)", rlj=self.parent.read_language_json)
+                filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
             if filepath:
                 data: str
                 with open (filepath, "r+") as f:
@@ -339,8 +339,8 @@ class ExpSettings(QDialog):
                 for i in range(len(tickets)):
                     self._add_exp_to_list(ticket=tickets.get(str(i)))
                 self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
-        except:
-            show_warning_messagebox(self.lang_pack.get("ticket_unreadable"), rlj=self.parent.read_language_json)
+        except Exception:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
 
     def duplicate_ticket(self) -> None:
         """
