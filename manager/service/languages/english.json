@@ -451,7 +451,8 @@
         "name":"Terminal",
         "send":"Send",
         "no_answer":"Didn't get any answer!",
-        "req_inc":"Incorrect request!"
+        "req_inc":"Incorrect request!",
+        "error_occurred":"An error occurred!"
     },
     "snapshot":{
         "window_title":"Snapshot",

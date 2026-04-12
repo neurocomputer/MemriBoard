@@ -706,10 +706,8 @@ class Connector():
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
-            elif self.board_type in ['VISA']:
-                # todo: пока не реализован
-                time.sleep(timeout)
-                res = (0, 0)
+            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
+                res = self.interface.terminal_command(command)
         # режим симулятор
         elif self.cb_type == 'simulator':
             time.sleep(timeout)

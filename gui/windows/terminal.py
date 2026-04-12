@@ -48,16 +48,23 @@ class Terminal(QDialog):
             if status:
                 self.ui.label_answer.setText(str(info))
         else:
-            command = command.replace("-", "")
-            res = self.parent.man.conn.custom_impact(command + '\n', 0.01, 10)
-            if ',' in command:
-                if ''.join(command.strip().split(',')).isdigit():
-                    res = self.parent.man.conn.custom_impact(command + '\n', 0.01, 10)
-                    if len(res) == 2:
-                        self.ui.label_answer.setText(f'adc: {res[0]}, id: {res[1]}')
+            if self.parent.man.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:  # VISA instruments
+                res = self.parent.man.conn.custom_impact(command, 0, 0)
+                if res.startswith('ERROR'):
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get('error_occurred') + '\n' + res)
+                else:
+                    self.ui.label_answer.setText(res)
+            else:
+                command = command.replace("-", "")
+                res = self.parent.man.conn.custom_impact(command + '\n', 0.01, 10)
+                if ',' in command:
+                    if ''.join(command.strip().split(',')).isdigit():
+                        res = self.parent.man.conn.custom_impact(command + '\n', 0.01, 10)
+                        if len(res) == 2:
+                            self.ui.label_answer.setText(f'adc: {res[0]}, id: {res[1]}')
+                        else:
+                            self.ui.label_answer.setText(self.lang_pack.get("no_answer"))
                     else:
-                        self.ui.label_answer.setText(self.lang_pack.get("no_answer"))
+                        show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
                 else:
                     show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
-            else:
-                show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
