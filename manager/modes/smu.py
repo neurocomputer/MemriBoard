@@ -79,7 +79,7 @@ def get_smu_iv_dc(
 def get_smu_std(
     params: dict,
     terminate: dict,
-    blank_type:str
+    blank_type: str
 ) -> Generator[list, None, None]:
     """Генератор тасков для режима smu_std (режимы 7 и 9).
 
@@ -97,7 +97,7 @@ def get_smu_std(
 def get_smu_pulsed_retention(
     params: dict,
     terminate: dict,
-    blank_type:str
+    blank_type: str
 ) -> Generator[list, None, None]:
     """Генератор тасков для режима smu_pulsed_retention.
 
@@ -110,6 +110,24 @@ def get_smu_pulsed_retention(
         Generator[list, None, None]: Task generator
     """
     yield from smu_generator(params, terminate, blank_type, _smu_pulsed_retention_gen)
+    
+    
+def get_smu_endurance(
+    params: dict, 
+    terminate: dict,
+    blank_type: str
+) -> Generator[list, None, None]:
+    """Генератор тасков для режима smu_endurance.
+
+    Args:
+        params (dict): Experiment params.
+        terminate (dict): Terminator type and value.
+        blank_type (str): Blank type (blanks.py).
+
+    Yields:
+        Generator[list, None, None]: Task generator
+    """
+    yield from smu_generator(params, terminate, blank_type, _smu_endurance_gen)
 
 
 def smu_generator(
@@ -319,3 +337,36 @@ def _smu_pulsed_retention_gen(params, n_points, v_arrays, double, terminator, bl
                       'sign': 1}
         for _ in range(n_pulses):
             yield [sense_data, terminator]  # Sense task
+            
+            
+def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+    """Endurance generator (async).
+
+    Yields:
+        Generator[list, None, None]: Main task generator.
+    """
+    data = {'mode_flag': 'config_endurance',
+            'v_dir': params['v_dir_stop_inc'],
+            'v_rev': params['v_rev_stop_inc'],
+            't_ms': params['t_dir_msec_inc'],
+            't_us': params['t_dir_usec_inc'],
+            'id': params['id'],
+            'n_cycles': params['count'],
+            'dir_cc': params['dir_cc'],
+            'rev_cc': params['rev_cc']}
+    if 'wl' in params and 'bl' in params:
+        data['wl'] = params['wl']
+        data['bl'] = params['bl']
+    if 'dir_interval' in params:
+        data['trigger_interval'] = params['trigger_interval']
+    yield [data, terminator]  # Config task
+    sense_data = {'mode_flag': 'sense',
+                  'vol': 0,
+                  't_ms': params['t_dir_msec_inc'],
+                  't_us': params['t_dir_usec_inc'],
+                  'id': params['id'],
+                  'sign': 1,
+                  'skip_one': True}
+    for _ in range(params['count']):
+        yield [sense_data, terminator]
+        yield [sense_data, terminator]  # Two sense tasks for each cycle

@@ -459,6 +459,8 @@ class Connector():
                         trig_flag = task['triggered']
                     else:
                         trig_flag = False
+                    if 'skip_one' in task and task['skip_one']:  # Skip one value for endurance
+                        self.interface.sense(trigger=trig_flag)
                     sense_data = self.interface.sense(trigger=trig_flag)  # (R, timestamp)
                     if isinstance(sense_data, str):
                         self.logger.critical(f'Sense error: {sense_data}')
@@ -554,6 +556,30 @@ class Connector():
                         read_voltage = self.config['board']['vol_read'],
                         sign = 1,  # Reset
                         trigger_interval = trigger_interval
+                    )
+                    if flag:
+                        self.logger.info(response)
+                    else:
+                        # Останавливаем эксперимент
+                        self.logger.critical(f'Could not configure instruments: {response}')
+                    res = int(flag)
+                elif task['mode_flag'] == 'config_endurance':
+                    # TODO remove interval check (?)
+                    if 'trigger_interval' in task:
+                        trigger_interval = task['trigger_interval']
+                    else:
+                        trigger_interval = 5 * (task['t_us'] * 1e-6 + task['t_ms'] * 1e-3)
+                    flag, response = self.interface.config_endurance(
+                        v_dir = d2v(int(self.config['board']['dac_bit']), 
+                                    float(self.config['board']['vol_ref_dac']), task['v_dir']),
+                        v_rev = d2v(int(self.config['board']['dac_bit']), 
+                                    float(self.config['board']['vol_ref_dac']), task['v_rev']),
+                        read_voltage = self.config['board']['vol_read'],
+                        pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
+                        trigger_interval = trigger_interval,
+                        n_cycles = task['n_cycles'],
+                        dir_cc = task['dir_cc'],
+                        rev_cc = task['rev_cc']
                     )
                     if flag:
                         self.logger.info(response)

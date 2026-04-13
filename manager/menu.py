@@ -6,7 +6,8 @@ from manager.modes import (
     get_std, 
     get_smu_iv_dc, 
     get_smu_std, 
-    get_smu_pulsed_retention
+    get_smu_pulsed_retention,
+    get_smu_endurance
 )
 
 def get_menu(board_type):
@@ -33,5 +34,6 @@ def get_menu(board_type):
                 'std': get_smu_std,
                 'smu_iv_dc': get_smu_iv_dc,
                 'smu_pulsed_retention': get_smu_pulsed_retention,
+                'smu_endurance': get_smu_endurance
             }
     return menu
