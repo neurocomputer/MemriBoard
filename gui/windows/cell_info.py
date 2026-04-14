@@ -35,7 +35,7 @@ class CellInfo(QDialog):
         self.ui.button_read_one_cells.clicked.connect(self.read_one_cell)
         self.ui.button_history.clicked.connect(lambda: self.parent.show_history_dialog(mode="single"))
         self.ui.button_cancel.clicked.connect(self.close)
-        if self.parent.man.board_type == 'offline' or self.parent.coordinate_error == True:
+        if self.parent.man.board_type == 'offline' or self.parent.coordinate_error:
             self.ui.button_new_exp.setEnabled(False)
             self.ui.button_read_one_cells.setEnabled(False)
 
@@ -77,7 +77,7 @@ class CellInfo(QDialog):
                         self.parent.man.vol_ref_adc,
                         current_adc)
         if adc_vol > 3.5: # todo: вынести 3.5 в константы
-            show_warning_messagebox(self.lang_pack.get("high_adc"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("high_adc"))
 
     def fill_info(self) -> None:
         """

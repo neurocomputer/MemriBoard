@@ -10,7 +10,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
-from gui.src import show_choose_window
+from gui.src import show_choose_window, show_warning_messagebox
 
 class ConnectDialog(QDialog):
     """
@@ -47,6 +47,9 @@ class ConnectDialog(QDialog):
         self.on_combo_board_type_changed()
         # блокировка выбора плат
         self.ui.combo_board_type.setDisabled(self.parent.man.get_meta_info()["lock_board_type"])
+        # Предупреждаем, если изменились настройки в settings.ini
+        if self.parent.man.new_config_keys is not None:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get('new_settings') + '\n'.join(self.parent.man.new_config_keys))
 
     def change_language(self):
         """
@@ -162,6 +165,8 @@ class ConnectDialog(QDialog):
                       'rp5_fpga_python',
                       'rp5_fpga_c',
                       'elbear_nano',
+                      'elbear_multimode_WR',
+                      'elbear_multimode_MVM',
                       'rp5_rram_elbear_nano',
                       'rp5_rram_python',
                       'rp5_rram_c']
@@ -190,7 +195,7 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
-        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano']:
+        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
@@ -247,7 +252,7 @@ class ConnectDialog(QDialog):
                     self.parent.ui.button_math.setEnabled(False)
                     self.accept_connet()
                 else:
-                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano']:
+                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
                     else:
                         connected_flag = self.parent.man.connect()
@@ -293,7 +298,7 @@ class ConnectDialog(QDialog):
             self.parent.show() # показываем родительское окно
             event.accept()
         else:
-            answer = show_choose_window(self, self.lang_pack.get("quit_now"), rlj=self.parent.read_language_json)
+            answer = show_choose_window(self, self.lang_pack.get("quit_now"))
             if answer:
                 self.parent.close_modal_flag = True
                 self.parent.close() # вызывает выход функцией родительского окна

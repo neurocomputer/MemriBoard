@@ -25,6 +25,11 @@ class Settings(QDialog):
         self.change_language()
         # доп настройки
         self.setModal(True)
+        self.adjustSize()
+        # logging levels
+        log_items = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        self.ui.comboBox_app_log.addItems(log_items)
+        self.ui.comboBox_db_log.addItems(log_items)
         # обработка кнопок
         self.ui.button_save.clicked.connect(self.save_settings)
         self.ui.button_cancel.clicked.connect(self.close)
@@ -53,6 +58,13 @@ class Settings(QDialog):
             self.ui.label_9.setText(self.lang_pack.get("language"))
             self.ui.button_save.setText(self.lang_pack.get("save"))
             self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
+            self.ui.groupBox_logging.setTitle(self.lang_pack.get("logging"))
+            self.ui.label_app_log.setText(self.lang_pack.get("app_log"))
+            self.ui.label_db_log.setText(self.lang_pack.get("db_log"))
+            self.ui.label_app_log_level.setText(self.lang_pack.get("level"))
+            self.ui.label_db_log_level.setText(self.lang_pack.get("level"))
+            self.ui.checkBox_app_log.setText(self.lang_pack.get("rewrite_file"))
+            self.ui.checkBox_db_log.setText(self.lang_pack.get("rewrite_file"))
 
     def fill_settings(self) -> None:
         """
@@ -61,10 +73,15 @@ class Settings(QDialog):
         self.ui.choose_adc_bit.setCurrentText(str(self.parent.man.adc_bit))
         self.ui.choose_gain.setValue(self.parent.man.gain)
         self.ui.choose_software_cc.setValue(self.parent.man.soft_cc)
-        self.ui.lineedit_backup.setText(self.parent.man.get_meta_info()["backup"])
-        self.ui.lineedit_writable_cells.setText(self.parent.man.get_meta_info()["writable_cells"])
+        app_meta_info: dict = self.parent.man.get_meta_info()
+        self.ui.lineedit_backup.setText(app_meta_info["backup"])
+        self.ui.lineedit_writable_cells.setText(app_meta_info["writable_cells"])
         if self.parent.man.get_meta_info()["language"] in ["English", "Русский"]:
-            self.ui.choose_language.setCurrentText(self.parent.man.get_meta_info()["language"])
+            self.ui.choose_language.setCurrentText(app_meta_info["language"])
+        self.ui.comboBox_app_log.setCurrentText(app_meta_info["app_logging_level"])
+        self.ui.comboBox_db_log.setCurrentText(app_meta_info["db_logging_level"])
+        self.ui.checkBox_app_log.setChecked(bool(int(app_meta_info["app_log_rewrite_on_start"])))
+        self.ui.checkBox_app_log.setChecked(bool(int(app_meta_info["db_log_rewrite_on_start"])))
 
     def save_settings(self) -> None:
         """
@@ -88,7 +105,11 @@ class Settings(QDialog):
                                       soft_cc = str(self.ui.choose_software_cc.value()),
                                       backup = backup_path,
                                       writable_cells = writable_cells,
-                                      language = language)
+                                      language = language,
+                                      app_logging_level=self.ui.comboBox_app_log.currentText(),
+                                      db_logging_level=self.ui.comboBox_db_log.currentText(),
+                                      app_log_rewrite_on_start=str(int(self.ui.checkBox_app_log.isChecked())),
+                                      db_log_rewrite_on_start=str(int(self.ui.checkBox_db_log.isChecked())))                          
         if self.parent.connect_dialog:
             self.parent.connect_dialog.change_language()
         self.parent.change_language()

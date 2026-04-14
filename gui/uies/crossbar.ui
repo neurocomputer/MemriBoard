@@ -26,10 +26,10 @@
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="2">
-          <widget class="QPushButton" name="button_math">
+         <item row="0" column="6">
+          <widget class="QPushButton" name="button_settings">
            <property name="text">
-            <string>Математика</string>
+            <string>Настройки</string>
            </property>
           </widget>
          </item>
@@ -40,17 +40,10 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QPushButton" name="button_rram">
+         <item row="0" column="2">
+          <widget class="QPushButton" name="button_math">
            <property name="text">
-            <string>RRAM</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="6">
-          <widget class="QPushButton" name="button_settings">
-           <property name="text">
-            <string>Настройки</string>
+            <string>Математика</string>
            </property>
           </widget>
          </item>
@@ -61,10 +54,24 @@
            </property>
           </widget>
          </item>
+         <item row="0" column="1">
+          <widget class="QPushButton" name="button_rram">
+           <property name="text">
+            <string>RRAM</string>
+           </property>
+          </widget>
+         </item>
          <item row="0" column="5">
           <widget class="QPushButton" name="button_snapshot">
            <property name="text">
             <string>Снапшот</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="7">
+          <widget class="QToolButton" name="tool_button">
+           <property name="text">
+            <string>...</string>
            </property>
           </widget>
          </item>
@@ -99,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>769</width>
-     <height>24</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

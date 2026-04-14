@@ -58,6 +58,6 @@ class Terminal(QDialog):
                     else:
                         self.ui.label_answer.setText(self.lang_pack.get("no_answer"))
                 else:
-                    show_warning_messagebox(self.lang_pack.get("req_inc"), rlj=self.parent.read_language_json)
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
             else:
-                show_warning_messagebox(self.lang_pack.get("req_inc"), rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))

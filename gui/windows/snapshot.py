@@ -27,9 +27,10 @@ class Snapshot(QWidget):
     
     data: list  # Массив сопротивлений
     fig: Figure
+    lang_pack: dict
      
     def __init__(self, parent=None, data: list = None, mode: str = 'resistances') -> None:
-        """Snapshot windown
+        """Snapshot window
 
         Args:
             parent (optional): Parent class. Defaults to None.
@@ -42,20 +43,32 @@ class Snapshot(QWidget):
         super().__init__()
         self.parent = parent
         self.data = data
-        self.setWindowTitle('Снапшот')
         
         self.fig = Figure()
         self.canvas = FigureCanvas(self.fig)
+        self.change_language()
         self.plot_matrix(mode=mode)
         self.init_ui()
+        
+        
+    def change_language(self):
+        """
+        Change GUI language
+        """
+        ok, self.lang_pack = self.parent.read_language_json("snapshot")
+        if ok:
+            if hasattr(self, 'toolbar'):
+                self.toolbar.change_btn_text(self.lang_pack['export'])
+            self.setWindowTitle(self.lang_pack['window_title'])
+            self.plot_matrix()
         
         
     def init_ui(self) -> None:
         """Place widgets on the window"""
         layout = QVBoxLayout()
-        toolbar = CustomToolbar(self.canvas, self)
+        self.toolbar = CustomToolbar(self.canvas, self.lang_pack['export'], self)
         layout.addWidget(self.canvas)
-        layout.addWidget(toolbar)
+        layout.addWidget(self.toolbar)
         self.setLayout(layout)
         
         
@@ -86,10 +99,10 @@ class Snapshot(QWidget):
         cbar_ax = ax.inset_axes([n_cols+2, n_rows/6, max(n_cols//32, 1), n_rows*2/3], transform=ax.transData)
         cbar = self.fig.colorbar(image, cax=cbar_ax, orientation='vertical', shrink=0.4)
         if mode == 'resistances':
-            cbar.set_label('Сопротивление, кОм')
+            cbar.set_label(self.lang_pack['res_kOhm'])
             cbar.ax.yaxis.set_major_locator(MaxNLocator(10, integer=True))
         elif mode =='weights':
-            cbar.set_label('Вес')
+            cbar.set_label(self.lang_pack['weight'])
             cbar.ax.yaxis.set_major_locator(MaxNLocator(10, integer=True))
         else:
             cbar.ax.yaxis.set_major_locator(MaxNLocator(2, integer=True))
@@ -99,28 +112,28 @@ class Snapshot(QWidget):
     def save_matrix(self) -> None:
         """Handles pressing export button"""
         save_funcs = {
-            'Текстовый файл (*.txt)': save_matrix_txt,
-            'Файл CSV (*.csv)': save_matrix_csv,
-            'Таблица Excel (*.xls)': save_matrix_xlsx,
-            'Таблица Excel (*.xlsx)': save_matrix_xlsx,
-            'Файл JSON (*.json)': save_matrix_json
+            f'{self.lang_pack["txt"]} (*.txt)': save_matrix_txt,
+            f'{self.lang_pack["csv"]} (*.csv)': save_matrix_csv,
+            f'{self.lang_pack["xls"]} (*.xls)': save_matrix_xlsx,
+            f'{self.lang_pack["xls"]} (*.xlsx)': save_matrix_xlsx,
+            f'{self.lang_pack["json"]} (*.json)': save_matrix_json
         }
-        filename, extention = QFileDialog.getSaveFileName(self, 
+        filename, extension = QFileDialog.getSaveFileName(self, 
             filter=';;'.join(save_funcs))
         if filename == '':
             return
-        if extention not in save_funcs:
-            show_warning_messagebox('Данный формат не поддерживается.')
+        if extension not in save_funcs:
+            show_warning_messagebox(parent=self, message=self.lang_pack['ext_not_supported'])
             return
         try:
-            ext = extention.split('*')[1].split(')')[0]
+            ext = extension.split('*')[1].split(')')[0]
             if not filename.endswith(ext):
                 filename += ext
-            save_funcs[extention](filename, self.data)
+            save_funcs[extension](filename, self.data)
         except PermissionError:
-            show_warning_messagebox('Файл занят другой программой.')
+            show_warning_messagebox(parent=self, message=self.lang_pack['file_busy'])
         except Exception as e:
-            show_warning_messagebox(e)
+            show_warning_messagebox(parent=self, message=e)
         
         
     def safe_close(self) -> None:
@@ -139,9 +152,13 @@ class CustomToolbar(NavigationToolbar):
     """
     Custom Navigation Toolbar for matplotlib
     """    
-    def __init__(self, canvas, parent=None) -> None:
+    def __init__(self, canvas, export_text, parent=None) -> None:
         super(CustomToolbar, self).__init__(canvas, parent)
         
-        self.export_btn = QPushButton(self, text='Экспорт данных')
+        self.export_btn = QPushButton(self, text=export_text)
         self.export_btn.setGeometry(290, 5, 150, 30)  # TODO: set geometry not by pixels
         self.export_btn.clicked.connect(parent.save_matrix)        
+        
+    
+    def change_btn_text(self, text) -> None:
+        self.export_btn.setText(text)
