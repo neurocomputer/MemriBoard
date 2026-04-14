@@ -629,6 +629,9 @@ class Window(QMainWindow):
             send_ticket_all_thread = SendTicketAll(ticket, parent=self)
             send_ticket_all_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             send_ticket_all_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+            def stop_experiment():  # Останавливаем эксперимент по закрытии окна Wait
+                send_ticket_all_thread.need_stop = True
+            self.wait_dialog.stop_experiment.connect(stop_experiment)
             send_ticket_all_thread.start()
 
     def read_ticket_from_disk(self, ticket_name: str) -> dict:
@@ -712,6 +715,7 @@ class SendTicketAll(QThread):
         QThread.__init__(self, parent)
         self.parent = parent
         self.ticket = ticket
+        self.need_stop = False
 
     def run(self):
         """
@@ -719,7 +723,11 @@ class SendTicketAll(QThread):
         """
         counter = 0
         for i in range(self.parent.man.col_num):
+            if self.need_stop:
+                break
             for j in range(self.parent.man.row_num):
+                if self.need_stop: 
+                    break
                 self.ticket["params"]["wl"] = i
                 self.ticket["params"]["bl"] = j
                 # временное решение, лучше переписать на потоки
