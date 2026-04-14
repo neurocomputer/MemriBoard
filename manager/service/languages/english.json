@@ -14,7 +14,12 @@
         "save":"Save",
         "cancel":"Cancel",
         "pick_backup":"Add a backup path!",
-        "pick_cells":"Choose cells file"
+        "pick_cells":"Choose cells file",
+        "logging":"Logging settings",
+        "app_log":"Board manager (app.log)",
+        "db_log":"Database (db.log)",
+        "level":"Level",
+        "rewrite_file":"Rewrite file"
     },
     "connect":{
         "name":"Connect",
@@ -39,7 +44,8 @@
         "status_4":"Choose a crossbar!",
         "status_5":"Can't make a simulator!",
         "board_error":"No connection to ",
-        "quit_now":"Quit now?"
+        "quit_now":"Quit now?",
+        "new_settings":"New settings added to settings.ini.\nDefault values were set:\n\n"
     },
     "crossbar":{
         "name":"MemriBoard",
@@ -320,7 +326,7 @@
         "neg_nums":"All negative values were substituted with their absolute values",
         "incorrect_file":"File is incorrect!",
         "incorrect":"Incorrect!",
-        "vals_inputed":" values inputed",
+        "vals_inputed":" values inputted",
         "max_unset":"Maximum is unset!",
         "ohm":" Ohm",
         "saving_dir":"Choose a directory for saving",

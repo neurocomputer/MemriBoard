@@ -7,11 +7,10 @@
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
-from gui.windows.rram import Rram
 
 class Wait(QDialog):
     """
-    Окно информации о ячейке
+    Окно ожидания во время эксперимента
     """
 
     GUI_PATH = os.path.join("gui","uies","wait.ui")

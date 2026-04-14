@@ -90,7 +90,7 @@ class ScientificQLineEdit(QLineEdit):
 
     def set_unit(self, unit: str) -> None:
         """
-        Set the QlineEdit unit (V, A, s)
+        Set the QLineEdit unit (V, A, s)
         
         Args:
             unit (str): SI unit to set.
