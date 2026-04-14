@@ -8,11 +8,6 @@ import time
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
-from manager.service import d2v
-from simulator.src import (load_crossbar_array,
-                           send_mode_7_to_crossbar,
-                           send_mode_9_to_crossbar,
-                           send_mode_mvm_to_crossbar)
 
 class Connector():
     """
@@ -30,8 +25,6 @@ class Connector():
 
     # для симулятора
     config: ConfigParser
-    crossbar_serial: str
-    crossbar_array: list
 
     def __init__(self, silent, logger, cb_type, board_type, **kwargs):
         self.silent = silent
@@ -79,7 +72,9 @@ class Connector():
         open_flag = False
         if self.cb_type == 'simulator':
             # загрузка симулятора
-            open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
+            from simulator.src import BoardSimulator
+            self.interface = BoardSimulator()
+            open_flag = self.interface.connect(self.crossbar_serial)
         elif self.cb_type == 'real':
             # для плат на базе Arduino
             if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
@@ -376,71 +371,33 @@ class Connector():
             # time.sleep(55/1000)
         # режим симулятор
         elif self.cb_type == 'simulator':
-            task_id = task["id"]
-            # если выбрали систему комманд для сигнальной платы
-            #todo: возможно логику нужно переделать, пока не понятно
-            if 'wl' not in task:
-                wl = 0
-            else:
-                wl = task['wl']
-            if 'bl' not in task:
-                bl = 0
-            else:
-                bl = task['bl']
             if task['mode_flag'] == 7: # режим команды 7
-                vol = d2v(int(self.config['board']['dac_bit']),
-                        float(self.config['board']['vol_ref_dac']),
-                        task['vol'],
-                        sign=task['sign'])
-                duration = task['t_ms'] * 1000 + task['t_us']
-                res = (send_mode_7_to_crossbar(self.crossbar_serial,
-                                               self.crossbar_array,
-                                               vol = vol,
-                                               duration = duration,
-                                               wl = wl,
-                                               bl = bl,
-                                               vol_read = float(self.config['board']['vol_read']),
-                                               res_load = float(self.config['board']['res_load']),
-                                               res_switches = float(self.config['board']['res_switches']),
-                                               gain = float(self.config['board']['gain']),
-                                               adc_bit = int(self.config['board']['adc_bit']),
-                                               vol_ref_adc = float(self.config['board']['vol_ref_adc'])
-                                               ), task_id)
+                task['vol'] = abs(task['vol'])
+                adc = self.interface.mode_7(task['vol'],
+                                        task['t_ms'],
+                                        task['t_us'],
+                                        task['sign'],
+                                        task['id'],
+                                        task['wl'],
+                                        task['bl']) # vDAC, tms, tus, rev, id, wl, bl
+                res = (int(adc[0]), int(adc[1]))
             elif task['mode_flag'] == 9: # режим команды 9
-                vol = d2v(int(self.config['board']['dac_bit']),
-                        float(self.config['board']['vol_ref_dac']),
-                        task['vol'])
-                if vol >= 0.3:
-                    vol = 0.3
-                res = (send_mode_9_to_crossbar(self.crossbar_array,
-                                               vol = vol,
-                                               wl = wl,
-                                               bl = bl,
-                                               res_load = float(self.config['board']['res_load']),
-                                               res_switches = float(self.config['board']['res_switches']),
-                                               gain = float(self.config['board']['gain']),
-                                               adc_bit = int(self.config['board']['adc_bit']),
-                                               vol_ref_adc = float(self.config['board']['vol_ref_adc'])
-                                               ), task_id)
+                adc = self.interface.mode_9(task['vol'], 0, task['wl'], task['bl'])
+                res = (int(adc[0]), int(adc[1]))
             elif task['mode_flag'] == 10: # режим команды 10
-                vol = []
-                for item in task['vol']:
-                    vol.append(d2v(int(self.config['board']['dac_bit']),
-                               float(self.config['board']['vol_ref_dac']),
-                               item))
-                res = (send_mode_mvm_to_crossbar(self.crossbar_array,
-                                                vol = vol,
-                                                wl = wl,
-                                                gain = float(self.config['board']['gain']),
-                                                sum_gain = float(self.config['board']['sum_gain']),
-                                                adc_bit = int(self.config['board']['adc_bit']),
-                                                vol_ref_adc = float(self.config['board']['vol_ref_adc'])
-                                                ), task_id)
-            if not self.silent:
-                self.logger.info('Send %s', str(task['mode_flag']))
-            time.sleep(1/1000)
-            if not self.silent:
-                self.logger.info('Recieved data: %s', str(res))
+                #print(task['vol'])
+                adc = self.interface.mode_mvm(task['vol'],
+                                                0,
+                                                0,
+                                                0,
+                                                0,
+                                                task['wl'],
+                                                task["id"])
+                res = (int(adc[0]), int(adc[1]))
+        if not self.silent:
+            self.logger.info('Send %s', str(task['mode_flag']))
+        if not self.silent:
+            self.logger.info('Recieved data: %s', str(res))
         return res
 
     def custom_impact(self, command: str, timeout: float, attempts: int):
