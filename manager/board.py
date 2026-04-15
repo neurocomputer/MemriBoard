@@ -435,6 +435,21 @@ class Connector():
             res = (0, 0)
         # можно добавить работу с другими платами
         return res
+    
+    def connect_cell_to_external(self, mode: str, wl: int, bl: int):
+        """
+        Connect cell to the external terminals on the board
+        """
+        if self.cb_type == 'real':
+            if self.board_type in ['memardboard_crossbar']:  # TODO add other boards, if available
+                if mode == 'connect':
+                    self.custom_impact(f'33,{wl},{bl}\n', 0.01, 10)  # TODO check if connected and return True of False
+                    # if not_connected:
+                    # raise Exception('...')
+                else:
+                    self.custom_impact('44\n', 0.01, 10)
+                    # if not_disconnected:
+                    # raise Exception('...')
 
     def inc_req_id(self):
         """
