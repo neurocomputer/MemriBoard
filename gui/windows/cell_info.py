@@ -124,6 +124,7 @@ class CellInfo(QDialog):
         Connect cell to an external device
         """
         self.ui.label_ext_connection.setText(self.lang_pack.get("connecting"))
+        self.ui.label_ext_connection.repaint()
         try:
             self.parent.man.conn.connect_cell_to_external(
                 mode='connect',
@@ -146,6 +147,7 @@ class CellInfo(QDialog):
         Disconnect cell from an external device
         """
         self.ui.label_ext_connection.setText(self.lang_pack.get("disconnecting"))
+        self.ui.label_ext_connection.repaint()
         try:
             self.parent.man.conn.connect_cell_to_external(
                 mode='disconnect',
