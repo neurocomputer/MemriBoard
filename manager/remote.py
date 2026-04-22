@@ -5,14 +5,14 @@ class RemoteConnect():
     uri: str
 
     def __init__(self):
-        self.uri = 'http://127.0.0.1:5000'
+        self.uri = 'http://127.0.0.1:12345'
 
     def connect(self, address):
         """
         Подключиться к удаленному серверу
         """
         if not address:
-            address = '127.0.0.1:5000'
+            address = '127.0.0.1:12345'
         status = False
         try:
             self.uri = f'http://{address}'

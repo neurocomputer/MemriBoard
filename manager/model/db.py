@@ -39,7 +39,7 @@ class DBOperate():
         try:
             self.db_connection = sqlite3.connect(DB_PATH) # выполняется подключение к базе данных
             #self.db_connection.execute("PRAGMA journal_mode = WAL")
-            #self.db_connection.execute("PRAGMA busy_timeout = 5000")
+            #self.db_connection.execute("PRAGMA busy_timeout = 12345")
             #self.db_connection.execute("PRAGMA synchronous = NORMAL")
             self.db_cursor = self.db_connection.cursor() # позволяет выполнять SQLite-запросы
             self.parent.db_logger.info(f"Cоединение с базой открыто! ({func_name})")

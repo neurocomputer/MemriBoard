@@ -47,7 +47,7 @@ class ConnectDialog(QDialog):
         self.update_crossbar_list()
         self.update_board_list()
         self.on_combo_board_type_changed()
-        self.ui.edit_server.setText('127.0.0.1:5000')
+        self.ui.edit_server.setText('127.0.0.1:12345')
         # блокировка выбора плат
         self.ui.combo_board_type.setDisabled(self.parent.man.get_meta_info()["lock_board_type"])
 
@@ -197,9 +197,9 @@ class ConnectDialog(QDialog):
         if len(url_raw.split(":")) == 2:
             url = 'http://' + url_raw + '/ping'
         else:
-            url = 'http://' + url_raw + ':5000/ping' # http://172.19.0.1:5000/ping
+            url = 'http://' + url_raw + ':12345/ping' # http://172.19.0.1:12345/ping
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=100) # todo: разобраться с таймаутом
             if response.status_code == 200:
                 self.ui.button_ping.setStyleSheet("background-color: lime;")
             else:
@@ -280,7 +280,14 @@ class ConnectDialog(QDialog):
         if status: # если в базе есть данные по чипу
             combo_board_type = self.ui.combo_board_type.currentText()
             self.parent.man.board_type = combo_board_type
-            if self.parent.man.cb_type != 'simulator':
+            if combo_board_type == 'remote':
+                connected_flag = self.parent.man.connect(address = self.ui.edit_server.text())
+                if connected_flag:
+                    self.accept_connet()
+                else:
+                    message = self.lang_pack.get("board_error") + str(combo_board_type)
+                    self.ui.label_status.setText(message)
+            elif self.parent.man.cb_type != 'simulator':
                 # попытка подключения
                 if combo_board_type == 'offline':
                     self.parent.ui.button_rram.setEnabled(False)
@@ -291,8 +298,6 @@ class ConnectDialog(QDialog):
                 else:
                     if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
-                    elif combo_board_type == 'remote':
-                        connected_flag = self.parent.man.connect(address = self.ui.edit_server.text())
                     else:
                         connected_flag = self.parent.man.connect()
                     if connected_flag:
@@ -306,7 +311,7 @@ class ConnectDialog(QDialog):
                     self.accept_connet()
                 else:
                     self.ui.label_status.setText(self.lang_pack.get("status_5"))
-        else:    
+        else:
             self.ui.label_status.setText('Не могу получить данные из БД!')
 
     def accept_connet(self) -> None:

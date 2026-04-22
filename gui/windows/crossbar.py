@@ -34,7 +34,7 @@ from gui.windows.connect import ConnectDialog
 from gui.windows.apply import Apply
 from gui.windows.settings import Settings
 from gui.windows.history import History
-from gui.windows.requests import RequestsList
+from gui.windows.tasklist import RequestsList
 from gui.windows.terminal import Terminal
 from gui.windows.filter import Filter
 from gui.windows.testing import Testing

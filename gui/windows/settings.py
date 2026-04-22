@@ -6,7 +6,7 @@
 
 import os
 import platform
-import requests
+import requests 
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
@@ -39,8 +39,8 @@ class Settings(QDialog):
         self.ui.button_connect.clicked.connect(self.connect)
         self.ui.button_disconnect.clicked.connect(self.disconnect)
         # заполнение параметров
-        self.uri = '127.0.0.1:5000'
-        self.ui.lineedit_uri.setText('127.0.0.1:5000')
+        self.uri = '127.0.0.1:12345'
+        self.ui.lineedit_uri.setText('127.0.0.1:12345')
         self.fill_settings()
 
     def connect(self):

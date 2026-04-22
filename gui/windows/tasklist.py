@@ -16,7 +16,7 @@ class RequestsList(QDialog):
     """
     lang_pack: dict
 
-    GUI_PATH = os.path.join("gui","uies","requests.ui")
+    GUI_PATH = os.path.join("gui","uies","tasklist.ui")
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
