@@ -181,7 +181,7 @@ def smu_generator(
             task = {'mode_flag': 'standby', 'id': 0}
             yield [task, terminator]
     except Exception as ex: # для корректного завершения работы плат
-        print(ex)
+        print(f'{type(ex).__name__}: {ex}')
         interrupt_flag = True
         exception = ex
         yield
@@ -358,7 +358,7 @@ def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_typ
         data['wl'] = params['wl']
         data['bl'] = params['bl']
     if 'dir_interval' in params:
-        data['trigger_interval'] = params['trigger_interval']
+        data['trigger_interval'] = params['dir_interval']
     yield [data, terminator]  # Config task
     sense_data = {'mode_flag': 'sense',
                   'vol': 0,
