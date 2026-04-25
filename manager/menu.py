@@ -7,7 +7,8 @@ from manager.modes import (
     get_smu_iv_dc, 
     get_smu_std, 
     get_smu_pulsed_retention,
-    get_smu_endurance
+    get_smu_endurance,
+    get_visa_crossbar_scan
 )
 
 def get_menu(board_type):
@@ -34,6 +35,15 @@ def get_menu(board_type):
                 'std': get_smu_std,
                 'smu_iv_dc': get_smu_iv_dc,
                 'smu_pulsed_retention': get_smu_pulsed_retention,
-                'smu_endurance': get_smu_endurance
+                'smu_endurance': get_smu_endurance,
             }
     return menu
+
+
+def get_crossbar_scan(board_type):
+    """
+    Генератор тасков для режима сканирования кроссбара.
+    """
+    if board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
+        return get_visa_crossbar_scan
+    return None

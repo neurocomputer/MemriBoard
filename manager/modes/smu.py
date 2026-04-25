@@ -128,13 +128,33 @@ def get_smu_endurance(
         Generator[list, None, None]: Task generator
     """
     yield from smu_generator(params, terminate, blank_type, _smu_endurance_gen)
+    
+    
+def get_visa_crossbar_scan(
+    params: dict, 
+    terminate: dict,
+    blank_type: str
+) -> Generator[list, None, None]:
+    """Генератор тасков для режима smu_endurance.
+
+    Args:
+        params (dict): Experiment params.
+        terminate (dict): Terminator type and value.
+        blank_type (str): Blank type (blanks.py).
+
+    Yields:
+        Generator[list, None, None]: Task generator
+    """
+    yield from smu_generator(params, terminate, blank_type, _visa_crossbar_scan_gen, 
+                             connect_cell_before_main_gen=False)
 
 
 def smu_generator(
     params: dict,
     terminate: dict,
     blank_type: str,
-    main_task_generator: Generator
+    main_task_generator: Generator,
+    connect_cell_before_main_gen: bool = True
 ) -> Generator[list, None, None]:
     """Глобальный генератор тасков для инструметов с SMU.
 
@@ -142,20 +162,15 @@ def smu_generator(
         params (dict): Experiment params.
         terminate (dict): Terminator type and value.
         blank_type (str): Blank type (blanks.py).
-        main_task_generator (Generator[list, None, None]): Main task generator
+        main_task_generator (Generator[list, None, None]): Main task generator.
+        connect_cell_before_main_gen (bool, optional): If True, connects cell specified in `params`
+            before executing `main_task_generator`.
 
     Yields:
         Generator[list, None, None]: Task generator
     """
     interrupt_flag = False
     terminator = terminators[terminate['type']](terminate['value'])
-
-    # Подключаем нужную ячейку
-    bl = params['bl']
-    wl = params['wl']
-    task = {'mode_flag': 'connect_cell',
-            'wl': wl, 'bl': bl, 'id': 0}
-    yield [task, terminator]
 
     # Рассчитываем параметры
     n_points = {}
@@ -174,12 +189,20 @@ def smu_generator(
             n_points[dir] = 0
     
     try:
+        # Подключаем нужную ячейку
+        if connect_cell_before_main_gen:
+            bl = params['bl']
+            wl = params['wl']
+            task = {'mode_flag': 'connect_cell',
+                    'wl': wl, 'bl': bl, 'id': 0}
+            yield [task, terminator]
+        
         # Генерация основных тасков
         yield from main_task_generator(params, n_points, v_arrays, double, terminator, blank_type)
+        
         # Отключаем все ячейки в кроссбаре от источника
-        if not ('crossbar_scan' in params and params['crossbar_scan']): # Если сканируем весь кроссбар, то не отключаем
-            task = {'mode_flag': 'standby', 'id': 0}
-            yield [task, terminator]
+        task = {'mode_flag': 'standby', 'id': 0}
+        yield [task, terminator]
     except Exception as ex: # для корректного завершения работы плат
         print(f'{type(ex).__name__}: {ex}')
         interrupt_flag = True
@@ -370,3 +393,40 @@ def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_typ
     for _ in range(params['count']):
         yield [sense_data, terminator]
         yield [sense_data, terminator]  # Two sense tasks for each cycle
+        
+        
+def _visa_crossbar_scan_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+    """Crossbar resistance scan generator (async).
+
+    Yields:
+        Generator[list, None, None]: Main task generator.
+    """
+    if params['dir_inc_countr'] != 0:
+        dir = 'dir'
+    else:
+        dir = 'rev'
+    config_task = {'mode_flag': 'config_std',
+                   'vol': 0,
+                   't_ms': params[f't_{dir}_msec_inc'],
+                   't_us': params[f't_{dir}_usec_inc'],
+                   'id': params['id'],
+                   'sign': _modes[dir],
+                   'current_compliance': params[f'{dir}_cc'],
+                   'pulse_sequence': ['read' for _ in range(params['col_num'] * params['row_num'])]}
+    yield [config_task, terminator]
+    sense_data = {'mode_flag': 'sense',
+                  'vol': 0,
+                  't_ms': params['t_dir_msec_inc'],
+                  't_us': params['t_dir_usec_inc'],
+                  'id': params['id'],
+                  'sign': 1,
+                  'triggered': True,
+                  'crossbar_scan': True}
+    for wl in range(params['col_num']):
+        for bl in range(params['row_num']):
+            task = {'mode_flag': 'connect_cell',
+                    'wl': wl, 'bl': bl, 'id': 0}
+            yield [task, terminator]  # Connecting
+            sense_data['wl'] = wl
+            sense_data['bl'] = bl
+            yield [sense_data, terminator]  # Reading

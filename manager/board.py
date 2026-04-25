@@ -175,24 +175,26 @@ class Connector():
                     pass
             # Для VISA-инструментов
             elif self.board_type == 'ITC_1T1R_32x8_switched':
-                try:
-                    from RRAM_VISA_Drivers import ITC_1T1R_32x8_switched  # type: ignore
-                    # A_address = 'TCPIP0::192.168.0.101::inst0::INSTR'  # TODO remove
-                    # B_address = 'TCPIP0::192.168.0.103::inst0::INSTR'
-                    # switch_address = 'TCPIP0::192.168.0.100::inst0::INSTR'
-                    self.interface = ITC_1T1R_32x8_switched(
-                        B2902B_1_address=kwargs['visa_addresses'][0],
-                        B2902B_2_address=kwargs['visa_addresses'][1],
-                        Switch_address=kwargs['visa_addresses'][2],
-                        VISA_library_path=kwargs['visa_library_path']
-                    )
-                    open_flag = True
-                    if self.interface.sim:
-                        simulation_fallback = True  # Что-то не так с адресами, драйвер упал в режим симуляции
-                except ModuleNotFoundError:
-                    pass
-                except ConnectionError:
+                # Checking row and column number
+                if kwargs['row_num'] != 32 or kwargs['col_num'] != 8:
+                    print('ERROR! Wrong crossbar shape for ITC_1T1R_32x8_switched driver. Correct shape: 32 rows, 8 columns.')
                     open_flag = False
+                else:  # Connecting
+                    try:
+                        from RRAM_VISA_Drivers import ITC_1T1R_32x8_switched  # type: ignore
+                        self.interface = ITC_1T1R_32x8_switched(
+                            B2902B_1_address=kwargs['visa_addresses'][0],
+                            B2902B_2_address=kwargs['visa_addresses'][1],
+                            Switch_address=kwargs['visa_addresses'][2],
+                            VISA_library_path=kwargs['visa_library_path']
+                        )
+                        open_flag = True
+                        if self.interface.sim:
+                            simulation_fallback = True  # Что-то не так с адресами, драйвер упал в режим симуляции
+                    except ModuleNotFoundError:
+                        pass
+                    except ConnectionError:
+                        open_flag = False
             elif self.board_type == 'ITC_1T1R_32x8_probe_station':
                 try:
                     from RRAM_VISA_Drivers import ITC_1T1R_32x8_probe_station  # type: ignore
@@ -476,7 +478,10 @@ class Connector():
                             res_switches = float(self.config['board']['res_switches']),
                             res = sense_data[0]
                         )
-                        res = (int(adc), task['id'], *sense_data[1:])
+                        if 'crossbar_scan' in task and task['crossbar_scan']:
+                            res = (int(adc), task['id'], task['wl'], task['bl'])
+                        else:    
+                            res = (int(adc), task['id'], *sense_data[1:])
                 elif task['mode_flag'] == 'trigger':
                     flag, response = self.interface.trigger()
                     if flag:
@@ -504,14 +509,12 @@ class Connector():
                         self.logger.critical(f'Could not configure instruments: {response}')
                     res = int(flag)
                 elif task['mode_flag'] == 'read':
-                    flag, response = self.interface.config_iv_dc(
-                        trigger_interval = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
-                        v_start = self.config['board']['vol_read'], 
-                        v_stop = self.config['board']['vol_read'],
-                        n_points = 1,
-                        double = False,
+                    flag, response = self.interface.config_std(
+                        pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3,
+                        pulse_sequence = [self.config['board']['vol_read']],
+                        read_flags = [True],
                         current_compliance = task['current_compliance'],
-                        sign = 1  # Reset
+                        sign = task['sign']
                     )
                     if flag:
                         self.logger.info(response)

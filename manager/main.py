@@ -146,7 +146,9 @@ class Manager(Application):
                                                       timeout = float(self.ap_config["connector"]["timeout"]))
         elif 'visa_addresses' in kwargs:  # Подключение к VISA
             self.connected_flag, self.simulation_fallback = self.conn.open_port(visa_addresses=kwargs['visa_addresses'], 
-                                                                                visa_library_path = self.visa_library_path)
+                                                                                visa_library_path = self.visa_library_path,
+                                                                                row_num=self.row_num,
+                                                                                col_num=self.col_num)
         else:
             # другое подключение
             self.connected_flag, self.simulation_fallback = self.conn.open_port()

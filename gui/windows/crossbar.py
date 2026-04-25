@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 from manager import Manager
 from manager.service import a2r
 from manager.service.global_settings import TICKET_PATH
+from manager.menu import get_crossbar_scan
 
 from gui.windows.cell_info import CellInfo
 from gui.windows.experiment import ExpSettings
@@ -727,44 +728,69 @@ class SendTicketAll(QThread):
         Запуск потока посылки тикета
         """
         counter = 0
-        for i in range(self.parent.man.col_num):
-            if self.need_stop:
-                break
-            for j in range(self.parent.man.row_num):
-                if self.need_stop: 
+        if self.parent.man.board_type not in ['ITC_1T1R_32x8_switched',]:  # Режим, когда на каждую ячейку свой тикет (как обычно)
+            # TODO: Добавить эти два типа сканирования в список драйверов
+            # TODO: Можно объединить подходы, если прописать режим сканирования кроссбара для обычных драйверов в menu 
+            for i in range(self.parent.man.col_num):
+                if self.need_stop:
                     break
-                self.ticket["params"]["wl"] = i
-                self.ticket["params"]["bl"] = j
-                # Флаг для экспериментов, в которых сканируется весь кроссбар
-                # Добавляется во все тикеты, кроме тикета для последней ячейки
-                if not (i == self.parent.man.col_num-1 and j == self.parent.man.row_num-1):
-                    self.ticket["params"]["crossbar_scan"] = True
-                else:
-                    self.ticket["params"]["crossbar_scan"] = False
-                # временное решение, лучше переписать на потоки
-                _, memristor_id = self.parent.man.db.get_memristor_id(i, j, self.parent.man.crossbar_id)
-                task_generator = self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
+                for j in range(self.parent.man.row_num):
+                    if self.need_stop: 
+                        break
+                    self.ticket["params"]["wl"] = i
+                    self.ticket["params"]["bl"] = j
+                    # временное решение, лучше переписать на потоки
+                    _, memristor_id = self.parent.man.db.get_memristor_id(i, j, self.parent.man.crossbar_id)
+                    task_generator = self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
+                                                                            self.ticket['terminate'],
+                                                                            self.parent.man.blank_type)
+                    for task in task_generator:
+                        if task[0]['mode_flag'] in [7, 9, 'sense']:
+                            result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                        else:
+                            request_status = self.parent.man.conn.impact(task[0]) # todo: Предупреждение пользователю
+                            if not request_status:
+                                task_generator.throw(Exception("bad request"))
+                                continue
+                    try:
+                        last_resistance = int(a2r(self.parent.man.gain,
+                                                self.parent.man.res_load,
+                                                self.parent.man.vol_read,
+                                                self.parent.man.adc_bit,
+                                                self.parent.man.vol_ref_adc,
+                                                self.parent.man.res_switches,
+                                                result[0]))
+                    except IndexError:
+                        last_resistance = 0
+                    _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
+                    counter += 1
+                    self.count_changed.emit(counter)
+        else:  # Режим с одним тикетом на весь скан, итерируемся только по таскам
+            self.ticket['params']['col_num'] = self.parent.man.col_num
+            self.ticket['params']['row_num'] = self.parent.man.row_num
+            task_generator = get_crossbar_scan(self.parent.man.board_type)(self.ticket['params'],
                                                                            self.ticket['terminate'],
                                                                            self.parent.man.blank_type)
-                for task in task_generator:
-                    if task[0]['mode_flag'] in [7, 9, 'sense']:
-                        result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
-                    else:
-                        request_status = self.parent.man.conn.impact(task[0]) # todo: Предупреждение пользователю
-                        if not request_status:
-                            task_generator.throw(Exception("bad request"))
-                            continue
-                try:
-                    last_resistance = int(a2r(self.parent.man.gain,
-                                            self.parent.man.res_load,
-                                            self.parent.man.vol_read,
-                                            self.parent.man.adc_bit,
-                                            self.parent.man.vol_ref_adc,
-                                            self.parent.man.res_switches,
-                                            result[0]))
-                except IndexError:
-                    last_resistance = 0
-                _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
-                counter += 1
-                self.count_changed.emit(counter)
+            for task in task_generator:
+                if task[0]['mode_flag'] in [7, 9, 'sense']:
+                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id, wl, bl)
+                    try:
+                        last_resistance = int(a2r(self.parent.man.gain,
+                                                self.parent.man.res_load,
+                                                self.parent.man.vol_read,
+                                                self.parent.man.adc_bit,
+                                                self.parent.man.vol_ref_adc,
+                                                self.parent.man.res_switches,
+                                                result[0]))
+                    except IndexError:
+                        last_resistance = 0
+                    _, memristor_id = self.parent.man.db.get_memristor_id(result[2], result[3], self.parent.man.crossbar_id)
+                    _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
+                    counter += 1
+                    self.count_changed.emit(counter)
+                else:
+                    request_status = self.parent.man.conn.impact(task[0]) # todo: Предупреждение пользователю
+                    if not request_status:
+                        task_generator.throw(Exception("bad request"))
+                        continue
         self.progress_finished.emit(counter)
