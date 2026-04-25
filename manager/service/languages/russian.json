@@ -462,5 +462,8 @@
     "help":{
         "name":"Справка",
         "path":"docs/README_rus.md"
+    },
+    "wait":{
+        "window_title":"Ждите..."
     }
 }
