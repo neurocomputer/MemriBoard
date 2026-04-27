@@ -4,11 +4,14 @@
 
 # pylint: disable=W0212, C0301
 
+import os
 import pickle
 import random
 from typing import Union
+from configparser import ConfigParser
 import numpy as np
 from simulator.memristor import MemristorModel
+from manager.service import d2v
 
 def create_crossbar_array(serial: str, row_num: int, col_num: int) -> None:
     """
@@ -103,3 +106,91 @@ def send_mode_mvm_to_crossbar(crossbar: list, **kwargs) -> int:
         res = 0
     # print('Результат', res)
     return res
+
+class BoardSimulator():
+    """
+    Симулятор платы с кроссбаром
+    """
+    serial: str
+    crossbar: list
+
+    def __init__(self):
+        """
+        Создание симулятора
+        """
+        if os.path.exists(os.path.join('simulator','simulator_settings.ini')):
+            self.config = ConfigParser()
+            self.config.read(os.path.join('simulator','simulator_settings.ini'), encoding="utf-8")  # читаем конфиг
+        else:
+            print("simulator_settings.ini не найден в", os.getcwd())
+
+    def connect(self, crossbar_serial):
+        """
+        Подключить симулятор
+        """
+        self.serial = crossbar_serial
+        status, self.crossbar = load_crossbar_array(crossbar_serial)
+        return status
+
+    def mode_7(self, v_dac, tms, tus, rev, task_id, wl, bl):
+        """
+        Запрос к плате в режиме 7
+        """
+        vol = d2v(int(self.config['board']['dac_bit']),
+                  float(self.config['board']['vol_ref_dac']),
+                  v_dac,
+                  sign=rev)
+        res = send_mode_7_to_crossbar(self.serial,
+                                      self.crossbar,
+                                      wl=wl,
+                                      bl=bl,
+                                      task_id=task_id,
+                                      vol_read=float(self.config['board']['vol_read']),
+                                      vol=vol,
+                                      res_load=float(self.config['board']['res_load']),
+                                      res_switches=float(self.config['board']['res_switches']),
+                                      gain=float(self.config['board']['gain']),
+                                      adc_bit=int(self.config['board']['adc_bit']),
+                                      vol_ref_adc=float(self.config['board']['vol_ref_adc']),
+                                      duration=tms*1000+tus)
+        return (res, task_id)
+
+    def mode_9(self, v_dac, task_id, wl, bl):
+        """
+        Запрос к плате в режиме 9
+        """
+        v_dac = int(abs(v_dac))
+        vol = d2v(int(self.config['board']['dac_bit']),
+                  float(self.config['board']['vol_ref_dac']),
+                  v_dac)
+        if vol >= 0.3:
+            vol = 0.3
+        res = send_mode_9_to_crossbar(self.crossbar,
+                                      vol = vol,
+                                      wl=wl,
+                                      bl=bl,
+                                      task_id=task_id,
+                                      res_load=float(self.config['board']['res_load']),
+                                      res_switches=float(self.config['board']['res_switches']),
+                                      gain=float(self.config['board']['gain']),
+                                      adc_bit=int(self.config['board']['adc_bit']),
+                                      vol_ref_adc=float(self.config['board']['vol_ref_adc']))
+        return (res, task_id)
+
+    def mode_mvm(self, vols, tms, tus, rtms, rums, wl, task_id):
+        """
+        vDAC_mas, tms, tus, rtms, rums, wl, id
+        """
+        vol = []
+        for item in vols:
+            vol.append(d2v(int(self.config['board']['dac_bit']),
+                        float(self.config['board']['vol_ref_dac']),
+                        item))
+        res = send_mode_mvm_to_crossbar(self.crossbar,
+                                        vol = vol,
+                                        wl = wl,
+                                        gain = float(self.config['board']['gain']),
+                                        sum_gain = float(self.config['board']['sum_gain']),
+                                        adc_bit = int(self.config['board']['adc_bit']),
+                                        vol_ref_adc = float(self.config['board']['vol_ref_adc']))
+        return (res, task_id)
