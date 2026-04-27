@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
+        <div class="head">
+            <img src="logo.svg" alt="Логотип">
+        </div>
+        <div class="body">
+            <div class="container">
+                <div>
+                    <canvas id="graphic" style="border:2px solid #000;"></canvas>
+                </div>
+                <div>
+                    <div>
+                        <button onclick="read()">СНЯТЬ ВАХ</button>
+                    </div>
+                    <div>
+                        <table id="dataTable">
+                            <thead>
+                            </thead>
+                            <tbody id="pointsTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+
+    <script>
+        function read() {
+            const now = new Date();
+            fetch('iv-curve.txt')
+                .then(response => response.text())
+                .then(data => {
+                    const lines = data.trim().split('\n');
+                    const tbody = document.getElementById('pointsTable');
+                    
+                    points = [];
+                    
+                    lines.forEach(line => {
+                        if (line.trim() === '') return;
+                        
+                        // Функция А обрабатывает строку и возвращает [a, b]
+                        const result = functionA(line);
+                        
+                        if (result && result.length === 2) {
+                            const a = result[0];
+                            const b = result[1];
+                            
+                            // Добавляем точку в массив и рисуем
+                            points.push({x: a, y: b});
+                            updateRanges();
+                            updateGraph();
+                        }
+                    });
+                    // таблица
+                    const row = tbody.insertRow();
+                    const cellX = row.insertCell(0);    
+                    const cellY = row.insertCell(1);
+                    cellX.textContent = now.toLocaleString();
+                    cellY.textContent = "снятие ВАХ";
+                })
+                .catch(error => console.error('Ошибка:', error));
+        }
+
+        // получает строку, возвращает два числа [a, b]
+        function functionA(str) {
+            return [2000, 3000]
+        }
+
+        const canvas = document.getElementById('graphic');
+        const ctx = canvas.getContext('2d');
+        
+        const config = {
+            width: 600,
+            height: 400,
+            margin: {
+                top: 30,
+                right: 30,
+                bottom: 40,
+                left: 60
+            },
+            xRange: { min: 0, max: 10000 },
+            yRange: { min: 0, max: 10000 }
+        };
+        
+        let points = [];
+
+        initCanvas();
+        updateRanges();
+        updateGraph();
+        
+        function initCanvas() {
+            canvas.width = config.width;
+            canvas.height = config.height;
+        }
+        
+        function getChartDimensions() {
+            const chartWidth = config.width - config.margin.left - config.margin.right;
+            const chartHeight = config.height - config.margin.top - config.margin.bottom;
+            return { chartWidth, chartHeight };
+        }
+        
+        function transformX(x) {
+            const { chartWidth } = getChartDimensions();
+            return config.margin.left + (x - config.xRange.min) / (config.xRange.max - config.xRange.min) * chartWidth;
+        }
+        
+        function transformY(y) {
+            const { chartHeight } = getChartDimensions();
+            return config.margin.top + chartHeight - (y - config.yRange.min) / (config.yRange.max - config.yRange.min) * chartHeight;
+        }
+        
+        function clearCanvas() {
+            ctx.clearRect(0, 0, config.width, config.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, config.width, config.height);
+        }
+        
+        function drawGrid() {
+            const { chartWidth, chartHeight } = getChartDimensions();
+            ctx.beginPath();
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 0.5;
+            
+            for (let i = 0; i <= 6; i++) {
+                const x = config.margin.left + (i / 6) * chartWidth;
+                ctx.moveTo(x, config.margin.top);
+                ctx.lineTo(x, config.margin.top + chartHeight);
+            }
+            for (let i = 0; i <= 5; i++) {
+                const y = config.margin.top + (i / 5) * chartHeight;
+                ctx.moveTo(config.margin.left, y);
+                ctx.lineTo(config.margin.left + chartWidth, y);
+            }
+            ctx.stroke();
+        }
+        
+        function drawAxes() {
+            const { chartWidth, chartHeight } = getChartDimensions();
+            
+            // оси
+            ctx.beginPath();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.moveTo(config.margin.left, config.margin.top);
+            ctx.lineTo(config.margin.left, config.margin.top + chartHeight);
+            ctx.moveTo(config.margin.left, config.margin.top + chartHeight);
+            ctx.lineTo(config.margin.left + chartWidth, config.margin.top + chartHeight);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.moveTo(config.margin.left - 5, config.margin.top + 10);
+            ctx.lineTo(config.margin.left, config.margin.top);
+            ctx.lineTo(config.margin.left + 5, config.margin.top + 10);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(config.margin.left + chartWidth - 10, config.margin.top + chartHeight - 5);
+            ctx.lineTo(config.margin.left + chartWidth, config.margin.top + chartHeight);
+            ctx.lineTo(config.margin.left + chartWidth - 10, config.margin.top + chartHeight + 5);
+            ctx.fill();
+        }
+        
+        function drawAxisLabels() {
+            const { chartWidth, chartHeight } = getChartDimensions();
+            
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText('Voltage (V)', config.margin.left + chartWidth/2 - 40, config.margin.top + chartHeight + 35);
+            
+            ctx.save();
+            ctx.translate(config.margin.left - 35, config.margin.top + chartHeight/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('Current (А)', -20, 0);
+            ctx.restore();
+        }
+        
+        function drawTickValues() {
+            const { chartWidth, chartHeight } = getChartDimensions();
+            ctx.font = '10px Arial';
+            ctx.fillStyle = '#666';
+            
+            for (let i = 0; i <= 6; i++) {
+                const x = config.margin.left + (i / 6) * chartWidth;
+                const value = Math.round(config.xRange.min + (i / 6) * (config.xRange.max - config.xRange.min));
+                ctx.fillText(value, x - 15, config.margin.top + chartHeight + 15);
+            }
+            for (let i = 0; i <= 5; i++) {
+                const y = config.margin.top + chartHeight - (i / 5) * chartHeight;
+                const value = Math.round(config.yRange.min + (i / 5) * (config.yRange.max - config.yRange.min));
+                ctx.fillText(value, config.margin.left - 30, y + 3);
+            }
+        }
+        
+        function drawPointsAndLines() {
+            if (points.length === 0) return;
+            
+            const transformedPoints = points.map(p => ({
+                x: transformX(p.x),
+                y: transformY(p.y)
+            }));
+            
+            if (transformedPoints.length > 1) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#2d3dcc';
+                ctx.lineWidth = 2;
+                ctx.moveTo(transformedPoints[0].x, transformedPoints[0].y);
+                for (let i = 1; i < transformedPoints.length; i++) {
+                    ctx.lineTo(transformedPoints[i].x, transformedPoints[i].y);
+                }
+                ctx.stroke();
+            }
+            
+            transformedPoints.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+                ctx.fillStyle = '#FF0000';
+                ctx.fill();
+                ctx.strokeStyle = "#800000"
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+        }
+            
+        function addPoint(x, y) {
+            points.push({x, y});
+            points.sort((a, b) => a.x - b.x);
+            updateGraph();
+        }
+        
+        function updateGraph() {
+            clearCanvas();
+            drawGrid();
+            drawAxes();
+            drawAxisLabels();
+            drawTickValues();
+            drawPointsAndLines();
+        }
+        
+        function updateRanges() {
+            if (points.length === 0) {
+                config.xRange = { min: 0, max: 10000 };
+                config.yRange = { min: 0, max: 10000 };
+                return;
+            }
+            
+            const xValues = points.map(p => p.x);
+            const yValues = points.map(p => p.y);
+            config.xRange.max = Math.max(...xValues) * 1.1;
+            config.yRange.max = Math.max(...yValues) * 1.1;
+            config.xRange.min = Math.min(0, ...xValues);
+            config.yRange.min = Math.min(0, ...yValues);
+        }
+    </script>
+</html>
