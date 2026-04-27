@@ -9,10 +9,6 @@ from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
 from manager.service import d2v, r2a
-from simulator.src import (load_crossbar_array,
-                           send_mode_7_to_crossbar,
-                           send_mode_9_to_crossbar,
-                           send_mode_mvm_to_crossbar)
 
 class Connector():
     """
@@ -718,6 +714,15 @@ class Connector():
                     self.custom_impact('44\n', 0.01, 10)
                     # if not_disconnected:
                     # raise Exception('...')
+            elif self.board_type in ['ITC_1T1R_32x8_switched']:
+                if mode == 'connect':
+                    flag, resp = self.interface.connect_cell(wl, bl)
+                    if not flag:
+                        raise Exception(str(resp))
+                else:
+                    flag, resp = self.interface.standby()
+                    if not flag:
+                        raise Exception(str(resp))
 
     def inc_req_id(self):
         """
