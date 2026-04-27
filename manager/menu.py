@@ -11,7 +11,7 @@ from manager.modes import (
     get_visa_crossbar_scan
 )
 
-def get_menu(board_type):
+def get_menu(board_type, logger=None):
     '''
     Меню связывает сущности board_type, ticket['mode'] и manager.modes
     '''
@@ -31,19 +31,19 @@ def get_menu(board_type):
                 'std': get_std,
             }
     elif board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
-        menu: dict = {
-                'std': get_smu_std,
-                'smu_iv_dc': get_smu_iv_dc,
-                'smu_pulsed_retention': get_smu_pulsed_retention,
-                'smu_endurance': get_smu_endurance,
+        menu: dict = {  # TODO на этом этапе уже как будто лучше сделать меню целым классом, у которого есть методы и атрибут menu
+                'std': lambda params, terminate, blank_type: get_smu_std(params, terminate, blank_type, logger),
+                'smu_iv_dc': lambda params, terminate, blank_type: get_smu_iv_dc(params, terminate, blank_type, logger),
+                'smu_pulsed_retention': lambda params, terminate, blank_type: get_smu_pulsed_retention(params, terminate, blank_type, logger),
+                'smu_endurance': lambda params, terminate, blank_type: get_smu_endurance(params, terminate, blank_type, logger),
             }
     return menu
 
 
-def get_crossbar_scan(board_type):
+def get_crossbar_scan(board_type, logger=None):
     """
     Генератор тасков для режима сканирования кроссбара.
     """
     if board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
-        return get_visa_crossbar_scan
+        return lambda params, terminate, blank_type: get_visa_crossbar_scan(params, terminate, blank_type, logger)
     return None

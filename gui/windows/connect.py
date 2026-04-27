@@ -11,7 +11,6 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
 from gui.src import show_choose_window, show_warning_messagebox
-from manager.menu import get_menu
 
 class ConnectDialog(QDialog):
     """
@@ -304,7 +303,7 @@ class ConnectDialog(QDialog):
         if status: # если в базе есть данные по чипу
             combo_board_type = self.ui.combo_board_type.currentText()
             self.parent.man.board_type = combo_board_type
-            self.parent.man.menu = get_menu(combo_board_type) # todo: просится отдельная функция в manager
+            self.parent.man.init_menu()  # Initializing menu
             if self.parent.man.cb_type != 'simulator':
                 # попытка подключения
                 if combo_board_type == 'offline':

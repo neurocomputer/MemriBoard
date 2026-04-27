@@ -17,6 +17,7 @@ from manager.service import a2r
 from manager.model.src import create_empty_db_crossbar
 from manager.service.global_settings import DB_PATH
 from manager.model.db import DBOperate
+from manager.menu import get_menu
 from simulator.src import create_crossbar_array
 
 class Manager(Application):
@@ -153,6 +154,12 @@ class Manager(Application):
             # другое подключение
             self.connected_flag, self.simulation_fallback = self.conn.open_port()
         return self.connected_flag
+    
+    def init_menu(self) -> None:
+        """
+        Initialize menu
+        """
+        self.menu = get_menu(self.board_type, self.ap_logger)
 
     def _admin(self) -> None:
         """

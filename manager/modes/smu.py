@@ -61,7 +61,8 @@ _modes = {'dir': 0,  # Режимы прямо и обратно
 def get_smu_iv_dc(
     params: dict,
     terminate: dict,
-    blank_type:str
+    blank_type:str,
+    logger=None
 ) -> Generator[list, None, None]:
     """Генератор тасков для режима smu_iv_dc.
 
@@ -73,13 +74,14 @@ def get_smu_iv_dc(
     Yields:
         Generator[list, None, None]: Task generator
     """
-    yield from smu_generator(params, terminate, blank_type, _smu_iv_dc_gen)
+    yield from smu_generator(params, terminate, blank_type, _smu_iv_dc_gen, logger=logger)
     
     
 def get_smu_std(
     params: dict,
     terminate: dict,
-    blank_type: str
+    blank_type: str,
+    logger=None
 ) -> Generator[list, None, None]:
     """Генератор тасков для режима smu_std (режимы 7 и 9).
 
@@ -91,13 +93,14 @@ def get_smu_std(
     Yields:
         Generator[list, None, None]: Task generator
     """
-    yield from smu_generator(params, terminate, blank_type, _smu_std_gen)
+    yield from smu_generator(params, terminate, blank_type, _smu_std_gen, logger=logger)
     
     
 def get_smu_pulsed_retention(
     params: dict,
     terminate: dict,
-    blank_type: str
+    blank_type: str,
+    logger=None
 ) -> Generator[list, None, None]:
     """Генератор тасков для режима smu_pulsed_retention.
 
@@ -109,13 +112,14 @@ def get_smu_pulsed_retention(
     Yields:
         Generator[list, None, None]: Task generator
     """
-    yield from smu_generator(params, terminate, blank_type, _smu_pulsed_retention_gen)
+    yield from smu_generator(params, terminate, blank_type, _smu_pulsed_retention_gen, logger=logger)
     
     
 def get_smu_endurance(
     params: dict, 
     terminate: dict,
-    blank_type: str
+    blank_type: str,
+    logger=None
 ) -> Generator[list, None, None]:
     """Генератор тасков для режима smu_endurance.
 
@@ -127,13 +131,14 @@ def get_smu_endurance(
     Yields:
         Generator[list, None, None]: Task generator
     """
-    yield from smu_generator(params, terminate, blank_type, _smu_endurance_gen)
+    yield from smu_generator(params, terminate, blank_type, _smu_endurance_gen, logger=logger)
     
     
 def get_visa_crossbar_scan(
     params: dict, 
     terminate: dict,
-    blank_type: str
+    blank_type: str,
+    logger=None
 ) -> Generator[list, None, None]:
     """Генератор тасков для режима smu_endurance.
 
@@ -146,7 +151,7 @@ def get_visa_crossbar_scan(
         Generator[list, None, None]: Task generator
     """
     yield from smu_generator(params, terminate, blank_type, _visa_crossbar_scan_gen, 
-                             connect_cell_before_main_gen=False)
+                             connect_cell_before_main_gen=False, logger=logger)
 
 
 def smu_generator(
@@ -154,7 +159,8 @@ def smu_generator(
     terminate: dict,
     blank_type: str,
     main_task_generator: Generator,
-    connect_cell_before_main_gen: bool = True
+    connect_cell_before_main_gen: bool = True,
+    logger = None
 ) -> Generator[list, None, None]:
     """Глобальный генератор тасков для инструметов с SMU.
 
@@ -204,7 +210,8 @@ def smu_generator(
         task = {'mode_flag': 'standby', 'id': 0}
         yield [task, terminator]
     except Exception as ex: # для корректного завершения работы плат
-        print(f'{type(ex).__name__}: {ex}')
+        if logger is not None:
+            logger.info(f'Task_generator: {type(ex).__name__}: {ex}')
         interrupt_flag = True
         exception = ex
         yield

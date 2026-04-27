@@ -751,6 +751,7 @@ class SendTicketAll(QThread):
                             request_status = self.parent.man.conn.impact(task[0]) # todo: Предупреждение пользователю
                             if not request_status:
                                 task_generator.throw(Exception("bad request"))
+                                self.need_stop = False
                                 continue
                     try:
                         last_resistance = int(a2r(self.parent.man.gain,
@@ -768,10 +769,16 @@ class SendTicketAll(QThread):
         else:  # Режим с одним тикетом на весь скан, итерируемся только по таскам
             self.ticket['params']['col_num'] = self.parent.man.col_num
             self.ticket['params']['row_num'] = self.parent.man.row_num
-            task_generator = get_crossbar_scan(self.parent.man.board_type)(self.ticket['params'],
-                                                                           self.ticket['terminate'],
-                                                                           self.parent.man.blank_type)
+            task_generator = get_crossbar_scan(self.parent.man.board_type, logger=self.parent.man.ap_logger)(
+                self.ticket['params'],
+                self.ticket['terminate'],
+                self.parent.man.blank_type
+            )
             for task in task_generator:
+                if self.need_stop:
+                    task_generator.throw(Exception('need stop'))
+                    self.need_stop = False
+                    continue
                 if task[0]['mode_flag'] in [7, 9, 'sense']:
                     result = self.parent.man.conn.impact(task[0]) # result = (resistance, id, wl, bl)
                     try:
@@ -792,5 +799,6 @@ class SendTicketAll(QThread):
                     request_status = self.parent.man.conn.impact(task[0]) # todo: Предупреждение пользователю
                     if not request_status:
                         task_generator.throw(Exception("bad request"))
+                        self.need_stop = False
                         continue
         self.progress_finished.emit(counter)
