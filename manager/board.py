@@ -441,15 +441,29 @@ class Connector():
         Connect cell to the external terminals on the board
         """
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_crossbar']:  # TODO add other boards, if available
+            if self.board_type in ['memardboard_crossbar']:
                 if mode == 'connect':
-                    self.custom_impact(f'33,{wl},{bl}\n', 0.01, 10)  # TODO check if connected and return True of False
-                    # if not_connected:
-                    # raise Exception('...')
+                    self.push(f'3,{wl},{bl},333\n')
+                    connected = False
+                    for _ in range(10):
+                        res = self.pull()
+                        if res[0] == 333:
+                            connected = True
+                            break
+                        time.sleep(0.01)
+                    if not connected:
+                        raise ConnectionError('Could not connect the cell!')
                 else:
-                    self.custom_impact('44\n', 0.01, 10)
-                    # if not_disconnected:
-                    # raise Exception('...')
+                    disconnected = False
+                    self.push('4,444')
+                    for _ in range(10):
+                        res = self.pull()
+                        if res[0] == 444:
+                            disconnected = True
+                            break
+                        time.sleep(0.01)
+                    if not disconnected:
+                        raise ConnectionError('Could not disconnect the cell!')
 
     def inc_req_id(self):
         """
