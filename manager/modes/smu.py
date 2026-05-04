@@ -271,7 +271,8 @@ def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -
                     't_ms': params['t_rev_msec_inc'],
                     't_us': params['t_rev_usec_inc'],
                     'id': params['id'],
-                    'sign': 1}
+                    'sign': 1,
+                    'triggered': True}
     yield [sense_data, terminator]
         
         
