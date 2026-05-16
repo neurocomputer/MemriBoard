@@ -8,6 +8,7 @@ from manager.modes import (
     get_smu_std, 
     get_smu_pulsed_retention,
     get_smu_endurance,
+    get_smu_pot_dep,
     get_visa_crossbar_scan
 )
 
@@ -36,6 +37,7 @@ def get_menu(board_type, logger=None):
                 'smu_iv_dc': lambda params, terminate, blank_type: get_smu_iv_dc(params, terminate, blank_type, logger),
                 'smu_pulsed_retention': lambda params, terminate, blank_type: get_smu_pulsed_retention(params, terminate, blank_type, logger),
                 'smu_endurance': lambda params, terminate, blank_type: get_smu_endurance(params, terminate, blank_type, logger),
+                'smu_pot_dep': lambda params, terminate, blank_type: get_smu_pot_dep(params, terminate, blank_type, logger),
             }
     return menu
 

@@ -154,7 +154,7 @@ class SignalMod(QDialog):
             widget.set_unit(unit)
             widget.bad_value.connect(partial(warn, widget))
         # Modes for which setting trigger interval is needed
-        self.trigger_interval_modes = ['smu_pulsed_retention', 'smu_endurance']
+        self.trigger_interval_modes = ['smu_pulsed_retention', 'smu_endurance', 'smu_pot_dep']
 
     def _plot_ticket(self) -> None:
         """

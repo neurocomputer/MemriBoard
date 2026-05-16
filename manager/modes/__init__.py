@@ -9,6 +9,7 @@ from manager.modes.smu import (  # Modes for SMUs  # noqa: F401
     get_smu_std,
     get_smu_pulsed_retention,
     get_smu_endurance,
+    get_smu_pot_dep,
     get_visa_crossbar_scan,
 )
 

@@ -134,6 +134,25 @@ def get_smu_endurance(
     yield from smu_generator(params, terminate, blank_type, _smu_endurance_gen, logger=logger)
     
     
+def get_smu_pot_dep(
+    params: dict, 
+    terminate: dict,
+    blank_type: str,
+    logger=None
+) -> Generator[list, None, None]:
+    """Генератор тасков для режима smu_pot_dep.
+
+    Args:
+        params (dict): Experiment params.
+        terminate (dict): Terminator type and value.
+        blank_type (str): Blank type (blanks.py).
+
+    Yields:
+        Generator[list, None, None]: Task generator
+    """
+    yield from smu_generator(params, terminate, blank_type, _smu_pot_dep_gen, logger=logger)
+    
+    
 def get_visa_crossbar_scan(
     params: dict, 
     terminate: dict,
@@ -391,16 +410,75 @@ def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_typ
     if 'dir_interval' in params:
         data['trigger_interval'] = params['dir_interval']
     yield [data, terminator]  # Config task
+    sense_data_dir = {'mode_flag': 'sense',  # Sensing dir pulse
+                      'vol': params['v_dir_stop_inc'],
+                      't_ms': params['t_dir_msec_inc'],
+                      't_us': params['t_dir_usec_inc'],
+                      'id': params['id'],
+                      'sign': 1,
+                      'skip_one': True}
+    sense_data_rev = {'mode_flag': 'sense',  # Sensing rev pulse
+                      'vol': params['v_rev_stop_inc'],
+                      't_ms': params['t_dir_msec_inc'],
+                      't_us': params['t_dir_usec_inc'],
+                      'id': params['id'],
+                      'sign': 1,
+                      'skip_one': True}
+    for _ in range(params['count']):
+        yield [sense_data_dir, terminator]
+        yield [sense_data_rev, terminator]  # Two sense tasks for each cycle
+        
+        
+def _smu_pot_dep_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+    """Const pulse generator (async): potentiation/depression.
+
+    Yields:
+        Generator[list, None, None]: Main task generator.
+    """
+    if params['dir_inc_countr'] == 1:  # Potentiation
+        vol = params['v_dir_stop_inc']
+        sign = 0
+        t_ms = params['t_dir_msec_inc']
+        t_us = params['t_dir_usec_inc']
+        data = {'mode_flag': 'config_pot_dep',
+                'vol': vol,
+                't_ms': t_ms,
+                't_us': t_us,
+                'id': params['id'],
+                'n_pulses': params['count'],
+                'compliance': params['dir_cc'],
+                'sign': sign}
+        if 'dir_interval' in params:
+            data['trigger_interval'] = params['dir_interval']
+    elif params['rev_inc_countr'] == 1:
+        vol = params['v_rev_stop_inc']
+        sign = 1
+        t_ms = params['t_rev_msec_inc']
+        t_us = params['t_rev_usec_inc']
+        data = {'mode_flag': 'config_pot_dep',
+                'vol': vol,
+                't_ms': t_ms,
+                't_us': t_us,
+                'id': params['id'],
+                'n_pulses': params['count'],
+                'compliance': params['rev_cc'],
+                'sign': sign}
+        if 'rev_interval' in params:
+            data['trigger_interval'] = params['rev_interval']
+    else:
+        raise ChildProcessError('Bad config for pot/dep: dir or rev amount must be equal to 1')
+    if 'wl' in params and 'bl' in params:
+        data['wl'] = params['wl']
+        data['bl'] = params['bl']
+    yield [data, terminator]  # Config task
     sense_data = {'mode_flag': 'sense',
-                  'vol': 0,
-                  't_ms': params['t_dir_msec_inc'],
-                  't_us': params['t_dir_usec_inc'],
+                  'vol': vol,
+                  't_ms': t_ms,
+                  't_us': t_us,
                   'id': params['id'],
-                  'sign': 1,
-                  'skip_one': True}
+                  'sign': sign}
     for _ in range(params['count']):
         yield [sense_data, terminator]
-        yield [sense_data, terminator]  # Two sense tasks for each cycle
         
         
 def _visa_crossbar_scan_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:

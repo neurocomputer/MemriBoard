@@ -586,6 +586,27 @@ class Connector():
                         # Останавливаем эксперимент
                         self.logger.critical(f'Could not configure instruments: {response}')
                     res = int(flag)
+                elif task['mode_flag'] == 'config_pot_dep':
+                    # TODO remove interval check (?)
+                    if 'trigger_interval' in task:
+                        trigger_interval = task['trigger_interval']
+                    else:
+                        trigger_interval = 5 * (task['t_us'] * 1e-6 + task['t_ms'] * 1e-3)
+                    flag, response = self.interface.config_pot_dep(
+                        voltage = d2v(int(self.config['board']['dac_bit']), 
+                                    float(self.config['board']['vol_ref_dac']), task['vol']),
+                        pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
+                        trigger_interval = trigger_interval,
+                        n_pulses = task['n_pulses'],
+                        compliance = task['compliance'],
+                        sign = task['sign']
+                    )
+                    if flag:
+                        self.logger.info(response)
+                    else:
+                        # Останавливаем эксперимент
+                        self.logger.critical(f'Could not configure instruments: {response}')
+                    res = int(flag)
                 elif task['mode_flag'] == 7:
                     flag, response, sense_data = self.interface.mode_7(
                         pulse_width = task['t_us'] * 1e-6 + task['t_ms'] * 1e-3, 
