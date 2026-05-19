@@ -2,12 +2,13 @@
 Сервер для обмена тасками и данными
 """
 
-from random import randint
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 server = Flask(__name__)
 tasks = []
 results = []
+CORS(server)  # разрешает все запросы
 
 @server.route('/')
 def home():
@@ -39,7 +40,6 @@ def put_task():
     """
     data = request.get_json()
     tasks.append(data)
-    #results.append((randint(0, 2**14-1), 1))
     return jsonify({"status": "saved"})
 
 @server.route('/check_tasks_storage', methods=['GET'])
@@ -56,6 +56,8 @@ def get_task():
     """
     Забрать таску с сервера
     """
+    if len(tasks) == 0:
+        return jsonify({"data": None})
     return jsonify({"data": tasks.pop()})
 
 @server.route('/put_result', methods=['POST'])
@@ -81,6 +83,8 @@ def get_result():
     """
     Забрать результат с сервера
     """
+    if len(results) == 0:
+        return jsonify({"data": None})
     return jsonify({"data": results.pop()})
 
 if __name__ == '__main__':

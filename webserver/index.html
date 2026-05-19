@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="head">
+        <img src="logo.svg" alt="Логотип">
+    </div>
+    <div class="body">
+        <div class="container">
+            <div>
+                <div id="graphic" style="border:2px solid #000;"></div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <div>
+                    <div>
+                        <button type="button" onclick="read()">СНЯТЬ ВАХ</button>
+                    </div>
+                    <div>
+                        <table id="dataTable">
+                            <thead>
+                                <tr><th>№</th><th>Время</th><th>Действие</th></tr>
+                            </thead>
+                            <tbody id="pointsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="tableControls" style="display: none; height: 300px;">
+                    <div style="writing-mode: vertical-lr; height: 100%;">
+                        <input type="range" id="tableSlider" min="0" max="0" value="0" step="1" style="height: 100%; width: 20px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let points = [];
+        let currentIndex = 0;
+        const rowsPerPage = 10;
+
+        async function read() {
+            const tbody = document.getElementById('pointsTable');
+            tbody.innerHTML = '';
+            points = [];
+            currentIndex = 0;
+            updateGraph();
+            
+            const resp = await fetch('iv-curve.txt');
+            const text = await resp.text();
+            const lines = text.trim().split('\n');
+            const allResults = [];
+            
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                const v = line.split(',').map(Number);
+                
+                await fetch('/put_task', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        mode_flag: v[0] || 7,
+                        vol: v[1] || 0,
+                        t_ms: v[2] || 0,
+                        t_us: v[3] || 0,
+                        sign: v[4] || 0,
+                        id: v[5] || 0,
+                        wl: v[6] || 0,
+                        bl: v[7] || 0
+                    })
+                });
+                
+                const result = await waitResult();
+                if (result) {
+                    points.push({x: result[0], y: result[1]});
+                    points.sort((a,b) => a.x - b.x);
+                    updateGraph();
+                    allResults.push(result);
+                    renderTable(allResults);
+                }
+            }
+        }
+
+        function renderTable(results) {
+            const tbody = document.getElementById('pointsTable');
+            tbody.innerHTML = '';
+            
+            const start = currentIndex;
+            const end = Math.min(start + rowsPerPage, results.length);
+            
+            for (let i = start; i < end; i++) {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = i + 1;
+                row.insertCell(1).textContent = new Date().toLocaleString();
+                row.insertCell(2).textContent = "снятие ВАХ";
+            }
+            
+            const total = results.length;
+            const controls = document.getElementById('tableControls');
+            
+            if (total > rowsPerPage) {
+                controls.style.display = 'flex';
+                const slider = document.getElementById('tableSlider');
+                slider.max = total - rowsPerPage;
+                slider.value = currentIndex;
+                
+                let info = document.getElementById('tableInfo');
+                if (!info) {
+                    info = document.createElement('div');
+                    info.id = 'tableInfo';
+                    info.style.marginTop = '10px';
+                    info.style.textAlign = 'center';
+                    controls.appendChild(info);
+                }
+                info.textContent = `${currentIndex + 1} - ${Math.min(currentIndex + rowsPerPage, total)} из ${total}`;
+                
+                slider.oninput = function(e) {
+                    currentIndex = parseInt(e.target.value);
+                    renderTable(results);
+                };
+            } else {
+                controls.style.display = 'none';
+            }
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            const allResults = points.map(p => [p.x, p.y]);
+            renderTable(allResults);
+        }
+        
+        async function waitResult() {
+            while (true) {
+                const resp = await fetch('/get_result');
+                const data = await resp.json();
+                if (data.data) return data.data;
+                await new Promise(r => setTimeout(r, 500));
+            }
+        }
+        
+        function updateGraph() {
+            const xValues = points.map(p => p.x);
+            const yValues = points.map(p => p.y);
+            
+            const trace = {
+                x: xValues,
+                y: yValues,
+                mode: 'lines+markers',
+                type: 'scatter',
+                line: { color: '#2d3dcc', width: 2 },
+                marker: { color: '#FF0000', size: 4 }
+            };
+            
+            const layout = {
+                xaxis: { title: 'Voltage (V)' },
+                yaxis: { title: 'Current (А)' },
+                margin: { t: 30, r: 30, b: 40, l: 60 },
+                plot_bgcolor: '#fff',
+                paper_bgcolor: '#fff'
+            };
+            
+            Plotly.newPlot('graphic', [trace], layout, { responsive: true });
+        }
+        
+        updateGraph();
+    </script>
+</body>
+</html>

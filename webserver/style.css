@@ -97,3 +97,8 @@ button {
     border: none;
     cursor: pointer;
 }
+
+#tableSlider {
+    -webkit-appearance: slider-vertical;
+    width: 20px;
+}
