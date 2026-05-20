@@ -189,7 +189,9 @@ class RemoteThread(QThread):
             status, task = self.interface.get_task()
             if status:
                 self.logging.emit('Данные получены.')
+                self.logging.emit(f'{task}')
                 result = self.parent.parent.man.conn.impact(task)
+                self.logging.emit(f'{result}')
                 status = self.interface.send_result(result)
                 if status:
                     self.logging.emit('Результат отправлен.')

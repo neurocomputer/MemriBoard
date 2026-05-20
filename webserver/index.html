@@ -14,23 +14,19 @@
             <div>
                 <div id="graphic" style="border:2px solid #000;"></div>
             </div>
-            <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <div class="right-panel">
                 <div>
-                    <div>
-                        <button type="button" onclick="read()">СНЯТЬ ВАХ</button>
-                    </div>
-                    <div>
-                        <table id="dataTable">
-                            <thead>
-                                <tr><th>№</th><th>Время</th><th>Действие</th></tr>
-                            </thead>
-                            <tbody id="pointsTable"></tbody>
-                        </table>
-                    </div>
+                    <button type="button" id="startBtn" onclick="startMeasurement()">СНЯТЬ ВАХ</button>
                 </div>
-                <div id="tableControls" style="display: none; height: 300px;">
-                    <div style="writing-mode: vertical-lr; height: 100%;">
-                        <input type="range" id="tableSlider" min="0" max="0" value="0" step="1" style="height: 100%; width: 20px;">
+                <div class="table-wrapper">
+                    <table id="dataTable">
+                        <thead>
+                            <tr><th>№</th><th>Время</th><th>Действие</th></tr>
+                        </thead>
+                        <tbody id="pointsTable"></tbody>
+                    </table>
+                    <div id="tableControls" style="display: none;">
+                        <input type="range" id="tableSlider" min="0" max="0" value="0" step="1">
                     </div>
                 </div>
             </div>
@@ -40,46 +36,50 @@
     <script>
         let points = [];
         let currentIndex = 0;
+        let isMeasuring = false;
         const rowsPerPage = 10;
+        const startBtn = document.getElementById('startBtn');
 
-        async function read() {
-            const tbody = document.getElementById('pointsTable');
-            tbody.innerHTML = '';
+        async function startMeasurement() {
+            if (isMeasuring) return;
+            
+            isMeasuring = true;
+            startBtn.disabled = true;
+            startBtn.textContent = 'ИЗМЕРЕНИЕ...';
+            
             points = [];
             currentIndex = 0;
             updateGraph();
+            renderTable([]);
             
-            const resp = await fetch('iv-curve.txt');
-            const text = await resp.text();
-            const lines = text.trim().split('\n');
-            const allResults = [];
+            await fetch('/start_measurement', {method: 'POST'});
+            getNextResult();
+        }
+        
+        async function getNextResult() {
+            const resp = await fetch('/get_result');
+            const data = await resp.json();
             
-            for (const line of lines) {
-                if (!line.trim()) continue;
-                const v = line.split(',').map(Number);
-                
-                await fetch('/put_task', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        mode_flag: v[0] || 7,
-                        vol: v[1] || 0,
-                        t_ms: v[2] || 0,
-                        t_us: v[3] || 0,
-                        sign: v[4] || 0,
-                        id: v[5] || 0,
-                        wl: v[6] || 0,
-                        bl: v[7] || 0
-                    })
+            if (data.data) {
+                points.push({
+                    num: points.length + 1,
+                    time: new Date().toLocaleString(),
+                    x: data.data.voltage,
+                    y: data.data.current
                 });
+                updateGraph();
+                renderTable(points);
+                getNextResult();
+            } else {
+                const statusResp = await fetch('/check_status');
+                const status = await statusResp.json();
                 
-                const result = await waitResult();
-                if (result) {
-                    points.push({x: result[0], y: result[1]});
-                    points.sort((a,b) => a.x - b.x);
-                    updateGraph();
-                    allResults.push(result);
-                    renderTable(allResults);
+                if (!status.is_processing) {
+                    isMeasuring = false;
+                    startBtn.disabled = false;
+                    startBtn.textContent = 'СНЯТЬ ВАХ';
+                } else {
+                    setTimeout(getNextResult, 500);
                 }
             }
         }
@@ -93,18 +93,17 @@
             
             for (let i = start; i < end; i++) {
                 const row = tbody.insertRow();
-                row.insertCell(0).textContent = i + 1;
-                row.insertCell(1).textContent = new Date().toLocaleString();
+                row.insertCell(0).textContent = results[i].num;
+                row.insertCell(1).textContent = results[i].time;
                 row.insertCell(2).textContent = "снятие ВАХ";
             }
             
-            const total = results.length;
             const controls = document.getElementById('tableControls');
             
-            if (total > rowsPerPage) {
+            if (results.length > rowsPerPage) {
                 controls.style.display = 'flex';
                 const slider = document.getElementById('tableSlider');
-                slider.max = total - rowsPerPage;
+                slider.max = results.length - rowsPerPage;
                 slider.value = currentIndex;
                 
                 let info = document.getElementById('tableInfo');
@@ -115,7 +114,7 @@
                     info.style.textAlign = 'center';
                     controls.appendChild(info);
                 }
-                info.textContent = `${currentIndex + 1} - ${Math.min(currentIndex + rowsPerPage, total)} из ${total}`;
+                info.textContent = `${currentIndex + 1} - ${Math.min(currentIndex + rowsPerPage, results.length)} из ${results.length}`;
                 
                 slider.oninput = function(e) {
                     currentIndex = parseInt(e.target.value);
@@ -123,21 +122,6 @@
                 };
             } else {
                 controls.style.display = 'none';
-            }
-        }
-
-        function changePage(delta) {
-            currentPage += delta;
-            const allResults = points.map(p => [p.x, p.y]);
-            renderTable(allResults);
-        }
-        
-        async function waitResult() {
-            while (true) {
-                const resp = await fetch('/get_result');
-                const data = await resp.json();
-                if (data.data) return data.data;
-                await new Promise(r => setTimeout(r, 500));
             }
         }
         

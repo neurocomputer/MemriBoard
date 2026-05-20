@@ -87,5 +87,14 @@ def get_result():
         return jsonify({"data": None})
     return jsonify({"data": results.pop()})
 
+@server.route('/clean_all', methods=['POST'])
+def clean_all():
+    """
+    Очистить сервер
+    """
+    tasks.clear()
+    results.clear()
+    return jsonify({"status": "ok"})
+
 if __name__ == '__main__':
     server.run(host='127.0.0.1', port=12345)

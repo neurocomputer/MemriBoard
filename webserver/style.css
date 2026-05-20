@@ -11,7 +11,7 @@ table {
 
 thead, tbody, tr {
     display: table;
-    width: 100%;
+    width: 90%;
     table-layout: fixed;
 }
 
@@ -40,7 +40,9 @@ th, td {
 .container {
     display: flex;
     width: 100%;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px;
 }
 
 .container > div:first-child {
@@ -48,29 +50,42 @@ th, td {
     width: 60%;
 }
 
-.container > div:first-child img {
-    width: 100%;
-    height: auto;
-}
-
-.container > div:last-child {
+.right-panel {
+    flex: 0 0 35%;
+    width: 40%;
     display: flex;
     flex-direction: column;
-    flex: 0 0 30%;
-    width: 30%;
+    gap: 10px;
+}
+
+.table-wrapper {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+}
+
+.table-wrapper table {
+    flex: 1;
+}
+
+#tableControls {
+    display: none;
+    flex-direction: column;
     align-items: center;
     gap: 10px;
 }
 
-.container > div:last-child > div:last-child {
-    width: 100%;
-    flex: 1;
+#tableSlider {
+    -webkit-appearance: slider-vertical;
+    width: 25px;
+    height: 300px;
+    transform: scaleY(-1);
 }
 
 #graphic {
     display: block;
     width: 100%;
-    height: auto;
     background-color: #fff;
 }
 
@@ -98,7 +113,7 @@ button {
     cursor: pointer;
 }
 
-#tableSlider {
-    -webkit-appearance: slider-vertical;
-    width: 20px;
+button:disabled {
+    background-color: #666;
+    cursor: not-allowed;
 }
