@@ -5,7 +5,8 @@ class RemoteConnect():
     uri: str
 
     def __init__(self):
-        self.uri = 'http://127.0.0.1:12345'
+        #self.uri = 'http://127.0.0.1:12345'
+        self.uri = 'http://u3521007.isp.regruhosting.ru/'
 
     def connect(self, address):
         """
@@ -35,12 +36,15 @@ class RemoteConnect():
 
     def check_data(self, mode='result'):
         status = False
+        print(self.uri + '/check_tasks_storage')
         try:
             if mode=='result':
                 response = requests.get(self.uri + '/check_results_storage')
             elif mode =='task':
                 response = requests.get(self.uri + '/check_tasks_storage')
             data = response.json()
+            
+            print(data)
             result = data.get('status')
             if result == 'ok':
                 status = True

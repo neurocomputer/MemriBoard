@@ -39,12 +39,15 @@ class Settings(QDialog):
         self.ui.button_connect.clicked.connect(self.connect)
         self.ui.button_disconnect.clicked.connect(self.disconnect)
         # заполнение параметров
-        self.uri = '127.0.0.1:12345'
-        self.ui.lineedit_uri.setText('127.0.0.1:12345')
+        #self.uri = '127.0.0.1:12345'
+        self.uri = 'http://u3521007.isp.regruhosting.ru/'
+        #self.ui.lineedit_uri.setText('127.0.0.1:12345')
+        self.ui.lineedit_uri.setText('http://u3521007.isp.regruhosting.ru/')
         self.fill_settings()
 
     def connect(self):
-        self.uri = 'http://' + self.ui.lineedit_uri.text()
+        #self.uri = 'http://' + self.ui.lineedit_uri.text()
+        self.uri = self.ui.lineedit_uri.text()
         try:
             self.ui.text_log.append(f'Подключение к {self.uri}')
             response = requests.get(self.uri + '/ping')
