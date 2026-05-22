@@ -40,9 +40,9 @@ class Settings(QDialog):
         self.ui.button_disconnect.clicked.connect(self.disconnect)
         # заполнение параметров
         #self.uri = '127.0.0.1:12345'
-        self.uri = 'http://u3521007.isp.regruhosting.ru/'
+        self.uri = 'http://u3521007.isp.regruhosting.ru'
         #self.ui.lineedit_uri.setText('127.0.0.1:12345')
-        self.ui.lineedit_uri.setText('http://u3521007.isp.regruhosting.ru/')
+        self.ui.lineedit_uri.setText('http://u3521007.isp.regruhosting.ru')
         self.fill_settings()
 
     def connect(self):
@@ -53,6 +53,8 @@ class Settings(QDialog):
             response = requests.get(self.uri + '/ping')
             if response.status_code == 200:
                 self.ui.text_log.append(f'Успех')
+                response = requests.post(self.uri + '/clean_all')
+                print("---->", response)
                 self.start_thread()
             else:
                 self.ui.text_log.append(f'Ошибка')
@@ -191,15 +193,19 @@ class RemoteThread(QThread):
                 continue
             status, task = self.interface.get_task()
             if status:
-                self.logging.emit('Данные получены.')
-                self.logging.emit(f'{task}')
-                result = self.parent.parent.man.conn.impact(task)
-                self.logging.emit(f'{result}')
-                status = self.interface.send_result(result)
-                if status:
-                    self.logging.emit('Результат отправлен.')
-                else:
-                    self.logging.emit('Результат не отправлен')
+                try:
+                    self.logging.emit('Данные получены.')
+                    self.logging.emit(f'{task}')
+                    result = self.parent.parent.man.conn.impact(task)
+                    self.logging.emit(f'{result}')
+                    status = self.interface.send_result(result)
+                    if status:
+                        self.logging.emit('Результат отправлен.')
+                    else:
+                        self.logging.emit('Результат не отправлен')
+                except:
+                    status = self.interface.send_result((0,0))
+                    self.logging.emit('Ошибка при emite таски')
             else:
                 self.logging.emit('Данные не получены.')
         self.logging.emit('Поток остановлен.')

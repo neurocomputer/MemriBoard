@@ -6,6 +6,7 @@ import os
 import csv
 import time
 import logging
+import random
 from logging.handlers import TimedRotatingFileHandler
 from threading import Lock
 from datetime import datetime
@@ -15,10 +16,13 @@ from flask import Flask, render_template, jsonify, request, Response, stream_wit
 
 BOARD_ADRES = '127.0.0.1:12345' # адрес сервера для работы с платой
 REQUESTS_TIMEOUT = 3 # таймаут в запросах requests
-TIME_SLEEP = 0.1 # пауза между запросом и ответом
+TIME_SLEEP = 10 # пауза между запросом и ответом
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 HISTORY_FILE = os.path.join(SCRIPT_DIR, 'history.csv')
 EXTERNAL_BOARD_SERVER = False
+
+tasks = []
+results = []
 
 application = Flask(__name__)
 server_lock = Lock()
@@ -103,66 +107,80 @@ def save_to_history(iv_data):
         else:
             writer.writerow([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Плата не подключена'])
 
-def get_point(command, request_id):
+def convert_command_to_task(command):
+    command = command.strip()
+    v = command.split(',')
+    task_data = {
+        'mode_flag': int(v[0]) if v[0] else 7,
+        'vol': int(v[1]) if len(v) > 1 else 0,
+        't_ms': int(v[2]) if len(v) > 2 else 0,
+        't_us': int(v[3]) if len(v) > 3 else 0,
+        'sign': int(v[4]) if len(v) > 4 else 0,
+        'id': int(v[5]) if len(v) > 4 else 0,
+        'wl': int(v[6]) if len(v) > 6 else 0,
+        'bl': int(v[7]) if len(v) > 7 else 0
+        }
+    return task_data
+
+def send_command(command, request_id):
     '''
-    Послать одну команду на плату
+    Послать команды на плату
     '''
     try:
-        command = command.strip()
-        v = command.split(',')
-        task_data = {
-            'mode_flag': int(v[0]) if v[0] else 7,
-            'vol': int(v[1]) if len(v) > 1 else 0,
-            't_ms': int(v[2]) if len(v) > 2 else 0,
-            't_us': int(v[3]) if len(v) > 3 else 0,
-            'sign': int(v[4]) if len(v) > 4 else 0,
-            'id': int(v[5]) if len(v) > 5 else 0,
-            'wl': int(v[6]) if len(v) > 6 else 0,
-            'bl': int(v[7]) if len(v) > 7 else 0
-        }
+        task_data = convert_command_to_task(command)
+        task_data['id'] = request_id
         try:
             if EXTERNAL_BOARD_SERVER:
                 requests.post(f'http://{BOARD_ADRES}/put_task', json=task_data, timeout=REQUESTS_TIMEOUT)
             else:
                 put_task(task_data)
         except Exception as e:
-            logger.error(f'Ошибка запроса таски: {e}')
-        time.sleep(TIME_SLEEP)
-        timeout = 1
+            logger.error(f'Ошибка отправки таски: {e}')
+    except Exception as e:
+            logger.error(f'Ошибка формирования таски: {e}')
+
+def get_result_command(command, request_id):
+    """
+    Получить результат команды
+    """
+    voltage = None
+    current = None
+    try:
+        task_data = convert_command_to_task(command)
+        task_data['id'] = request_id
+        timeout = 1000
         while timeout:
-            try:
-                if EXTERNAL_BOARD_SERVER:
-                    r = requests.get(f'http://{BOARD_ADRES}/get_result', timeout=REQUESTS_TIMEOUT)
-                else:
-                    r = get_result()
-                if r.status_code == 200:
-                    data = r.json()
-                    if data.get('data'):
-                        result = data['data']
-                        break
-            except Exception as e:
-                logger.error(f'Ошибка получения результата: {e}')
+            #if EXTERNAL_BOARD_SERVER:
+            #    r = requests.get(f'http://{BOARD_ADRES}/get_result', timeout=REQUESTS_TIMEOUT)
+            #    if r.status_code == 200:
+            #        data = r.json()
+            #        if data.get('data'):
+            #            result = data['data']
+            #            break
+            #else:
+            data = get_result()
+            result = data['data']
+            if result is not None:
+                break
             timeout -= 1
-        # if result[1] != request_id:
-        #     print(result[1], request_id)
-        #     raise ValueError
-        voltage = convert_dac_to_volt(12,
+        if result[1] == request_id:
+            voltage = convert_dac_to_volt(12,
                                         5,
-                                        task_data['vol'],
+                                        #task_data['vol'],
+                                        result[1], # напряжение берем из ответа
                                         sign=task_data['sign'])
-        resistance = convert_adc_to_res(11,
+            resistance = convert_adc_to_res(11,
                     3000,
                     0.3,
                     14,
                     5,
                     10,
                     result[0])
-        current = 0
-        if resistance != 0:
-            current = voltage/resistance
+            current = 0
+            if resistance != 0:
+                current = voltage/resistance
     except Exception as e:
-            logger.error(f'Ошибка получения точки: {e}')
-
+        logger.error(f'Ошибка получения ответа: {e}')            
     return voltage, current
 
 def get_history():
@@ -207,20 +225,21 @@ def measure_stream():
     """
     client_ip = request.remote_addr
     logger.info(f'Запрос на измерение от {client_ip}')
-
     # пинг
     if EXTERNAL_BOARD_SERVER:
         status = ping_board_server()
         if not status:
             logger.warning(f'Отклонён запрос от {client_ip} - плата не подключена')
             return jsonify({'error': 'Плата не подключена'}), 409
-
     # блокировка для очереди
     if not server_lock.acquire(blocking=False):
         logger.warning(f'Отклонён запрос от {client_ip} - сервер занят')
         return jsonify({'error': 'Сервер занят, подождите'}), 409
 
     iv_data = []
+    
+    tasks.clear()
+    results.clear()
 
     def generate():
         """
@@ -232,28 +251,28 @@ def measure_stream():
             file_path = os.path.join(SCRIPT_DIR, 'static', 'iv-curve.txt')
             with open(file_path, 'r') as file:
                 commands = file.readlines()
+            # отправляем все команды в очередь команд в надежде что их заберет плата
             for request_id, command in enumerate(commands):
-                try:
-                    voltage, current = get_point(command, request_id)
-                    iv_data.append((voltage, current))
-                    yield f"data: {voltage},{current}\n\n"
-                except Exception as e:
-                    logger.error(f'Ошибка посылки команды: {e}')
+                send_command(command, request_id)
+            time.sleep(TIME_SLEEP)
+            # запрашиваем все результаты
+            for request_id, command in enumerate(commands):
+                voltage, current = get_result_command()
+                iv_data.append((voltage, current))
+                yield f"data: {voltage},{current}\n\n"
         except Exception as e:
             logger.error(f'Ошибка снятия ВАХ для {client_ip}: {e}')
         finally:
             yield f"data: DONE\n\n"
             save_to_history(iv_data)
             server_lock.release()
-    
+
     response = Response(stream_with_context(generate()), mimetype='text/event-stream')
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['X-Accel-Buffering'] = 'no'  # Отключаем буферизацию nginx
     return Response(generate(), mimetype='text/event-stream')
 
-############################## Эндпоинты сервера
-tasks = []
-results = []
+############################## Эндпоинты сервера обмена данными
 
 def put_task(data):
     """
@@ -284,7 +303,7 @@ def get_task():
     """
     if len(tasks) == 0:
         return jsonify({"data": None})
-    return jsonify({"data": tasks.pop()})
+    return jsonify({"data": tasks.pop(0)})
 
 @application.route('/put_result', methods=['POST'])
 def put_result():
@@ -301,7 +320,7 @@ def get_result():
     """
     if len(results) == 0:
         return {"data": None}
-    return {"data": results.pop()}
+    return {"data": results.pop(0)}
 
 @application.route('/clean_all', methods=['POST'])
 def clean_all(): 
@@ -313,4 +332,4 @@ def clean_all():
     return jsonify({"status": "ok"})
 
 if __name__ == '__main__':
-    application.run(host='0.0.0.0', debug=False, threaded=True)
+    application.run(host='127.0.0.1', debug=False, threaded=True)
