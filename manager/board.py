@@ -406,6 +406,7 @@ class Connector():
                 # time.sleep(55/1000)
             # режим симулятор
             elif self.cb_type == 'simulator':
+                print(task)
                 task_id = task["id"]
                 # если выбрали систему комманд для сигнальной платы
                 #todo: возможно логику нужно переделать, пока не понятно

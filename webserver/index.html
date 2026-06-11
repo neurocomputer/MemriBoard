@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="head">
+        <img src="logo.svg" alt="Логотип">
+    </div>
+    <div class="body">
+        <div class="container">
+            <div>
+                <div id="graphic" style="border:2px solid #000;"></div>
+            </div>
+            <div class="right-panel">
+                <div>
+                    <button type="button" id="startBtn" onclick="startMeasurement()">СНЯТЬ ВАХ</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="dataTable">
+                        <thead>
+                            <tr><th>№</th><th>Время</th><th>Действие</th></tr>
+                        </thead>
+                        <tbody id="pointsTable"></tbody>
+                    </table>
+                    <div id="tableControls" style="display: none;">
+                        <input type="range" id="tableSlider" min="0" max="0" value="0" step="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let points = [];
+        let currentIndex = 0;
+        let isMeasuring = false;
+        const rowsPerPage = 10;
+        const startBtn = document.getElementById('startBtn');
+
+        async function startMeasurement() {
+            if (isMeasuring) return;
+            
+            isMeasuring = true;
+            startBtn.disabled = true;
+            startBtn.textContent = 'ИЗМЕРЕНИЕ...';
+            
+            points = [];
+            currentIndex = 0;
+            updateGraph();
+            renderTable([]);
+            
+            await fetch('/start_measurement', {method: 'POST'});
+            getNextResult();
+        }
+        
+        async function getNextResult() {
+            const resp = await fetch('/get_result');
+            const data = await resp.json();
+            
+            if (data.data) {
+                points.push({
+                    num: points.length + 1,
+                    time: new Date().toLocaleString(),
+                    x: data.data.voltage,
+                    y: data.data.current
+                });
+                updateGraph();
+                renderTable(points);
+                getNextResult();
+            } else {
+                const statusResp = await fetch('/check_status');
+                const status = await statusResp.json();
+                
+                if (!status.is_processing) {
+                    isMeasuring = false;
+                    startBtn.disabled = false;
+                    startBtn.textContent = 'СНЯТЬ ВАХ';
+                } else {
+                    setTimeout(getNextResult, 500);
+                }
+            }
+        }
+
+        function renderTable(results) {
+            const tbody = document.getElementById('pointsTable');
+            tbody.innerHTML = '';
+            
+            const start = currentIndex;
+            const end = Math.min(start + rowsPerPage, results.length);
+            
+            for (let i = start; i < end; i++) {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = results[i].num;
+                row.insertCell(1).textContent = results[i].time;
+                row.insertCell(2).textContent = "снятие ВАХ";
+            }
+            
+            const controls = document.getElementById('tableControls');
+            
+            if (results.length > rowsPerPage) {
+                controls.style.display = 'flex';
+                const slider = document.getElementById('tableSlider');
+                slider.max = results.length - rowsPerPage;
+                slider.value = currentIndex;
+                
+                let info = document.getElementById('tableInfo');
+                if (!info) {
+                    info = document.createElement('div');
+                    info.id = 'tableInfo';
+                    info.style.marginTop = '10px';
+                    info.style.textAlign = 'center';
+                    controls.appendChild(info);
+                }
+                info.textContent = `${currentIndex + 1} - ${Math.min(currentIndex + rowsPerPage, results.length)} из ${results.length}`;
+                
+                slider.oninput = function(e) {
+                    currentIndex = parseInt(e.target.value);
+                    renderTable(results);
+                };
+            } else {
+                controls.style.display = 'none';
+            }
+        }
+        
+        function updateGraph() {
+            const xValues = points.map(p => p.x);
+            const yValues = points.map(p => p.y);
+            
+            const trace = {
+                x: xValues,
+                y: yValues,
+                mode: 'lines+markers',
+                type: 'scatter',
+                line: { color: '#2d3dcc', width: 2 },
+                marker: { color: '#FF0000', size: 4 }
+            };
+            
+            const layout = {
+                xaxis: { title: 'Voltage (V)' },
+                yaxis: { title: 'Current (А)' },
+                margin: { t: 30, r: 30, b: 40, l: 60 },
+                plot_bgcolor: '#fff',
+                paper_bgcolor: '#fff'
+            };
+            
+            Plotly.newPlot('graphic', [trace], layout, { responsive: true });
+        }
+        
+        updateGraph();
+    </script>
+</body>
+</html>

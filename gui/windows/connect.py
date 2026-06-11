@@ -47,7 +47,7 @@ class ConnectDialog(QDialog):
         self.update_crossbar_list()
         self.update_board_list()
         self.on_combo_board_type_changed()
-        self.ui.edit_server.setText('127.0.0.1:12345')
+        self.ui.edit_server.setText('http://u3521007.isp.regruhosting.ru')
         # блокировка выбора плат
         self.ui.combo_board_type.setDisabled(self.parent.man.get_meta_info()["lock_board_type"])
 
@@ -192,12 +192,13 @@ class ConnectDialog(QDialog):
         Пинг сервера
         """
         url_raw = self.ui.edit_server.text()
-        if url_raw.startswith("http://"):
-            url_raw = url_raw.replace("http://","")
-        if len(url_raw.split(":")) == 2:
-            url = 'http://' + url_raw + '/ping'
-        else:
-            url = 'http://' + url_raw + ':12345/ping' # http://172.19.0.1:12345/ping
+        # if url_raw.startswith("http://"):
+        #     url_raw = url_raw.replace("http://","")
+        # if len(url_raw.split(":")) == 2:
+        #     url = 'http://' + url_raw + '/ping'
+        # else:
+        #     url = 'http://' + url_raw + ':12345/ping' # http://172.19.0.1:12345/ping
+        url = url_raw + '/ping'
         try:
             response = requests.get(url, timeout=100) # todo: разобраться с таймаутом
             if response.status_code == 200:

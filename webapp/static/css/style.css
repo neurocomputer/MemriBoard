@@ -1,0 +1,200 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 15px;
+    background: #f5f5f5;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    height: 50px;
+    width: auto;
+}
+
+h1 {
+    font-size: 1.4rem;
+    margin: 0;
+    flex: 1;
+}
+
+/* Main content */
+.main {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.graph-area {
+    flex: 2;
+    min-width: 280px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.history-area {
+    flex: 1;
+    min-width: 250px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Plot container */
+.plot-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+#plot {
+    width: 100%;
+    height: 400px;
+}
+
+/* Plotly toolbar fix */
+.modebar-container {
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 10 !important;
+}
+
+.modebar {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-radius: 5px !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Button */
+button {
+    padding: 12px 24px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background 0.3s;
+    width: 100%;
+    max-width: 300px;
+}
+
+button:hover:not(:disabled) {
+    background: #0056b3;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #6c757d;
+}
+
+/* Error message */
+.error {
+    color: red;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    padding: 8px;
+    background: #ffe6e6;
+    border-radius: 5px;
+    display: none;
+}
+
+.error.show {
+    display: block;
+}
+
+/* History table */
+.history-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background: #f0f0f0;
+    position: sticky;
+    top: 0;
+}
+
+.loading {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+}
+
+/* Mobile adaptation */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    h1 {
+        font-size: 1.1rem;
+    }
+    
+    #plot {
+        height: 300px;
+    }
+    
+    .modebar-container {
+        top: 5px !important;
+        right: 5px !important;
+    }
+    
+    .modebar {
+        transform: scale(0.8) !important;
+    }
+    
+    th, td {
+        padding: 6px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    #plot {
+        height: 250px;
+    }
+    
+    .modebar {
+        transform: scale(0.7) !important;
+    }
+    
+    .history-container {
+        max-height: 300px;
+    }
+}

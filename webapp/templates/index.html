@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ВАХ мемристора</title>
+    
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="header">
+        <!-- <img src="/static/logo.svg" class="logo" alt="Logo" onerror="this.style.display='none'">-->
+        <h1>Мемристоры в ННГУ им. Н.И. Лобачевского</h1>
+    </div>
+    
+    <div class="main">
+        <div class="graph-area">
+            <div class="plot-container">
+                <div id="plot"></div>
+            </div>
+            <button id="measureBtn">Снять ВАХ</button>
+            <div id="errorMsg" class="error"></div>
+        </div>
+        
+        <div class="history-area">
+            <h3>История запросов</h3>
+            <div class="history-container">
+                <table id="historyTable">
+                    <thead>
+                        <tr><th>Время</th><th>Запрос</th></tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="2" class="loading">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Для получения большей информации напишите на почту: </p>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

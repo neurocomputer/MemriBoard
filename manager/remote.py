@@ -5,7 +5,8 @@ class RemoteConnect():
     uri: str
 
     def __init__(self):
-        self.uri = 'http://127.0.0.1:12345'
+        #self.uri = 'http://127.0.0.1:12345'
+        self.uri = 'http://u3521007.isp.regruhosting.ru'
 
     def connect(self, address):
         """
@@ -15,7 +16,7 @@ class RemoteConnect():
             address = '127.0.0.1:12345'
         status = False
         try:
-            self.uri = f'http://{address}'
+            #self.uri = f'http://{address}'
             response = requests.get(self.uri + '/ping')
             if response.status_code == 200:
                 status = True
@@ -35,12 +36,15 @@ class RemoteConnect():
 
     def check_data(self, mode='result'):
         status = False
+        print(self.uri + '/check_tasks_storage')
         try:
             if mode=='result':
                 response = requests.get(self.uri + '/check_results_storage')
             elif mode =='task':
                 response = requests.get(self.uri + '/check_tasks_storage')
             data = response.json()
+            
+            print(data)
             result = data.get('status')
             if result == 'ok':
                 status = True
@@ -69,6 +73,7 @@ class RemoteConnect():
             if response.status_code == 200:
                 data = response.json()
                 task = data.get('data', [])
+                print(task)
                 status = True
         except Exception as e:
             print(f'RemoteConnect.get_task: {e}')
