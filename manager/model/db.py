@@ -11,7 +11,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sess
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound, MultipleResultsFound
 from datetime import datetime
 from typing import Optional, List
-import pgembed as pg
 from manager.service.saves import results_from_bytes
 # from manager.service.global_settings import DB_PATH
 
@@ -136,6 +135,7 @@ class DBOperate():
             elif base == 'postgress':
                 # поднятие сервера
                 data_dir = os.path.join(os.getcwd(), 'postgress')
+                import pgembed as pg
                 server = pg.get_server(data_dir)
                 uri = server.get_uri()
                 # создание базы, если отсутствует
