@@ -96,7 +96,7 @@ def plot_input_signal(parent,
         ax = figure.add_subplot(111)
         ax.plot(result)
         ax.set_ylabel('Voltage, V')
-        ax.set_xlabel('Time, mcs')
+        ax.set_xlabel('Time, μs')
         ax.grid(True, linestyle='--')
         if not shadow:
             plt.show()
@@ -206,10 +206,10 @@ def plot_with_save(parent,
             plt.xlabel('Pulse count')
         else:
             plt.plot(result_stem)
-            plt.xlabel('Time, mcs')
+            plt.xlabel('Time, μs')
     else:
         plt.plot(result_plot)
-        plt.xlabel('Time, mcs')
+        plt.xlabel('Time, μs')
     plt.ylabel('Voltage, V')
     plt.grid(True, linestyle='--')
     plt.tight_layout()

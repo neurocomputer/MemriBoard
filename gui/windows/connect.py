@@ -82,7 +82,7 @@ class ConnectDialog(QDialog):
         edit_com_name = self.ui.edit_com_name.text()
         # адрес COM порта
         if edit_com_name: # адрес введен вручную
-            self.com_port = combo_com_name
+            self.com_port = edit_com_name
         else: # адрес в списке
             self.com_port = combo_com_name
 
