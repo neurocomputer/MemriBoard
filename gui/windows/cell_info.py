@@ -44,7 +44,7 @@ class CellInfo(QDialog):
         if self.parent.man.board_type == 'offline' or self.parent.coordinate_error:
             self.ui.button_new_exp.setEnabled(False)
             self.ui.button_read_one_cells.setEnabled(False)
-            self.ui.button_ext.connection.setEnabled(False)
+            self.ui.button_ext_connection.setEnabled(False)
 
     def change_language(self):
         """
