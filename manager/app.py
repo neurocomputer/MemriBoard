@@ -83,10 +83,6 @@ class Application():
         # другие нужные подготовки
         self.menu = menu
         self.db = DBOperate(parent=self)
-        status_db_connect = self.db.db_connect('app.__init__()')
-        if not status_db_connect:
-            assert 0 # нет подключения к БД
-        self.db.db_disconnect('app.__init__()')
 
     def read_settings(self) -> None:
         """
