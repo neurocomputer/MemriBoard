@@ -16,9 +16,9 @@ import numpy as np
 from numpy import inf
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QShortcut
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu
 from PyQt5.QtGui import QColor, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
 matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
@@ -36,6 +36,7 @@ from gui.windows.settings import Settings
 from gui.windows.history import History
 from gui.windows.requests import RequestsList
 from gui.windows.terminal import Terminal
+from gui.windows.filter import Filter
 from gui.windows.testing import Testing
 from gui.windows.map import Map
 from gui.windows.cb_info import CbInfo
@@ -43,7 +44,9 @@ from gui.windows.rram import Rram
 from gui.windows.new_ann import NewAnn
 from gui.windows.wait import Wait
 from gui.windows.math import Math
-from gui.src import show_choose_window, show_warning_messagebox, snapshot
+from gui.windows.snapshot import Snapshot
+from gui.windows.help import Help
+from gui.src import show_choose_window, show_warning_messagebox, change_src_language
 
 class Window(QMainWindow):
     """
@@ -53,8 +56,9 @@ class Window(QMainWindow):
     man: Manager # менеджер работы с платой
     GUI_PATH = os.path.join("gui","uies","crossbar.ui")
     all_resistances: list # все сопротивления для раскраски
-    snapshot = None # для кнопки снимок
+    snapshot_dialog = None # для кнопки снимок
     close_modal_flag: bool = False # главное окно закрывает модальное окно
+    lang_pack: dict
 
     all_results_progressed = 0
     number_results_wait = 0
@@ -78,6 +82,7 @@ class Window(QMainWindow):
     requests_dialog: RequestsList
     history_dialog: History
     terminal_dialog: Terminal
+    filter_dialog: Filter
     testing_dialog: Testing
     map_dialog: Map
     cb_info_dialog: CbInfo
@@ -85,9 +90,13 @@ class Window(QMainWindow):
     new_ann_dialog: NewAnn
     wait_dialog: Wait
     math_dialog = Math
+    help_dialog: Help = None
     opener: str = ''
     extra = []
     coordinate_error = False
+    lang_pack: dict
+    filter_rmin = None
+    filter_rmax = None
 
     protected_modes: list = ['blank', # защищенные от удаления и перезаписи файлы
                              'endurance',
@@ -112,6 +121,10 @@ class Window(QMainWindow):
         self.man.blank_type = 'mode_7'
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        # Меню с действиями и шорткатами
+        self.set_shortcuts()
+        # Смена языка
+        self.change_language()
         # параметры кроссбара
         self.ui.crossbar_progress.setVisible(False)
         # параметры таблицы
@@ -121,22 +134,81 @@ class Window(QMainWindow):
         self.ui.button_rram.clicked.connect(self.show_rram_dialog)
         self.ui.button_tests.clicked.connect(self.show_testing_dialog)
         self.ui.button_math.clicked.connect(self.show_math_dialog)
-        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot))
-        self.ui.button_net.clicked.connect(lambda: show_warning_messagebox('В процессе адаптации под открытый доступ!'))
+        self.ui.button_net.clicked.connect(lambda: show_warning_messagebox(parent=self, message=self.lang_pack.get("not_done")))
+        self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
-        # хоткей
-        shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        shortcut.activated.connect(self.show_terminal_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
-        shortcut.activated.connect(self.show_crossbar_weights_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+I"), self)
-        shortcut.activated.connect(self.show_cb_info_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+B"), self)
-        shortcut.activated.connect(self.show_new_ann_dialog)
-        shortcut = QShortcut(QKeySequence("Ctrl+U"), self)
-        shortcut.activated.connect(lambda: self.read_cell_all('crossbar'))
         # диалоговое окно подключения
         self.show_connect_dialog()
+        
+    def set_shortcuts(self):
+        """
+        Настройка меню с шорткатами
+        """
+        self.tool_button_menu = QMenu(self)
+        self.tool_button_menu.addAction('', self.show_cb_info_dialog, QKeySequence("Ctrl+I"))
+        self.tool_button_menu.addAction('', self.show_terminal_dialog, QKeySequence("Ctrl+T"))
+        self.tool_button_menu.addAction('', self.show_filter_dialog, QKeySequence("Ctrl+F"))
+        self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
+        self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
+        self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_menu.addAction('', self.show_help, QKeySequence("F1"))
+        self.tool_button_actions_text = ['info', 
+                                         'terminal', 
+                                         'filter', 
+                                         'show_weights', 
+                                         'write', 
+                                         'read_all_btn',
+                                         'help']
+        self.ui.tool_button.setMenu(self.tool_button_menu)
+        self.ui.tool_button.setPopupMode(2)
+
+    def read_language_json(self, window: str):
+        """
+        Прочитать языковые настройки для окна
+        """
+        if self.man.language.lower() in ["english", "en"]:
+            filename = "english.json"
+        elif self.man.language.lower() in ["русский", "russian"]:
+            filename = "russian.json"
+        else:
+            filename = "english.json"
+        path = os.path.join(os.getcwd(), "manager", "service", "languages", filename)
+        if not os.path.isfile(path):
+            path = os.path.join(os.getcwd(), "manager", "service", "languages", "english.json")
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                localization_data = json.load(f)
+                data = localization_data[window]
+            if data:
+                return True, data
+            else:
+                return False, {}
+        except FileNotFoundError:
+            return False, {}
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.read_language_json("crossbar")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.button_rram.setText(self.lang_pack.get("rram"))
+            self.ui.button_math.setText(self.lang_pack.get("math"))
+            self.ui.button_net.setText(self.lang_pack.get("ann"))
+            self.ui.button_tests.setText(self.lang_pack.get("tests"))
+            self.ui.button_snapshot.setText(self.lang_pack.get("snapshot"))
+            self.ui.button_settings.setText(self.lang_pack.get("settings"))
+            for action, text in zip(self.tool_button_menu.actions(), self.tool_button_actions_text):
+                action.setText(self.lang_pack.get(text))
+            if self.help_dialog is not None:
+                self.help_dialog.change_language()
+            if self.snapshot_dialog is not None:
+                self.snapshot_dialog.change_language()
+            # Set language for Messages in src.py
+            _, src_lang_pack = self.read_language_json('src')
+            change_src_language(src_lang_pack)
+            
 
     # методы открытия диалоговых окон
 
@@ -157,12 +229,12 @@ class Window(QMainWindow):
         if self.math_dialog is Math:
             mode = ''
             if self.man.cb_type == "real":
-                if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c']:
+                if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c', 'rp5_rram_elbear_nano']:
                     mode = "no_crossbar"
                 if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
                     mode = "normal"
                 else:
-                    show_warning_messagebox("Плата не распознана!")
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("warn"))
             elif self.man.cb_type == "simulator":
                 mode = "normal"
             if mode != '':
@@ -191,6 +263,13 @@ class Window(QMainWindow):
         """
         self.terminal_dialog = Terminal(parent=self)
         self.terminal_dialog.show()
+
+    def show_filter_dialog(self) -> None:
+        """
+        Открыть фильтр
+        """
+        self.filter_dialog = Filter(parent=self)
+        self.filter_dialog.show()
 
     def show_requests_dialog(self) -> None:
         """
@@ -282,7 +361,7 @@ class Window(QMainWindow):
         """
         self.show_map_dialog()
         self.map_dialog.fill_table(mode='weights')
-        self.map_dialog.set_prompt("Веса кроссбара")
+        self.map_dialog.set_prompt(self.lang_pack.get("crossbar_weights"))
 
     def show_cb_info_dialog(self) -> None:
         """
@@ -306,6 +385,38 @@ class Window(QMainWindow):
         """
         self.wait_dialog = Wait(opener=opener, parent=self)
         self.wait_dialog.show()
+        
+    def show_snapshot(self) -> None:
+        """
+        Окно со снапшотом
+        """
+        if self.snapshot_dialog is None:
+            self.snapshot_dialog = Snapshot(parent=self, data=self.all_resistances)
+            self.snapshot_dialog.show()
+        else:
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.snapshot_dialog.safe_close()
+                self.show_snapshot()
+            else:
+                self.snapshot_dialog.data = self.all_resistances
+                self.snapshot_dialog.plot_matrix()
+                self.snapshot_dialog.activateWindow()     
+            
+    def show_help(self) -> None:
+        """
+        Окно со справкой
+        """
+        if self.help_dialog is None:
+            self.help_dialog = Help(self)
+            self.help_dialog.show()
+        else:
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.help_dialog.close()
+                self.show_help()
+            else:
+                self.help_dialog.activateWindow()
 
     # обработчики кнопок
 
@@ -400,7 +511,6 @@ class Window(QMainWindow):
         try:
             sum_values = np.sum(self.all_resistances)
             log_resistances = np.log10(self.all_resistances)
-            self.snapshot = np.zeros((self.man.row_num, self.man.col_num))
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
@@ -410,7 +520,7 @@ class Window(QMainWindow):
                     for i in range(len(cells)):
                         writable[int(cells[i][1])][int(cells[i][0])] = 1
                 else:
-                    show_warning_messagebox("Файл с рабочими ячейками некорректно сформирован!")
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("warn_1"))
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
@@ -427,16 +537,19 @@ class Window(QMainWindow):
                         else:
                             color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
                             color_value = int(color_value*255)
-                        if writable != []:
+                        if (self.filter_rmin is not None) and (self.filter_rmax is not None):
+                            if self.filter_rmin < int(self.ui.table_crossbar.item(i, j).text()) < self.filter_rmax:
+                                colors[i][j] = QColor(204, 255, 229)
+                            else:
+                                colors[i][j] = QColor(255, 204, 229)
+                        elif writable != []:
                             if writable[i][j] == 1:
                                 colors[i][j] = QColor(color_value, color_value, color_value)
                             else:
                                 colors[i][j] = QColor(0, 0, 0)
                         else:
                             colors[i][j] = QColor(color_value, color_value, color_value)
-                        self.snapshot[i][j] = color_value
         except ValueError:
-            #show_warning_messagebox("Не возможно корректно задать цвета!")
             pass
         else:
             if sum_values != 0:
@@ -445,6 +558,14 @@ class Window(QMainWindow):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
                         item.setBackground(colors[i][j])
+                        if colors[i][j].black() < 127:
+                            item.setForeground(QColor(0, 0, 0))
+                        else:
+                            item.setForeground(QColor(230, 230, 230))
+                # Updating snapshot window
+                if self.snapshot_dialog is not None:
+                    self.snapshot_dialog.data = self.all_resistances
+                    self.snapshot_dialog.plot_matrix()
 
     def read_cell(self, wl: int, bl: int) -> None:
         """
@@ -492,7 +613,7 @@ class Window(QMainWindow):
         """
         Прочитать все
         """
-        answer = show_choose_window(self, 'Прочитать все?')
+        answer = show_choose_window(self, self.lang_pack.get("read_all"))
         if answer:
             self.button_all_set_enabled(False)
             # окно
@@ -508,13 +629,10 @@ class Window(QMainWindow):
             send_ticket_all_thread = SendTicketAll(ticket, parent=self)
             send_ticket_all_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             send_ticket_all_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
+            def stop_experiment():  # Останавливаем эксперимент по закрытии окна Wait
+                send_ticket_all_thread.need_stop = True
+            self.wait_dialog.stop_experiment.connect(stop_experiment)
             send_ticket_all_thread.start()
-
-    def not_done(self) -> None:
-        """
-        Заглушка
-        """
-        show_warning_messagebox("Пока не реализовано")
 
     def read_ticket_from_disk(self, ticket_name: str) -> dict:
         """
@@ -555,7 +673,7 @@ class Window(QMainWindow):
             self.safe_close()
             event.accept()
         else:
-            answer = show_choose_window(self, 'Выходим?')
+            answer = show_choose_window(self, self.lang_pack.get("quit_now"))
             if answer:
                 self.safe_close()
                 event.accept()
@@ -566,6 +684,11 @@ class Window(QMainWindow):
         """
         Безопасное завершение
         """
+        # closing snapshot window
+        if self.snapshot_dialog is not None:
+            self.snapshot_dialog.safe_close() 
+        if self.help_dialog is not None:
+            self.help_dialog.close()
         # закрытие программы
         self.man.abort()
         self.man.close()
@@ -582,6 +705,7 @@ class SendTicketAll(QThread):
         QThread.__init__(self, parent)
         self.parent = parent
         self.ticket = ticket
+        self.need_stop = False
 
     def run(self):
         """
@@ -589,7 +713,11 @@ class SendTicketAll(QThread):
         """
         counter = 0
         for i in range(self.parent.man.col_num):
+            if self.need_stop:
+                break
             for j in range(self.parent.man.row_num):
+                if self.need_stop: 
+                    break
                 self.ticket["params"]["wl"] = i
                 self.ticket["params"]["bl"] = j
                 # временное решение, лучше переписать на потоки

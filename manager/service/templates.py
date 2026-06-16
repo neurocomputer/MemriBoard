@@ -10,8 +10,18 @@ fastest=0
 
 ; настройки журналирования
 [logging]
-; w-перезапись, a-добавление
-filemode=w
+
+; Application logging
+; logging levels: debug | info | warning | error | critical
+app_logging_level=WARNING
+; Whether to rewrite log file on start or create new each time
+app_log_rewrite_on_start=1
+
+; Database logging
+; logging levels: debug | info | warning | error | critical
+database_logging_level=WARNING
+; Whether to rewrite log file on start or create new each time
+database_log_rewrite_on_start=1
 
 ; настройки подключения
 [connector]
@@ -72,6 +82,8 @@ program_ticket=programming.json
 writable_cells=
 ; блокировка платы
 lock_board_type=0
+; локализация
+language=English
 
 ; бэкап датабазы
 [database]

@@ -18,12 +18,14 @@ class CellInfo(QDialog):
 
     GUI_PATH = os.path.join("gui","uies","cell_info.ui")
     history: list
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.setModal(True)
         # инфо
@@ -33,9 +35,25 @@ class CellInfo(QDialog):
         self.ui.button_read_one_cells.clicked.connect(self.read_one_cell)
         self.ui.button_history.clicked.connect(lambda: self.parent.show_history_dialog(mode="single"))
         self.ui.button_cancel.clicked.connect(self.close)
-        if self.parent.man.board_type == 'offline' or self.parent.coordinate_error == True:
+        if self.parent.man.board_type == 'offline' or self.parent.coordinate_error:
             self.ui.button_new_exp.setEnabled(False)
             self.ui.button_read_one_cells.setEnabled(False)
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("cell_info")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("cell_info"))
+            self.ui.label_bl.setText(self.lang_pack.get("bl"))
+            self.ui.label_wl.setText(self.lang_pack.get("wl"))
+            self.ui.label_resistance.setText(self.lang_pack.get("res"))
+            self.ui.button_read_one_cells.setText(self.lang_pack.get("update"))
+            self.ui.button_history.setText(self.lang_pack.get("history"))
+            self.ui.button_new_exp.setText(self.lang_pack.get("new_exp"))
+            self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
 
     def read_one_cell(self):
         """
@@ -59,15 +77,15 @@ class CellInfo(QDialog):
                         self.parent.man.vol_ref_adc,
                         current_adc)
         if adc_vol > 3.5: # todo: вынести 3.5 в константы
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("high_adc"))
 
     def fill_info(self) -> None:
         """
         Заполнение информации
         """
-        self.ui.label_bl.setText(f"BL = {self.parent.current_bl}")
-        self.ui.label_wl.setText(f"WL = {self.parent.current_wl}")
-        self.ui.label_resistance.setText(f"R = {self.parent.current_last_resistance} Ом")
+        self.ui.label_bl.setText(self.lang_pack.get("bl") + str(self.parent.current_bl))
+        self.ui.label_wl.setText(self.lang_pack.get("wl") + str(self.parent.current_wl))
+        self.ui.label_resistance.setText(self.lang_pack.get("res") + str(self.parent.current_last_resistance) + self.lang_pack.get("ohm"))
         _, mem_id = self.parent.man.db.get_memristor_id(self.parent.current_wl, self.parent.current_bl, self.parent.man.crossbar_id)
         _, tasks = self.parent.man.db.count_tasks_on_memristor_id(mem_id)
         self.ui.label_tasks.setText(f"Запросы = {tasks}")
