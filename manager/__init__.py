@@ -3,5 +3,5 @@
 Короткие ярлыки для функций преобразования
 """
 
-from manager.app import Application
-from manager.main import Manager
+from manager.app import Application  # noqa: F401
+from manager.main import Manager  # noqa: F401

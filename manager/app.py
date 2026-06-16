@@ -228,4 +228,3 @@ class Application():
                     except Exception:
                         pass
         return os.path.join(os.path.dirname(log_path), f'{keyword}.{last_name+1}.log')
-    

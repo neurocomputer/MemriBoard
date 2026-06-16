@@ -10,7 +10,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
-from gui.src import show_choose_window
+from gui.src import show_choose_window, show_warning_messagebox
 
 class ConnectDialog(QDialog):
     """
@@ -21,12 +21,14 @@ class ConnectDialog(QDialog):
     connect_flag: bool = False
     cb_serial: str
     com_port: str = ''
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         self.setModal(True)
         # обработки кнопок
         self.ui.button_update.clicked.connect(self.update_port_list)
@@ -45,6 +47,32 @@ class ConnectDialog(QDialog):
         self.on_combo_board_type_changed()
         # блокировка выбора плат
         self.ui.combo_board_type.setDisabled(self.parent.man.get_meta_info()["lock_board_type"])
+        # Предупреждаем, если изменились настройки в settings.ini
+        if self.parent.man.new_config_keys is not None:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get('new_settings') + '\n'.join(self.parent.man.new_config_keys))
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("connect")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.label.setText(self.lang_pack.get("crossbar"))
+            self.ui.button_new_crossbar.setText(self.lang_pack.get("new"))
+            self.ui.label_4.setText(self.lang_pack.get("serial"))
+            self.ui.label_5.setText(self.lang_pack.get("comm"))
+            self.ui.label_6.setText(self.lang_pack.get("bl"))
+            self.ui.label_7.setText(self.lang_pack.get("wl"))
+            self.ui.label_8.setText(self.lang_pack.get("crossbar_type"))
+            self.ui.label_2.setText(self.lang_pack.get("board"))
+            self.ui.label_com_promt.setText(self.lang_pack.get("com_port"))
+            self.ui.button_update.setText(self.lang_pack.get("update"))
+            self.ui.label_com_entry.setText(self.lang_pack.get("or_write"))
+            self.ui.button_connect.setText(self.lang_pack.get("connect"))
+            self.ui.button_settings.setText(self.lang_pack.get("settings"))
+            self.ui.button_quit.setText(self.lang_pack.get("quit"))
+            self.ui.label_status.setText(self.lang_pack.get("status"))
 
     def on_com_name_changed(self) -> None:
         """
@@ -54,7 +82,7 @@ class ConnectDialog(QDialog):
         edit_com_name = self.ui.edit_com_name.text()
         # адрес COM порта
         if edit_com_name: # адрес введен вручную
-            self.com_port = combo_com_name
+            self.com_port = edit_com_name
         else: # адрес в списке
             self.com_port = combo_com_name
 
@@ -137,6 +165,9 @@ class ConnectDialog(QDialog):
                       'rp5_fpga_python',
                       'rp5_fpga_c',
                       'elbear_nano',
+                      'elbear_multimode_WR',
+                      'elbear_multimode_MVM',
+                      'rp5_rram_elbear_nano',
                       'rp5_rram_python',
                       'rp5_rram_c']
         try:
@@ -164,14 +195,14 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
-        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano']:
+        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
-            self.ui.label_status.setText('Выберете порт для подключения!')
+            self.ui.label_status.setText(self.lang_pack.get("status_1"))
         else:
             self.show_com_settings_layout(False)
-            self.ui.label_status.setText('Выберете кроссбар и плату для работы!')
+            self.ui.label_status.setText(self.lang_pack.get("status"))
         self.update_window_size()
 
     def connect(self) -> None:
@@ -188,7 +219,7 @@ class ConnectDialog(QDialog):
             wl = self.edit_cb_wl.value()
             cb_type = self.ui.combo_cb_type.currentText()
             if not cb_comment:
-                self.ui.label_status.setText('Добавьте коммент!')
+                self.ui.label_status.setText(self.lang_pack.get("status_2"))
                 return
             # пытаемся создать новый
             status_add = self.parent.man.add_chip(serial = edit_cb_serial,
@@ -197,7 +228,7 @@ class ConnectDialog(QDialog):
                                                   col_num = wl,
                                                   cb_type = cb_type)
             if not status_add:
-                self.ui.label_status.setText('Ошибка добавления в БД! Возможно такое устройство уже есть!')
+                self.ui.label_status.setText(self.lang_pack.get("status_3"))
                 return
             # используем новый
             self.cb_serial = edit_cb_serial
@@ -205,7 +236,7 @@ class ConnectDialog(QDialog):
             # используем из списка
             self.cb_serial = combo_cb_serial
         else:
-            self.ui.label_status.setText('Выберете кроссбар!')
+            self.ui.label_status.setText(self.lang_pack.get("status_4"))
             return
         # выбираем чип
         status, _ = self.parent.man.use_chip(self.cb_serial)
@@ -221,21 +252,21 @@ class ConnectDialog(QDialog):
                     self.parent.ui.button_math.setEnabled(False)
                     self.accept_connet()
                 else:
-                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano']:
+                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
                     else:
                         connected_flag = self.parent.man.connect()
                     if connected_flag:
                         self.accept_connet()
                     else:
-                        message = f"К плате \"{combo_board_type}\" нет подключения!"
+                        message = self.lang_pack.get("board_error") + str(combo_board_type)
                         self.ui.label_status.setText(message)
             else:
                 connected_flag = self.parent.man.connect()
                 if connected_flag:
                     self.accept_connet()
                 else:
-                    self.ui.label_status.setText('Не могу создать симулятор!')
+                    self.ui.label_status.setText(self.lang_pack.get("status_5"))
         else:    
             self.ui.label_status.setText('Не могу получить данные из БД!')
 
@@ -267,7 +298,7 @@ class ConnectDialog(QDialog):
             self.parent.show() # показываем родительское окно
             event.accept()
         else:
-            answer = show_choose_window(self, 'Выходим?')
+            answer = show_choose_window(self, self.lang_pack.get("quit_now"))
             if answer:
                 self.parent.close_modal_flag = True
                 self.parent.close() # вызывает выход функцией родительского окна

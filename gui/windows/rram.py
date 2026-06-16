@@ -12,8 +12,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog, QAbstractItemView, QWidget
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 import matplotlib.pyplot as plt
-from gui.src import show_warning_messagebox, show_choose_window, snapshot
+from gui.src import show_warning_messagebox, show_choose_window
 from gui.windows.apply import ApplyExp
+from gui.windows.snapshot import Snapshot
 from manager.service import a2r
 
 def save_binary_string_to_file(binary_str: str, filename: str) -> None:
@@ -66,12 +67,14 @@ class Rram(QWidget):
     snapshot_binary: list # данные для записи
     raw_data: list # переменная для записи результатов
     start_thread: ApplyExp
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None: #+
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.ui.setWindowFlags(Qt.Window)
         # значения по умолчанию
@@ -89,7 +92,7 @@ class Rram(QWidget):
         # обработчики кнопок
         self.ui.button_apply_tresh.clicked.connect(self.apply_tresh)
         self.ui.button_read.clicked.connect(lambda: self.parent.read_cell_all('rram'))
-        self.ui.button_snapshot.clicked.connect(lambda: snapshot(self.snapshot_binary))
+        self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_save_bin.clicked.connect(self.save_bin)
         self.ui.button_load.clicked.connect(self.load_text)
         self.ui.button_set_0.clicked.connect(lambda: self.set_experiment(False))
@@ -100,6 +103,37 @@ class Rram(QWidget):
         self.ui.button_clear.clicked.connect(self.erase_all_cells)
         self.ui.button_interrupt.clicked.connect(self.interrupt)
         self.ui.combo_read_encoding.currentTextChanged.connect(self.binary_to_text)
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("rram")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.tabWidget.setTabText(0, self.lang_pack.get("read"))
+            self.ui.tabWidget.setTabText(1, self.lang_pack.get("write"))
+            self.ui.button_read.setText(self.lang_pack.get("read"))
+            self.ui.label_4.setText(self.lang_pack.get("threshold"))
+            self.ui.combo_tresh_type.setItemText(0, self.lang_pack.get("thres_type_1"))
+            self.ui.combo_tresh_type.setItemText(1, self.lang_pack.get("thres_type_2"))
+            self.ui.combo_tresh_type.setItemText(2, self.lang_pack.get("thres_type_3"))
+            self.ui.button_apply_tresh.setText(self.lang_pack.get("apply"))
+            self.ui.button_snapshot.setText(self.lang_pack.get("snapshot"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("rec_bits"))
+            self.ui.groupBox_2.setTitle(self.lang_pack.get("rec_data"))
+            self.ui.groupBox_4.setTitle(self.lang_pack.get("data_rec"))
+            self.ui.groupBox_5.setTitle(self.lang_pack.get("bits_rec"))
+            self.ui.button_save_bin.setText(self.lang_pack.get("save"))
+            self.ui.button_set_0.setText(self.lang_pack.get("write_0"))
+            self.ui.button_set_1.setText(self.lang_pack.get("write_1"))
+            self.ui.label_exp0_name.setText(self.lang_pack.get("pick_exp"))
+            self.ui.label_exp1_name.setText(self.lang_pack.get("pick_exp"))
+            self.ui.button_load.setText(self.lang_pack.get("load"))
+            self.ui.label_write_info.setText(self.lang_pack.get("bits_written"))
+            self.ui.button_write.setText(self.lang_pack.get("record"))
+            self.ui.button_clear.setText(self.lang_pack.get("clear"))
+            self.ui.button_interrupt.setText(self.lang_pack.get("interrupt"))
 
     def set_up_init_values(self) -> None: #+
         """
@@ -112,8 +146,8 @@ class Rram(QWidget):
         self.counter = 0
         self.ticket_image_name = "temp.png"
         self.data_for_plot_y = []
-        self.xlabel_text = 'Отсчеты'
-        self.ylabel_text = 'Сопротивление, Ом'
+        self.xlabel_text = self.lang_pack.get("counting")
+        self.ylabel_text = self.lang_pack.get("resistance")
         self.ones_writable = False
         self.all_done = False
         self.ones_done = False
@@ -175,20 +209,20 @@ class Rram(QWidget):
         Дамп памяти в бинарном виде
         """
         binary_string = "".join(str(x) for row in self.snapshot_binary for x in row)
-        save_file = QFileDialog.getExistingDirectory(self, "Выберите директорию для сохранения")
+        save_file = QFileDialog.getExistingDirectory(self, self.lang_pack.get("saving_dir"))
         if save_file:
             save_file = os.path.join(save_file, "rram.bin")
             save_binary_string_to_file(binary_string, save_file)
-            show_warning_messagebox(f'{save_file} сохранен!')
+            show_warning_messagebox(parent=self, message=save_file + self.lang_pack.get("saved"))
 
     def load_text(self) -> None: #+
         """
         Загрузка текста из файла в поле ввода
         """
         load_file, _ = QFileDialog.getOpenFileName(self,
-                                                   'Открыть файл',
+                                                   self.lang_pack.get("open_file"),
                                                    ".",
-                                                   "Текстовые файлы (*.txt)")
+                                                   self.lang_pack.get("text_file"))
         if load_file:
             with open(load_file, "r+", encoding='utf-8') as f:
                 text = f.read()
@@ -196,7 +230,7 @@ class Rram(QWidget):
             if text:
                 self.ui.text_write.insertPlainText(text)
             else:
-                show_warning_messagebox("Файл " + load_file + " пуст!")
+                show_warning_messagebox(parent=self, message=load_file + self.lang_pack.get("empty_file"))
 
     def text_to_binary(self) -> None:
         """
@@ -208,7 +242,7 @@ class Rram(QWidget):
             translation = ascii_to_binary(text)
         elif self.ui.combo_write_type.currentText() == "bits":
             translation = text
-        self.ui.label_write_info.setText(f'Задано {len(translation)} бит')
+        self.ui.label_write_info.setText(str(len(translation)) + self.lang_pack.get("bits_set"))
         self.binary = deepcopy(translation)
         cols = self.parent.man.col_num
         rows = self.parent.man.row_num
@@ -250,11 +284,11 @@ class Rram(QWidget):
         def double_click(current_row):
             if settable:
                 self.experiment_1 = self.parent.history_dialog.experiments[current_row]
-                show_warning_messagebox("Эксперимент для записи 1 выбран!")
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("exp_chosen"))
                 self.ui.label_exp1_name.setText(f'{self.experiment_1[2]}')
             else:
                 self.experiment_0 = self.parent.history_dialog.experiments[current_row]
-                show_warning_messagebox("Эксперимент для записи 0 выбран!")
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("exp_chosen"))
                 self.ui.label_exp0_name.setText(f'{self.experiment_0[2]}')
                 self.ui.button_clear.setEnabled(True)
             if self.experiment_1 is not None and self.experiment_0 is not None:
@@ -275,7 +309,7 @@ class Rram(QWidget):
         Запись нулей и единиц по кнопке Записать
         """
         self.set_up_init_values_exp()
-        message = "Будет перезаписано " + str(len(self.binary)) + " ячеек. Продолжить?"
+        message = str(len(self.binary)) + self.lang_pack.get("rewritten")
         answer = show_choose_window(self, message)
         if answer:
             wl = self.parent.man.col_num
@@ -319,7 +353,7 @@ class Rram(QWidget):
                 self.start_thread.finished_exp.connect(self.on_finished_exp)
                 self.start_thread.start()
             else:
-                show_warning_messagebox("Тикеты невозможно получить!")
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("tickets_unreachable"))
                 self.lock_buttons(True)
 
     def write_ones(self) -> None: #+
@@ -361,7 +395,7 @@ class Rram(QWidget):
             self.lock_buttons(False)
             self.start_thread.start()
         else:
-            show_warning_messagebox("Тикеты невозможно получить!")
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("tickets_unreachable"))
             self.lock_buttons(True)
 
     def erase_all_cells(self) -> None: #+
@@ -470,11 +504,11 @@ class Rram(QWidget):
         value = value.split(',')
         stop_reason = int(value[0])
         if stop_reason == 1 and self.all_done:
-            show_warning_messagebox("Переписано " + str(len(self.coordinates)) + " ячеек!")
+            show_warning_messagebox(parent=self, message=str(len(self.coordinates)) + self.lang_pack.get("rewritten_1"))
         elif stop_reason == 1 and self.ones_done:
-            show_warning_messagebox("Переписано " + str(len(self.binary)) + " ячеек!")
+            show_warning_messagebox(parent=self, message=str(len(self.binary)) + self.lang_pack.get("rewritten_1"))
         elif stop_reason == 2:
-            show_warning_messagebox("Запись прервана!")
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("recording_interrupted"))
             self.ones_writable = False
         # запись единиц
         if self.ones_writable:
@@ -509,6 +543,23 @@ class Rram(QWidget):
         self.ui.button_save_bin.setEnabled(state)
         self.ui.button_read.setEnabled(state)
         self.ui.button_interrupt.setEnabled(not state)
+        
+    def show_snapshot(self):
+        """
+        Окно со снапшотом
+        """
+        if self.parent.snapshot_dialog is None:
+            self.parent.snapshot_dialog = Snapshot(self.parent, self.snapshot_binary, mode='binary')
+            self.parent.snapshot_dialog.show()
+        else:
+            session_type = os.environ.get('XDG_SESSION_TYPE')
+            if session_type is not None and session_type == 'wayland':  # Workaround for wayland
+                self.parent.snapshot_dialog.safe_close()
+                self.show_snapshot()
+            else:
+                self.parent.snapshot_dialog.data = self.snapshot_binary
+                self.parent.snapshot_dialog.plot_matrix(mode='binary')
+                self.parent.snapshot_dialog.activateWindow()  
 
     def closeEvent(self, event):
         """
@@ -517,4 +568,7 @@ class Rram(QWidget):
         self.parent.opener = None
         self.parent.showNormal()
         self.set_up_init_values()
+        if self.parent.snapshot_dialog is not None:
+            self.parent.snapshot_dialog.data = self.parent.all_resistances
+            self.parent.snapshot_dialog.plot_matrix()
         event.accept()

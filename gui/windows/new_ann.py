@@ -35,8 +35,6 @@ class NewAnn(QDialog):
     target_resistances: list = []
     counter: int # счетчик для прогрессбара
     data_for_plot_y: list # данные для отрисовки (сопротивления)
-    xlabel_text: str = 'Отсчеты'
-    ylabel_text: str = 'Сопротивление, Ом'
     ticket_image_name: str = "temp.png"
     application_status: str = 'stop'
     ticket = None
@@ -46,6 +44,7 @@ class NewAnn(QDialog):
     written_weights: list = []
     not_written_weights: list = []
     map_thread: ApplyExp
+    lang_pack: dict
 
     # значения по умолчанию для сигнала записи
     PROG_COUNT = 3
@@ -62,6 +61,7 @@ class NewAnn(QDialog):
         self.mode = mode
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.setModal(True)
         # начальные значения
@@ -124,12 +124,35 @@ class NewAnn(QDialog):
         self.ui.button_random_weights.clicked.connect(self.generate_random_weights)
         self.ui.table_match.itemDoubleClicked.connect(self.cell_info)
 
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("new_ann")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.tabWidget.setTabText(0, self.lang_pack.get("weights"))
+            self.ui.groupBox_3.setTitle(self.lang_pack.get("resistances"))
+            self.ui.groupBox_4.setTitle(self.lang_pack.get("weights"))
+            self.ui.button_update_cells.setText(self.lang_pack.get("update"))
+            self.ui.button_load_good_cells.setText(self.lang_pack.get("choose_cells"))
+            self.ui.button_drop_cells.setText(self.lang_pack.get("clear"))
+            self.ui.button_choose_weights.setText(self.lang_pack.get("choose"))
+            self.ui.button_random_weights.setText(self.lang_pack.get("random"))
+            self.ui.label_3.setText(self.lang_pack.get("correction"))
+            self.ui.button_drop_weights.setText(self.lang_pack.get("clear"))
+            self.ui.label_4.setText(self.lang_pack.get("limit"))
+            self.ui.button_signal_parameters.setText(self.lang_pack.get("signal"))
+            self.ui.button_map_weights.setText(self.lang_pack.get("record"))
+            self.ui.button_cancel_map_weights.setText(self.lang_pack.get("interrupt"))
+            self.ui.button_download.setText(self.lang_pack.get("download"))
+
     def color_table_match(self):
         """
         окрашивание ячеек таблицы
         """
         for row in range(self.ui.table_match.rowCount()):
-            if self.ui.table_match.item(row, 6).text() == "записано" or self.ui.table_match.item(row, 6).text() == "подходит":
+            if self.ui.table_match.item(row, 6).text() == self.lang_pack.get("written") or self.ui.table_match.item(row, 6).text() == self.lang_pack.get("suitable"):
                 self.ui.table_match.item(row, 6).setBackground(QColor(0,255,0))
             else:
                 self.ui.table_match.item(row, 6).setBackground(QColor(255,0,0))
@@ -141,7 +164,10 @@ class NewAnn(QDialog):
         # получаем с интерфейса сопротивления
         res_min = self.ui.spinbox_r_min.value()
         res_max = self.ui.spinbox_r_max.value()
-        random_res = np.random.uniform(res_min, res_max, size=(self.parent.man.row_num*self.parent.man.col_num,))
+        if self.cells_coordinates_choosen:
+            random_res = np.random.uniform(res_min, res_max, size=(len(self.cells_coordinates_choosen),))
+        else:
+            random_res = np.random.uniform(res_min, res_max, size=(self.parent.man.row_num*self.parent.man.col_num,))
         if self.mode == 'matmul':
             random_weights = map(lambda x: self.parent.man.sum_gain/float(x), random_res)
         else:
@@ -236,7 +262,7 @@ class NewAnn(QDialog):
             except Exception as er: # pylint: disable=W0718
                 self.cells_coordinates_choosen = []
                 print('button_load_good_cells_clicked',er)
-                show_warning_messagebox('Не возможно загрузить ячейки или их нет!')
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("err_load"))
             self.update_good_cels()
 
     def update_good_cels(self): # +
@@ -247,14 +273,14 @@ class NewAnn(QDialog):
             for i, item in enumerate(self.cells_coordinates_all):
                 if item in self.cells_coordinates_choosen:
                     _, row = self.find_row_index_wl_bl_table_weight(item[0], item[1])
-                    self.ui.table_weights.setItem(row, 4, QTableWidgetItem('выбрана'))
+                    self.ui.table_weights.setItem(row, 4, QTableWidgetItem(self.lang_pack.get("chosen")))
                     # self.ui.table_weights.item(row, 4).setBackground(QtGui.QColor(0,255,0))
                 else:
                     _, row = self.find_row_index_wl_bl_table_weight(item[0], item[1])
-                    self.ui.table_weights.setItem(row, 4, QTableWidgetItem('не выбрана'))
+                    self.ui.table_weights.setItem(row, 4, QTableWidgetItem(self.lang_pack.get("not_chosen")))
         else:
             for i, item in enumerate(self.cells_coordinates_all):
-                self.ui.table_weights.setItem(i, 4, QTableWidgetItem('не задано'))
+                self.ui.table_weights.setItem(i, 4, QTableWidgetItem(self.lang_pack.get("unset")))
         self.ui.table_weights.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     def find_row_index_wl_bl_table_weight(self, wl, bl): # +
@@ -288,8 +314,8 @@ class NewAnn(QDialog):
         """
         bl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 4)
         wl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 5)
-        if bl_item == None or wl_item == None:
-            show_warning_messagebox('Отсутствуют координаты ячеек в таблице "Веса"')
+        if bl_item is None or wl_item is None:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("missing_coor"))
             self.parent.coordinate_error = True
             self.parent.extra = []
         else:
@@ -319,7 +345,7 @@ class NewAnn(QDialog):
                     self.weights_target_all = file.readlines()
                     status_open = True
                 except Exception as ex: # pylint: disable=W0718
-                    show_warning_messagebox(f'{ex}')
+                    show_warning_messagebox(parent=self, message=f'{ex}')
             if status_open:
                 try:
                     self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
@@ -330,7 +356,7 @@ class NewAnn(QDialog):
                             self.weights_target_all.remove(0.)
                     self.fill_table_match()
                 except Exception as ex: # pylint: disable=W0718
-                    show_warning_messagebox(f'{ex}')
+                    show_warning_messagebox(parent=self, message=f'{ex}')
 
     def fill_table_match(self): # +
         """
@@ -395,11 +421,11 @@ class NewAnn(QDialog):
             self.ui.table_match.setItem(row, 2, qtable_item)
             # Проверяем статус
             if res_min <= new_resistance <= res_max:
-                self.weights_status[i] = 'подходит'
-                self.ui.table_match.setItem(row, 6, QTableWidgetItem('подходит'))
+                self.weights_status[i] = self.lang_pack.get("suitable")
+                self.ui.table_match.setItem(row, 6, QTableWidgetItem(self.lang_pack.get("suitable")))
             else:
-                self.weights_status[i] = 'не подходит'
-                self.ui.table_match.setItem(row, 6, QTableWidgetItem('не подходит'))
+                self.weights_status[i] = self.lang_pack.get("not_suitable")
+                self.ui.table_match.setItem(row, 6, QTableWidgetItem(self.lang_pack.get("not_suitable")))
         self.update_weights_table_weights()
         # красим ячейки
         self.ui.color_table_match()
@@ -411,7 +437,7 @@ class NewAnn(QDialog):
         if self.weights_status:
             weights_target_all_new = []
             for i, weight in enumerate(self.weights_target_all):
-                if self.weights_status[i] == 'подходит':
+                if self.weights_status[i] == self.lang_pack.get("suitable"):
                     weights_target_all_new.append(weight)
             self.weights_target_all = copy.deepcopy(weights_target_all_new)
             self.fill_table_match()
@@ -483,7 +509,7 @@ class NewAnn(QDialog):
         """
         if self.weights_target_all:
             if len(self.cells_coordinates_all) >= len(self.weights_target_all):
-                if 'не подходит' not in list(self.weights_status.values()):
+                if self.lang_pack.get("not_suitable") not in list(self.weights_status.values()):
                     if self.mode == 'matmul':
                         self.target_cells_resistances = {}
                         row_position = 0
@@ -526,7 +552,7 @@ class NewAnn(QDialog):
                                 row_position += 1
                                 if len(writable) > 0:
                                     if writable[bl][wl] == 0:
-                                        self.ui.table_match.item(row_position-1, 6).setText("не рабочая")
+                                        self.ui.table_match.item(row_position-1, 6).setText(self.lang_pack.get("not_working"))
                                         self.ui.table_match.item(row_position-1, 6).setBackground(QColor(255,0,0))
                                     else:
                                         self.target_cells_resistances[(wl,bl)] = target_resistance
@@ -553,6 +579,8 @@ class NewAnn(QDialog):
                             qtable_item = QTableWidgetItem()
                             qtable_item.setData(0, closest_resistance)
                             self.ui.table_match.setItem(row_position, 3, qtable_item)
+                            wl = closest_key[0]
+                            bl = closest_key[1]
                             self.target_cells_resistances[(wl,bl)] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
                     self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))
@@ -564,7 +592,7 @@ class NewAnn(QDialog):
                     self.application_status = 'work'
                     self.button_work_combination()
                     self.data_for_plot_y = []
-                    self.parent.exp_name = 'запись весов'
+                    self.parent.exp_name = self.lang_pack.get("weights_rec")
                     # ticket_name = self.parent.man.ap_config['gui']['program_ticket']
                     # self.ticket = self.parent.read_ticket_from_disk(ticket_name)
                     # # меняем параметры тикета
@@ -594,12 +622,12 @@ class NewAnn(QDialog):
                     self.map_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
                     self.map_thread.start()
                 else:
-                    show_warning_messagebox('Дропните не подходящие веса!')
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("clear_not_suit"))
             else:
-                show_warning_messagebox('Весов больше чем ячеек!')
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("weights_more_cells"))
                 # todo: двойной клик для удаления
         else:
-            show_warning_messagebox('Нечего записать!')
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("nothing_rec"))
 
     def on_count_changed(self, value): # +
         '''
@@ -629,13 +657,13 @@ class NewAnn(QDialog):
         shutdown_min = self.target_resistances[self.counter] - self.target_resistances[self.counter]*tolerance/100
         shutdown_max = self.target_resistances[self.counter] + self.target_resistances[self.counter]*tolerance/100
         if shutdown_min <= data_for_plot_y[-1] <= shutdown_max:
-            self.ui.table_match.setItem(row, 6, QTableWidgetItem('записано'))
+            self.ui.table_match.setItem(row, 6, QTableWidgetItem(self.lang_pack.get("written")))
             self.written_cells.append(self.coordinates[self.counter])
             self.written_weights.append(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
             self.not_writen_cells.remove(self.coordinates[self.counter])
             self.not_written_weights.remove(r2w(self.parent.man.res_load, self.target_resistances[self.counter]))
         else:
-            self.ui.table_match.setItem(row, 6, QTableWidgetItem('не записано'))
+            self.ui.table_match.setItem(row, 6, QTableWidgetItem(self.lang_pack.get("not_written")))
         # красим ячейки
         self.ui.color_table_match()
         # подменяем значение
@@ -646,8 +674,8 @@ class NewAnn(QDialog):
         # рисунок для базы в matplotlib
         plt.clf()
         plt.plot(data_for_plot_y, marker='o', linewidth=0.5)
-        plt.xlabel(self.xlabel_text)
-        plt.ylabel(self.ylabel_text)
+        plt.xlabel(self.lang_pack.get("countings"))
+        plt.ylabel(self.lang_pack.get("resistance"))
         plt.grid(True, linestyle='--')
         plt.tight_layout()
         plt.savefig(self.ticket_image_name, dpi=100)
@@ -695,13 +723,13 @@ class NewAnn(QDialog):
         flag_soft_cc = int(value[1])
         # блочим запуск
         if exp_status == 1:
-            show_warning_messagebox("Эксперимент выполнен!")
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("done"))
         elif exp_status == 2:
-            show_warning_messagebox("Эксперимент прерван!")
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("stopped"))
         elif exp_status == 3:
-            show_warning_messagebox('Подозрительно высокое напряжение на АЦП, проверьте подключение!')
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("voltage_high"))
         if flag_soft_cc:
-            show_warning_messagebox("Срабатывало программное ограничение!")
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("prog_stop"))
         self.application_status = 'stop'
         self.button_after_combination()
         self.ui.progress_bar_mapping.setValue(0)
@@ -749,7 +777,7 @@ class NewAnn(QDialog):
             self.set_up_init_values()
             event.accept()
         elif self.application_status == 'work':
-            show_warning_messagebox('Дождитесь или прервите!')
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("wait_or_interrupt"))
             event.ignore()
 
     def button_start_combination(self):

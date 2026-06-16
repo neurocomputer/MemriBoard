@@ -6,6 +6,7 @@
 
 import os
 import json
+from functools import partial
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5.QtGui import QPixmap
@@ -35,13 +36,16 @@ class SignalMod(QDialog):
     base_ticket_name: str # имя тикета (по имени файла)
     file_saved: bool # флаг сохраненности файла
     mode: str # режим запуска (create, edit)
+    lang_pack: dict
 
     def __init__(self, base_ticket_name, mode, parent=None) -> None:
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         self.setModal(True)
+        self.adjustSize()
         # обработчики кнопок
         self.ui.button_graph.clicked.connect(self._plot_ticket)
         self.ui.button_save.clicked.connect(self._save_json)
@@ -73,6 +77,48 @@ class SignalMod(QDialog):
             self.ui.json_name.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
 
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("signal")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("voltage"))
+            self.ui.groupBox_2.setTitle(self.lang_pack.get("time"))
+            self.ui.groupBox_3.setTitle(self.lang_pack.get("send_signal"))
+            self.ui.groupBox_4.setTitle(self.lang_pack.get("stop_condition"))
+            self.ui.groupBox_5.setTitle(self.lang_pack.get("view"))
+            self.ui.label_3.setText(self.lang_pack.get("start"))
+            self.ui.label_4.setText(self.lang_pack.get("stop"))
+            self.ui.label_5.setText(self.lang_pack.get("step"))
+            self.ui.label_6.setText(self.lang_pack.get("amount"))
+            self.ui.label_7.setText(self.lang_pack.get("dec"))
+            self.ui.label_10.setText(self.lang_pack.get("forward"))
+            self.ui.label_11.setText(self.lang_pack.get("backward"))
+            self.ui.label_8.setText(self.lang_pack.get("ms"))
+            self.ui.label_9.setText(self.lang_pack.get("mcs"))
+            self.ui.label_2.setText(self.lang_pack.get("sending_order"))
+            self.ui.label_13.setText(self.lang_pack.get("times"))
+            self.ui.label_14.setText(self.lang_pack.get("repeat"))
+            self.ui.terminator_measure_combobox.setItemText(0, self.lang_pack.get("ohm"))
+            self.ui.direction_combobox.setItemText(0, self.lang_pack.get("forth-back"))
+            self.ui.direction_combobox.setItemText(1, self.lang_pack.get("back-forth"))
+            self.ui.shutdown_value_label.setText(self.lang_pack.get("value"))
+            self.ui.shutdown_min_label.setText(self.lang_pack.get("min"))
+            self.ui.label_12.setText(self.lang_pack.get("condition"))
+            self.ui.label_15.setText(self.lang_pack.get("value"))
+            self.ui.shutdown_max_label.setText(self.lang_pack.get("max"))
+            self.ui.shutdown_enc_label.setText(self.lang_pack.get("accumulator"))
+            self.ui.terminator_measure_combobox_label.setText(self.lang_pack.get("measure"))
+            self.ui.label_17.setText(self.lang_pack.get("current"))
+            self.ui.button_graph.setText(self.lang_pack.get("graphic"))
+            self.ui.label_16.setText(self.lang_pack.get("board_req"))
+            self.ui.label.setText(self.lang_pack.get("exp_name"))
+            self.ui.button_save.setText(self.lang_pack.get("save"))
+            self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
+            self.ui.label_png.setPixmap(QPixmap(os.path.join(os.getcwd(),"gui","uies",self.lang_pack.get("hold_path"))))
+
     def set_up_init_values(self) -> None:
         """
         Задать начальные значения
@@ -81,6 +127,23 @@ class SignalMod(QDialog):
         self.one_value_terminators = ['==', '>', '<']
         self.base_json = {}
         self.file_saved = False
+        # Set units for scientific lines
+        self.scientific_widgets = {  # {widget: unit}
+            self.ui.forward_start: 'V',
+            self.ui.forward_step: 'V',
+            self.ui.forward_stop: 'V',
+            self.ui.backward_start: 'V',
+            self.ui.backward_step: 'V',
+            self.ui.backward_stop: 'V',
+        }
+        def warn(widget, text):  # Warning for ScientificQLineEdit
+            if not widget.isModified(): # Avoiding Qt bug where warning is shown twice
+                return
+            widget.setModified(False)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"')
+        for widget, unit in self.scientific_widgets.items():
+            widget.set_unit(unit)
+            widget.bad_value.connect(partial(warn, widget))
 
     def _plot_ticket(self) -> None:
         """
@@ -112,18 +175,23 @@ class SignalMod(QDialog):
         """
         status = False
         try:
+            # Check if data in scientific lines is correct
+            for widget in self.scientific_widgets:
+                if widget.get_value() is None:
+                    raise ValueError
+
             # dir inc
-            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_start.text()))
-            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_stop.text()))
-            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_step.text()))
+            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
+            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
+            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
             self.base_json['params']['t_dir_msec_inc'] = int(self.ui.forward_ms.text())
             self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
             self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
             # чекбокс dir dec
             if self.ui.forward_dec.isChecked():
-                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_stop.text()))
-                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_start.text()))
-                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.forward_step.text()))
+                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
+                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
+                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
                 self.base_json['params']['t_dir_msec_dec'] = int(self.ui.forward_ms.text())
                 self.base_json['params']['t_dir_usec_dec'] = int(self.ui.forward_mcs.text())
                 self.base_json['params']['dir_dec_countr'] = int(self.ui.forward_count.value())
@@ -135,17 +203,17 @@ class SignalMod(QDialog):
                 self.base_json['params']['t_dir_usec_dec'] = 0
                 self.base_json['params']['dir_dec_countr'] = 0
             # rev inc
-            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_start.text()))
-            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_stop.text()))
-            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_step.text()))
+            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
+            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
+            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
             self.base_json['params']['t_rev_msec_inc'] = int(self.ui.backward_ms.text())
             self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
             self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
             # чекбокс rev dec
             if self.ui.backward_dec.isChecked():
-                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_stop.text()))
-                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_start.text()))
-                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,float(self.ui.backward_step.text()))
+                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
+                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
+                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
                 self.base_json['params']['t_rev_msec_dec'] = int(self.ui.backward_ms.text())
                 self.base_json['params']['t_rev_usec_dec'] = int(self.ui.backward_mcs.text())
                 self.base_json['params']['rev_dec_countr'] = int(self.ui.backward_count.value())
@@ -195,7 +263,7 @@ class SignalMod(QDialog):
 
             status = True
         except ValueError:
-            show_warning_messagebox('Не корректный символ!')
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect"))
         return status
 
     def _save_json(self) -> None:
@@ -206,9 +274,9 @@ class SignalMod(QDialog):
         answer = None
         if self._make_json():
             if self.mode == "create":
-                answer = show_choose_window(self, 'Сохранить файл?')
+                answer = show_choose_window(self, self.lang_pack.get("save_file"))
             elif self.mode == "edit" or self.mode == "edit_for_programming":
-                answer = show_choose_window(self, 'Сохранить изменения?')
+                answer = show_choose_window(self, self.lang_pack.get("save_changes"))
             if answer:
                 try:
                     if self.mode == "create":
@@ -231,7 +299,7 @@ class SignalMod(QDialog):
                         json.dump(self.base_json, outfile)
                     self.file_saved = True
                 except ValueError:
-                    show_warning_messagebox('Имя файла задано не правильно!')
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("file_name_wrong"))
             if self.file_saved:
                 self.close()
 
@@ -245,9 +313,9 @@ class SignalMod(QDialog):
         if self.mode == "edit":
             self.json_name.setEnabled(False)
 
-        self.ui.forward_start.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc'])))
-        self.ui.forward_stop.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc'])))
-        self.ui.forward_step.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_step_inc'])))
+        self.ui.forward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc']))
+        self.ui.forward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc']))
+        self.ui.forward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_step_inc']))
         self.ui.forward_ms.setText(str(self.base_json['params']['t_dir_msec_inc']))
         self.ui.forward_mcs.setText(str(self.base_json['params']['t_dir_usec_inc']))
         self.ui.forward_count.setValue(self.base_json['params']['dir_inc_countr'])
@@ -257,9 +325,9 @@ class SignalMod(QDialog):
         else:
             self.ui.forward_dec.setCheckState(0)
 
-        self.ui.backward_start.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_strt_inc'])))
-        self.ui.backward_stop.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_stop_inc'])))
-        self.ui.backward_step.setText(str(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_step_inc'])))
+        self.ui.backward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_strt_inc']))
+        self.ui.backward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_stop_inc']))
+        self.ui.backward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_step_inc']))
         self.ui.backward_ms.setText(str(self.base_json['params']['t_rev_msec_inc']))
         self.ui.backward_mcs.setText(str(self.base_json['params']['t_rev_usec_inc']))
         self.ui.backward_count.setValue(self.base_json['params']['rev_inc_countr'])

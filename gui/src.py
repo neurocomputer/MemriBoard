@@ -5,27 +5,33 @@
 # pylint: disable=E0611
 
 import csv
-import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QMessageBox, QMainWindow, QFileDialog
+import pandas as pd  # TODO: add to requirements + xlsxwriter for save_xlsx
+import json
+from PyQt5.QtWidgets import QMessageBox, QFileDialog
 
-def show_warning_messagebox(message: str) -> None:
+
+lang_pack: dict = {}  # Language for src functions
+
+def change_src_language(new_lang_pack) -> None:
+    """
+    Change lang pack, called from crossbar window on language change.
+    """
+    global lang_pack
+    lang_pack = new_lang_pack
+
+def show_warning_messagebox(parent = None, message: str = None) -> None:
     """
     Оповещение
     """
-    msg = QMessageBox()
-    msg.setIcon(QMessageBox.Warning)
-    msg.setText(message)
-    msg.setWindowTitle("Предупреждение")
-    msg.setStandardButtons(QMessageBox.Ok)
-    _ = msg.exec_()
+    QMessageBox.warning(parent, lang_pack.get('warn'), message, QMessageBox.Ok)
 
-def show_choose_window(parent: QMainWindow, message: str) -> bool:
+def show_choose_window(parent = None, message: str = None) -> bool:
     """
     Окно выбора
     """
     answer = 0
     reply = QMessageBox.question(parent,
-                                 'Подтверждение',
+                                 lang_pack.get("confirm"),
                                  message,
                                  QMessageBox.Yes | QMessageBox.No,
                                  QMessageBox.No)
@@ -39,11 +45,11 @@ def bool_to_label(value):
     """
     answer = None
     if value == 1 or value is True:
-        answer = "Выполнен"
+        answer = lang_pack.get("done")
     elif value == 2:
-        answer = "Прерван"
+        answer = lang_pack.get("interrupted")
     elif value == 0 or value is False:
-        answer = "Не выполнен"
+        answer = lang_pack.get("not_done")
     return answer
 
 def open_file_dialog(parent, file_types="All Files (*);;Text Files (*.txt);;CSV Files (*.csv)"):
@@ -51,7 +57,7 @@ def open_file_dialog(parent, file_types="All Files (*);;Text Files (*.txt);;CSV 
     Окно выбора файлов
     """
     file_path, _ = QFileDialog.getOpenFileName(parent,
-                                               "Выбрать файл",
+                                               lang_pack.get("pick_file"),
                                                "",
                                                file_types)
     return file_path
@@ -67,22 +73,22 @@ def choose_cells(filepath, wl_max, bl_max):
         header = next(reader)  # Пропускаем заголовок
         # Проверяем, что в заголовке есть нужные колонки.
         if header != ['wl', 'bl']:
-            raise ValueError("Файл CSV должен иметь столбцы 'wl' и 'bl' в указанном порядке")
+            raise ValueError(lang_pack.get("wl_bl_order_wrong"))
         for row in reader:
             try:
                 if len(row) > 2:
-                    raise ArithmeticError("В строке больше 2-х значений")
+                    raise ArithmeticError(lang_pack.get("more_than_2_values"))
                 else:
                     wl = int(row[0]) # Преобразуем в число
                     bl = int(row[1])
                     if wl > wl_max or bl > bl_max:
-                        raise ArithmeticError("WL или BL имеют не корректное значение")
+                        raise ArithmeticError(lang_pack.get("wl_bl_incorrect"))
                     if [wl, bl] not in cells: # Без дубликатов
                         cells.append((wl, bl)) # Заполняем список
             except (ValueError, IndexError):
-                message = f"Ошибка при преобразовании строки в числа: {row}"
+                message = lang_pack.get("string_to_int_error") + str(row)
             except ArithmeticError as e:
-                message = f"Ошибка: {e}"
+                message = lang_pack.get("error") + e
             continue # переходим к следующей строке
     return cells, message
 
@@ -95,12 +101,59 @@ def write_csv_data(fpath, header, coordinates):
         file_wr.writerow(header)
         for item in coordinates:
             file_wr.writerow(item)
+    
+    
+# Methods for saving matrix in different formats
 
-def snapshot(data) -> None:
-    """
-    Картинка с кнопки снимок
-    """
-    plt.clf()
-    if data is not None:
-        plt.imshow(data)
-        plt.show()
+def save_matrix_text_format(filename: str, data: list, sep: int = '\t') -> None:
+    """Save matrix in a text document where sep is the column separator"""
+    with open(filename, 'w') as file:
+        file.write(f'   {sep}' + sep.join([f'WL{i}' for  i in range(len(data[0]))]) + '\n')
+        for j, row in enumerate(data):
+            file.write(f'BL{j}{sep}' + sep.join(map(str, row)) + '\n')
+  
+
+def save_matrix_txt(filename: str, data: list) -> None:
+    """Save matrix as txt"""
+    save_matrix_text_format(filename, data, sep='\t')  
+  
+    
+def save_matrix_csv(filename: str, data: list) -> None:
+    """Save matrix as csv"""
+    header = ['   '] + [f'WL{i}' for  i in range(len(data[0]))]
+    for i in range(len(data)):
+        data[i] = [f'BL{i}'] + data[i]
+    write_csv_data(filename, header, data)
+    
+    
+def save_matrix_json(filename: str, data: list) -> None:
+    """Save matrix as json"""
+    with open(filename, 'w') as file:
+        json.dump(data, file, indent=4)
+    
+    
+def save_matrix_xlsx(filename: str, data: list) -> None:
+    """Save matrix as xls or xlsx"""
+    n_rows = len(data)  # bl
+    n_cols = len(data[0])  # wl
+    d = [[None] * n_cols] * n_rows
+    df = pd.DataFrame(data=d, index = [str(i + 1) for i in range(n_rows)], 
+                    columns = [str(i + 1) for i in range(n_cols)])
+    writer = pd.ExcelWriter(filename, engine='xlsxwriter')
+    df.to_excel(writer, sheet_name='Sheet1')
+    workbook  = writer.book
+    worksheet = writer.sheets['Sheet1']
+    centered_format = workbook.add_format({'valign': "center", 
+                                            'align': "center"})
+    for i in range(n_rows + 1):
+        worksheet.set_row(i, 20)
+        if i != 0:
+            worksheet.write(i, 0, f'BL {i - 1}', centered_format)
+    worksheet.set_column(0, n_cols, 7)
+    for i in range(1, n_cols + 1):
+        worksheet.write(0, i, f'WL {i - 1}', centered_format)
+    
+    for i, row in enumerate(data):
+            for j, col in enumerate(row):
+                 worksheet.write(i + 1, j + 1, col, centered_format)
+    writer.close()

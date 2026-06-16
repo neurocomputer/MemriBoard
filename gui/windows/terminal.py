@@ -16,16 +16,27 @@ class Terminal(QDialog):
     """
 
     GUI_PATH = os.path.join("gui","uies","terminal.ui")
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.setModal(True)
         # обработчик нажатия
         self.ui.button_send.clicked.connect(self.send_command)
+
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("terminal")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("name"))
+            self.ui.button_send.setText(self.lang_pack.get("send"))
 
     def send_command(self):
         """
@@ -45,8 +56,8 @@ class Terminal(QDialog):
                     if len(res) == 2:
                         self.ui.label_answer.setText(f'adc: {res[0]}, id: {res[1]}')
                     else:
-                        self.ui.label_answer.setText('Ответ не получен!')
+                        self.ui.label_answer.setText(self.lang_pack.get("no_answer"))
                 else:
-                    show_warning_messagebox("Не корректный запрос!")
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
             else:
-                show_warning_messagebox("Не корректный запрос!")
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
