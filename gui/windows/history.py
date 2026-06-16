@@ -98,7 +98,7 @@ class History(QDialog):
                     ticket_id = self.tickets[row][0]
                     _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
                     _, experiment_id = self.parent.man.db.get_experiment_id_from_ticket_id(ticket_id)
-                    all_raw_data = results_from_bytes(ticket_result[0][0])
+                    all_raw_data = results_from_bytes(ticket_result)
                     raw_sign = all_raw_data[0::3]
                     raw_dac = all_raw_data[1::3]
                     raw_adc = all_raw_data[2::3]
