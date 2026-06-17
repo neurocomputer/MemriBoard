@@ -98,6 +98,8 @@ class Connector():
                         self.logger.info('Fail to receive %s', self.portnum)
                     else:
                         self.logger.info('Opened %s', self.portnum)
+                        if Serial(kwargs['meta_info']):
+                            self.meta_info['task_time'] = Serial(kwargs['meta_info']['task_time'])
                         open_flag = True
                 else:
                     self.logger.info('Fail to open %s', self.portnum)
@@ -108,6 +110,8 @@ class Connector():
                     self.attempts = kwargs['attempts']
                     from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
                     self.interface = RPI_modes_ELBEAR(kwargs['com_port'])
+                    if RPI_modes_ELBEAR(kwargs['meta_info']):
+                        self.meta_info['task_time'] = RPI_modes_ELBEAR(kwargs['meta_info']['task_time'])
                     open_flag = self.interface.check_connection(kwargs['attempts'])
                 except ModuleNotFoundError:
                     pass
@@ -117,6 +121,8 @@ class Connector():
                     self.attempts = kwargs['attempts']
                     from MemriCORE.elbear_multimode.elbear_controller import ElbearController
                     self.interface = ElbearController(kwargs['com_port'], mode=1)
+                    if ElbearController(kwargs['meta_info']):
+                        self.meta_info['task_time'] = ElbearController(kwargs['meta_info']['task_time'])
                     open_flag = self.interface.check_connection(kwargs['attempts'])
                 except ModuleNotFoundError as ex:
                     print(ex)
@@ -126,6 +132,8 @@ class Connector():
                     self.attempts = kwargs['attempts']
                     from MemriCORE.elbear_multimode.elbear_controller import ElbearController
                     self.interface = ElbearController(kwargs['com_port'], mode=2)
+                    if ElbearController(kwargs['meta_info']):
+                        self.meta_info['task_time'] = ElbearController(kwargs['meta_info']['task_time'])
                     open_flag = self.interface.check_connection(kwargs['attempts'])
                 except ModuleNotFoundError:
                     pass
@@ -134,6 +142,8 @@ class Connector():
                 try:
                     from MemriCORE.rp5_python.rpi_modes import RPI_modes # pylint: disable=C0415
                     self.interface = RPI_modes()
+                    if RPI_modes(kwargs['meta_info']):
+                        self.meta_info['task_time'] = RPI_modes(kwargs['meta_info']['task_time'])
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
@@ -141,6 +151,8 @@ class Connector():
                 try:
                     import MemriCORE.rp5_c.mvmdriver_wrapper as driver # pylint: disable=C0415,E0401
                     self.interface = driver.MVMDriver()
+                    if driver.MVMDriver(kwargs['meta_info']):
+                        self.meta_info['task_time'] = driver.MVMDriver(kwargs['meta_info']['task_time'])
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
@@ -148,6 +160,8 @@ class Connector():
                 try:
                     from MemriCORE.rp5_fpga_python.rpi_FPGAed import RPI_modes_FPGAed # pylint: disable=C0415
                     self.interface = RPI_modes_FPGAed()
+                    if RPI_modes_FPGAed(kwargs['meta_info']):
+                        self.meta_info['task_time'] = RPI_modes_FPGAed(kwargs['meta_info']['task_time'])
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
@@ -155,6 +169,8 @@ class Connector():
                 try:
                     from MemriCORE.rp5_fpga_c.fpga_wrapper import create_mode_controller # pylint: disable=C0415,E0401
                     self.interface = create_mode_controller()
+                    if create_mode_controller(kwargs['meta_info']):
+                        self.meta_info['task_time'] = create_mode_controller(kwargs['meta_info']['task_time'])
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
@@ -164,6 +180,8 @@ class Connector():
                     self.attempts = kwargs['attempts']
                     import RRAMPiDriver.ReRAMPiDrv as driver
                     self.interface = driver.RPI_modes_RRAM(kwargs['com_port'])
+                    if driver.RPI_modes_RRAM(kwargs['meta_info']):
+                        self.meta_info['task_time'] = driver.RPI_modes_RRAM(kwargs['meta_info']['task_time'])
                     open_flag = self.interface.check_connection(kwargs['attempts'])
                 except ModuleNotFoundError:
                     pass
@@ -171,6 +189,8 @@ class Connector():
                 try:
                     import RRAMPiDriver.ReRAMPiDrv_GPIO as driver
                     self.interface = driver.RPI_modes_RRAM()
+                    if driver.RPI_modes_RRAM(kwargs['meta_info']):
+                        self.meta_info['task_time'] = driver.RPI_modes_RRAM(kwargs['meta_info']['task_time'])
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
@@ -344,6 +364,8 @@ class Connector():
                             time.sleep(1)
                             from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
                             self.interface = RPI_modes_ELBEAR(self.portnum)
+                            if RPI_modes_ELBEAR(kwargs['meta_info']):
+                                self.meta_info['task_time'] = RPI_modes_ELBEAR(kwargs['meta_info']['task_time'])
                             _ = self.interface.check_connection(self.attempts)
                         except ModuleNotFoundError:
                             pass
