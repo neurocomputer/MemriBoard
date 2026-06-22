@@ -10,8 +10,18 @@ fastest=0
 
 ; настройки журналирования
 [logging]
-; w-перезапись, a-добавление
-filemode=w
+
+; Application logging
+; logging levels: debug | info | warning | error | critical
+app_logging_level=WARNING
+; Whether to rewrite log file on start or create new each time
+app_log_rewrite_on_start=1
+
+; Database logging
+; logging levels: debug | info | warning | error | critical
+database_logging_level=WARNING
+; Whether to rewrite log file on start or create new each time
+database_log_rewrite_on_start=1
 
 ; настройки подключения
 [connector]
@@ -76,7 +86,9 @@ lock_board_type=0
 language=English
 
 ; бэкап датабазы
-[backup]
+[database]
 ; путь для бэкапа
 backup_path=
+; режим базы данных (sqlite/postgress)
+database_mode=sqlite
 """

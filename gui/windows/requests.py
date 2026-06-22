@@ -70,6 +70,6 @@ class RequestsList(QDialog):
             with open (filepath, "w", encoding='utf-8') as file:
                 file.write(request)
                 file.close()
-            show_warning_messagebox(f'{self.lang_pack.get("saved_to")}{filepath}', rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=f'{self.lang_pack.get("saved_to")}{filepath}')
         else:
-            show_warning_messagebox(self.lang_pack.get("empty"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("empty"))

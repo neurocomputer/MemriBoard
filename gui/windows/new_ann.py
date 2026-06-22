@@ -252,17 +252,17 @@ class NewAnn(QDialog):
         """
         Загружены ячейки
         """
-        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)", rlj=self.parent.read_language_json)
+        filepath = open_file_dialog(self, file_types="CSV Files (*.csv)")
         if filepath:
             try:
                 self.cells_coordinates_choosen = []
                 wl_max = self.parent.man.col_num
                 bl_max = self.parent.man.row_num
-                self.cells_coordinates_choosen, _ = choose_cells(filepath, wl_max, bl_max, rlj=self.parent.read_language_json)
+                self.cells_coordinates_choosen, _ = choose_cells(filepath, wl_max, bl_max)
             except Exception as er: # pylint: disable=W0718
                 self.cells_coordinates_choosen = []
                 print('button_load_good_cells_clicked',er)
-                show_warning_messagebox(self.lang_pack.get("err_load"), rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("err_load"))
             self.update_good_cels()
 
     def update_good_cels(self): # +
@@ -314,8 +314,8 @@ class NewAnn(QDialog):
         """
         bl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 4)
         wl_item = self.ui.table_match.item(self.ui.table_match.currentRow(), 5)
-        if bl_item == None or wl_item == None:
-            show_warning_messagebox(self.lang_pack.get("missing_coor"), rlj=self.parent.read_language_json)
+        if bl_item is None or wl_item is None:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("missing_coor"))
             self.parent.coordinate_error = True
             self.parent.extra = []
         else:
@@ -337,7 +337,7 @@ class NewAnn(QDialog):
         Выбрать веса
         """
         self.weights_target_all = []
-        filepath = open_file_dialog(self, file_types="Text Files (*.txt)", rlj=self.parent.read_language_json)
+        filepath = open_file_dialog(self, file_types="Text Files (*.txt)")
         if filepath:
             status_open = False
             with open(filepath, 'r', encoding='utf-8') as file:
@@ -345,7 +345,7 @@ class NewAnn(QDialog):
                     self.weights_target_all = file.readlines()
                     status_open = True
                 except Exception as ex: # pylint: disable=W0718
-                    show_warning_messagebox(f'{ex}', rlj=self.parent.read_language_json)
+                    show_warning_messagebox(parent=self, message=f'{ex}')
             if status_open:
                 try:
                     self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
@@ -356,7 +356,7 @@ class NewAnn(QDialog):
                             self.weights_target_all.remove(0.)
                     self.fill_table_match()
                 except Exception as ex: # pylint: disable=W0718
-                    show_warning_messagebox(f'{ex}', rlj=self.parent.read_language_json)
+                    show_warning_messagebox(parent=self, message=f'{ex}')
 
     def fill_table_match(self): # +
         """
@@ -622,12 +622,12 @@ class NewAnn(QDialog):
                     self.map_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
                     self.map_thread.start()
                 else:
-                    show_warning_messagebox(self.lang_pack.get("clear_not_suit"), rlj=self.parent.read_language_json)
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("clear_not_suit"))
             else:
-                show_warning_messagebox(self.lang_pack.get("weights_more_cells"), rlj=self.parent.read_language_json)
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("weights_more_cells"))
                 # todo: двойной клик для удаления
         else:
-            show_warning_messagebox(self.lang_pack.get("nothing_rec"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("nothing_rec"))
 
     def on_count_changed(self, value): # +
         '''
@@ -723,13 +723,13 @@ class NewAnn(QDialog):
         flag_soft_cc = int(value[1])
         # блочим запуск
         if exp_status == 1:
-            show_warning_messagebox(self.lang_pack.get("done"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("done"))
         elif exp_status == 2:
-            show_warning_messagebox(self.lang_pack.get("stopped"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("stopped"))
         elif exp_status == 3:
-            show_warning_messagebox(self.lang_pack.get("voltage_high"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("voltage_high"))
         if flag_soft_cc:
-            show_warning_messagebox(self.lang_pack.get("prog_stop"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("prog_stop"))
         self.application_status = 'stop'
         self.button_after_combination()
         self.ui.progress_bar_mapping.setValue(0)
@@ -777,7 +777,7 @@ class NewAnn(QDialog):
             self.set_up_init_values()
             event.accept()
         elif self.application_status == 'work':
-            show_warning_messagebox(self.lang_pack.get("wait_or_interrupt"), rlj=self.parent.read_language_json)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("wait_or_interrupt"))
             event.ignore()
 
     def button_start_combination(self):

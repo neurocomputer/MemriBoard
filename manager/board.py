@@ -8,11 +8,6 @@ import time
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
-from manager.service import d2v
-from simulator.src import (load_crossbar_array,
-                           send_mode_7_to_crossbar,
-                           send_mode_9_to_crossbar,
-                           send_mode_mvm_to_crossbar)
 
 class Connector():
     """
@@ -31,8 +26,6 @@ class Connector():
 
     # для симулятора
     config: ConfigParser
-    crossbar_serial: str
-    crossbar_array: list
 
     def __init__(self, silent, logger, cb_type, board_type, **kwargs):
         self.silent = silent
@@ -80,8 +73,9 @@ class Connector():
         open_flag = False
         if self.cb_type == 'simulator':
             # загрузка симулятора
-            open_flag, self.crossbar_array = load_crossbar_array(self.crossbar_serial)
-            self.meta_info['task_time'] = 60
+            from simulator.src import BoardSimulator
+            self.interface = BoardSimulator()
+            open_flag = self.interface.connect(self.crossbar_serial)
         elif self.cb_type == 'real':
             # для плат на базе Arduino
             if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
@@ -110,7 +104,7 @@ class Connector():
                 try:
                     self.portnum = kwargs['com_port']
                     self.attempts = kwargs['attempts']
-                    from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
+                    from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR  # type: ignore
                     self.interface = RPI_modes_ELBEAR(kwargs['com_port'])
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -123,7 +117,7 @@ class Connector():
                 try:
                     self.portnum = kwargs['com_port']
                     self.attempts = kwargs['attempts']
-                    from MemriCORE.elbear_multimode.elbear_controller import ElbearController
+                    from MemriCORE.elbear_multimode.elbear_controller import ElbearController  # type: ignore
                     self.interface = ElbearController(kwargs['com_port'], mode=1)
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -136,7 +130,7 @@ class Connector():
                 try:
                     self.portnum = kwargs['com_port']
                     self.attempts = kwargs['attempts']
-                    from MemriCORE.elbear_multimode.elbear_controller import ElbearController
+                    from MemriCORE.elbear_multimode.elbear_controller import ElbearController  # type: ignore
                     self.interface = ElbearController(kwargs['com_port'], mode=2)
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -148,7 +142,7 @@ class Connector():
             # для плат на базе Raspberry Pi 5
             elif self.board_type == 'rp5_python':
                 try:
-                    from MemriCORE.rp5_python.rpi_modes import RPI_modes # pylint: disable=C0415
+                    from MemriCORE.rp5_python.rpi_modes import RPI_modes  # type: ignore
                     self.interface = RPI_modes()
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -159,7 +153,7 @@ class Connector():
                     pass
             elif self.board_type == 'rp5_c':
                 try:
-                    import MemriCORE.rp5_c.mvmdriver_wrapper as driver # pylint: disable=C0415,E0401
+                    import MemriCORE.rp5_c.mvmdriver_wrapper as driver  # type: ignore
                     self.interface = driver.MVMDriver()
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -170,7 +164,7 @@ class Connector():
                     pass
             elif self.board_type == 'rp5_fpga_python':
                 try:
-                    from MemriCORE.rp5_fpga_python.rpi_FPGAed import RPI_modes_FPGAed # pylint: disable=C0415
+                    from MemriCORE.rp5_fpga_python.rpi_FPGAed import RPI_modes_FPGAed  # type: ignore
                     self.interface = RPI_modes_FPGAed()
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -181,7 +175,7 @@ class Connector():
                     pass
             elif self.board_type == 'rp5_fpga_c':
                 try:
-                    from MemriCORE.rp5_fpga_c.fpga_wrapper import create_mode_controller # pylint: disable=C0415,E0401
+                    from MemriCORE.rp5_fpga_c.fpga_wrapper import create_mode_controller  # type: ignore
                     self.interface = create_mode_controller()
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -194,7 +188,7 @@ class Connector():
                 try:
                     self.portnum = kwargs['com_port']
                     self.attempts = kwargs['attempts']
-                    import RRAMPiDriver.ReRAMPiDrv as driver
+                    import RRAMPiDriver.ReRAMPiDrv as driver  # type: ignore
                     self.interface = driver.RPI_modes_RRAM(kwargs['com_port'])
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -205,7 +199,7 @@ class Connector():
                     pass
             elif self.board_type == 'rp5_rram_python':
                 try:
-                    import RRAMPiDriver.ReRAMPiDrv_GPIO as driver
+                    import RRAMPiDriver.ReRAMPiDrv_GPIO as driver  # type: ignore
                     self.interface = driver.RPI_modes_RRAM()
                     try:
                         self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -382,7 +376,7 @@ class Connector():
                             #print('!!!')
                             self.interface.com_close()
                             time.sleep(1)
-                            from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR
+                            from MemriCORE.elbear_nano.rpi_ELBEAR import RPI_modes_ELBEAR  # type: ignore
                             self.interface = RPI_modes_ELBEAR(self.portnum)
                             try:
                                 self.meta_info['task_time'] = self.interface.meta_info['task_time']
@@ -392,7 +386,8 @@ class Connector():
                         except ModuleNotFoundError:
                             pass
                         pass
-                    if status: break
+                    if status: 
+                        break
             elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
@@ -421,71 +416,33 @@ class Connector():
             # time.sleep(55/1000)
         # режим симулятор
         elif self.cb_type == 'simulator':
-            task_id = task["id"]
-            # если выбрали систему комманд для сигнальной платы
-            #todo: возможно логику нужно переделать, пока не понятно
-            if not 'wl' in task:
-                wl = 0
-            else:
-                wl = task['wl']
-            if not 'bl' in task:
-                bl = 0
-            else:
-                bl = task['bl']
             if task['mode_flag'] == 7: # режим команды 7
-                vol = d2v(int(self.config['board']['dac_bit']),
-                        float(self.config['board']['vol_ref_dac']),
-                        task['vol'],
-                        sign=task['sign'])
-                duration = task['t_ms'] * 1000 + task['t_us']
-                res = (send_mode_7_to_crossbar(self.crossbar_serial,
-                                               self.crossbar_array,
-                                               vol = vol,
-                                               duration = duration,
-                                               wl = wl,
-                                               bl = bl,
-                                               vol_read = float(self.config['board']['vol_read']),
-                                               res_load = float(self.config['board']['res_load']),
-                                               res_switches = float(self.config['board']['res_switches']),
-                                               gain = float(self.config['board']['gain']),
-                                               adc_bit = int(self.config['board']['adc_bit']),
-                                               vol_ref_adc = float(self.config['board']['vol_ref_adc'])
-                                               ), task_id)
+                task['vol'] = abs(task['vol'])
+                adc = self.interface.mode_7(task['vol'],
+                                        task['t_ms'],
+                                        task['t_us'],
+                                        task['sign'],
+                                        task['id'],
+                                        task['wl'],
+                                        task['bl']) # vDAC, tms, tus, rev, id, wl, bl
+                res = (int(adc[0]), int(adc[1]))
             elif task['mode_flag'] == 9: # режим команды 9
-                vol = d2v(int(self.config['board']['dac_bit']),
-                        float(self.config['board']['vol_ref_dac']),
-                        task['vol'])
-                if vol >= 0.3:
-                    vol = 0.3
-                res = (send_mode_9_to_crossbar(self.crossbar_array,
-                                               vol = vol,
-                                               wl = wl,
-                                               bl = bl,
-                                               res_load = float(self.config['board']['res_load']),
-                                               res_switches = float(self.config['board']['res_switches']),
-                                               gain = float(self.config['board']['gain']),
-                                               adc_bit = int(self.config['board']['adc_bit']),
-                                               vol_ref_adc = float(self.config['board']['vol_ref_adc'])
-                                               ), task_id)
+                adc = self.interface.mode_9(task['vol'], 0, task['wl'], task['bl'])
+                res = (int(adc[0]), int(adc[1]))
             elif task['mode_flag'] == 10: # режим команды 10
-                vol = []
-                for item in task['vol']:
-                    vol.append(d2v(int(self.config['board']['dac_bit']),
-                               float(self.config['board']['vol_ref_dac']),
-                               item))
-                res = (send_mode_mvm_to_crossbar(self.crossbar_array,
-                                                vol = vol,
-                                                wl = wl,
-                                                gain = float(self.config['board']['gain']),
-                                                sum_gain = float(self.config['board']['sum_gain']),
-                                                adc_bit = int(self.config['board']['adc_bit']),
-                                                vol_ref_adc = float(self.config['board']['vol_ref_adc'])
-                                                ), task_id)
-            if not self.silent:
-                self.logger.info('Send %s', str(task['mode_flag']))
-            time.sleep(1/1000)
-            if not self.silent:
-                self.logger.info('Recieved data: %s', str(res))
+                #print(task['vol'])
+                adc = self.interface.mode_mvm(task['vol'],
+                                                0,
+                                                0,
+                                                0,
+                                                0,
+                                                task['wl'],
+                                                task["id"])
+                res = (int(adc[0]), int(adc[1]))
+        if not self.silent:
+            self.logger.info('Send %s', str(task['mode_flag']))
+        if not self.silent:
+            self.logger.info('Recieved data: %s', str(res))
         return res
 
     def custom_impact(self, command: str, timeout: float, attempts: int):

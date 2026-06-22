@@ -51,6 +51,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QLabel" name="label_tasks">
+            <property name="text">
+             <string>Запросы=</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>

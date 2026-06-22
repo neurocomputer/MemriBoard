@@ -19,7 +19,7 @@ def create_empty_db_crossbar(db_path,
                              wl_num = 8,
                              cb_type = 'simulator'):
     """
-    Cоздание таблиц и их заполнение
+    Создание таблиц и их заполнение
     """
     status = False
     crossbar_id = 0
