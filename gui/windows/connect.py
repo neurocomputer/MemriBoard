@@ -22,6 +22,7 @@ class ConnectDialog(QDialog):
     cb_serial: str
     com_port: str = ''
     lang_pack: dict
+    core_scanned = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -36,10 +37,12 @@ class ConnectDialog(QDialog):
         self.ui.button_quit.clicked.connect(self.close)
         self.ui.button_settings.clicked.connect(self._settings)
         self.ui.button_new_crossbar.clicked.connect(lambda: self.show_new_cb_layout(True))
+        self.ui.button_scan_core.clicked.connect(self.core_scan)
         # обработка комбо
         self.ui.combo_com_name.currentIndexChanged.connect(self.on_com_name_changed)
         self.ui.edit_com_name.textChanged.connect(self.on_com_name_changed)
         self.ui.combo_board_type.currentIndexChanged.connect(self.on_combo_board_type_changed)
+        self.ui.combo_core_name.currentIndexChanged.connect(self.on_core_name_changed)
         # обновление отображения
         self.show_new_cb_layout(False)
         self.update_crossbar_list()
@@ -86,6 +89,12 @@ class ConnectDialog(QDialog):
         else: # адрес в списке
             self.com_port = combo_com_name
 
+    def on_core_name_changed(self) -> None:
+        """
+        Выбрали core
+        """
+        self.addr = self.ui.combo_core_name.currentData()
+
     def show_new_cb_layout(self, state) -> None:
         """
         Показать настройки нового кроссбара
@@ -110,6 +119,14 @@ class ConnectDialog(QDialog):
         self.ui.button_update.setVisible(state)
         self.ui.label_com_entry.setVisible(state)
         self.ui.edit_com_name.setVisible(state)
+
+    def show_core_settings_layout(self, state):
+        """
+        Показать параметры CORE если в COM выбран pico драйвер
+        """
+        self.ui.label_core_name.setVisible(state)
+        self.ui.combo_core_name.setVisible(state)
+        self.ui.button_scan_core.setVisible(state)
 
     def _settings(self) -> None:
         """
@@ -169,7 +186,8 @@ class ConnectDialog(QDialog):
                       'elbear_multimode_MVM',
                       'rp5_rram_elbear_nano',
                       'rp5_rram_python',
-                      'rp5_rram_c']
+                      'rp5_rram_c',
+                      'pico_client']
         try:
             last_board = self.parent.man.ap_config["board"]["board_type"]
             if last_board:
@@ -195,13 +213,18 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
-        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
+        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM', 'pico_client']:
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText(self.lang_pack.get("status_1"))
+            if combo_board_type in ['pico_client']:
+                self.show_core_settings_layout(True)
+            else:
+                self.show_core_settings_layout(False)
         else:
             self.show_com_settings_layout(False)
+            self.show_core_settings_layout(False)
             self.ui.label_status.setText(self.lang_pack.get("status"))
         self.update_window_size()
 
@@ -252,7 +275,13 @@ class ConnectDialog(QDialog):
                     self.parent.ui.button_math.setEnabled(False)
                     self.accept_connet()
                 else:
-                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
+                    if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM', 'pico_client']:
+                        if combo_board_type == 'pico_client':
+                            if self.core_scanned:
+                                connected_flag = self.parent.man.connect(com_port=self.com_port, addr=self.addr, pico=self.pico)
+                            else:
+                                self.ui.label_status.setText("Core не выбран")    
+                                return
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
                     else:
                         connected_flag = self.parent.man.connect()
@@ -286,6 +315,26 @@ class ConnectDialog(QDialog):
         self.parent.number_cells = self.parent.man.col_num*self.parent.man.row_num
         self.parent.all_resistances = [[0 for _ in range(self.parent.man.col_num)] for _ in range(self.parent.man.row_num)]
         self.close()
+
+    def core_scan(self):
+        """
+        Сканирование CORE
+        """
+        try:
+            from MemriCORE.Pico_PC.pico_client import PicoClient
+            pico = PicoClient.over_serial(self.com_port, 115200)
+            addrs = pico.scan()
+            for addr in addrs:
+                self.ui.combo_core_name.addItem(
+                    f'0x{addr:02X}',
+                    addr
+                )
+            self.pico = pico
+            self.core_scanned = True
+        except ImportError:
+            print("Нет драйвера PicoClient")
+        except Exception as e:
+            print(f"Ошибка при инициализации CORE: {e}")
 
     def closeEvent(self, event): # pylint: disable=C0103,W0613
         """
