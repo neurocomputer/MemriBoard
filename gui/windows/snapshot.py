@@ -10,7 +10,7 @@ from matplotlib.backends.backend_qt5agg import \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.ticker import (MultipleLocator, MaxNLocator)
-from PyQt5.QtWidgets import QWidget, QFileDialog, QVBoxLayout, QPushButton
+from PyQt5.QtWidgets import QWidget, QFileDialog, QVBoxLayout, QHBoxLayout, QPushButton
 from gui.src import (
     save_matrix_csv, 
     save_matrix_txt, 
@@ -58,7 +58,7 @@ class Snapshot(QWidget):
         ok, self.lang_pack = self.parent.read_language_json("snapshot")
         if ok:
             if hasattr(self, 'toolbar'):
-                self.toolbar.change_btn_text(self.lang_pack['export'])
+                self.export_btn.setText(self.lang_pack.get('export'))
             self.setWindowTitle(self.lang_pack['window_title'])
             self.plot_matrix()
         
@@ -66,9 +66,14 @@ class Snapshot(QWidget):
     def init_ui(self) -> None:
         """Place widgets on the window"""
         layout = QVBoxLayout()
-        self.toolbar = CustomToolbar(self.canvas, self.lang_pack['export'], self)
+        bottom_layout = QHBoxLayout()
+        self.toolbar = NavigationToolbar(self.canvas, self)
         layout.addWidget(self.canvas)
-        layout.addWidget(self.toolbar)
+        self.export_btn = QPushButton(self, text=self.lang_pack.get('export'))
+        self.export_btn.clicked.connect(self.save_matrix)
+        bottom_layout.addWidget(self.toolbar)
+        bottom_layout.addWidget(self.export_btn)
+        layout.addLayout(bottom_layout)
         self.setLayout(layout)
         
         
@@ -145,20 +150,3 @@ class Snapshot(QWidget):
         
     def closeEvent(self, event) -> None:
         self.safe_close()
-        
-        
-    
-class CustomToolbar(NavigationToolbar):
-    """
-    Custom Navigation Toolbar for matplotlib
-    """    
-    def __init__(self, canvas, export_text, parent=None) -> None:
-        super(CustomToolbar, self).__init__(canvas, parent)
-        
-        self.export_btn = QPushButton(self, text=export_text)
-        self.export_btn.setGeometry(290, 5, 150, 30)  # TODO: set geometry not by pixels
-        self.export_btn.clicked.connect(parent.save_matrix)        
-        
-    
-    def change_btn_text(self, text) -> None:
-        self.export_btn.setText(text)
