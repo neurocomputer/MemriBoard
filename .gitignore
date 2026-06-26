@@ -184,3 +184,19 @@ writtable_cells.csv
 RRAMPiDriver/
 RRAM_VISA_Drivers/
 MemriNeurons/
+math_symbols/
+[0.015907004475593567, 1.0]/
+xor/
+dataset/
+npu/
+test_model_1
+mc_images/
+xor_example.py
+test_SNN.py
+test_sim.py
+test_npu.py
+test_conv_2D.py
+speed_test.py
+math_symbols.py
+master_class.ipynb
+main_gui.py
