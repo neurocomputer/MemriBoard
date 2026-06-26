@@ -1074,12 +1074,12 @@ class Math(QWidget):
         for item in self.result:
             # постобработка
             if self.ui.combo_postprocess.currentText() == 'scaling':
-                result_for_show.append(a2v(self.parent.man.gain,
+                result_for_show.append(a2v(1,
                                         self.parent.man.adc_bit,
                                         self.parent.man.vol_ref_adc,
                                         item) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value()))
             elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
-                result_for_show.append(a2v(self.parent.man.gain,
+                result_for_show.append(a2v(1,
                                         self.parent.man.adc_bit,
                                         self.parent.man.vol_ref_adc,
                                         item))
@@ -1217,7 +1217,7 @@ class MatMul(QThread):
                     #print(v_adc)
                 else:
                     v_adc = 0
-                self.parent.matmul_crossbar_results[i][j] = a2v(self.parent.parent.man.gain,
+                self.parent.matmul_crossbar_results[i][j] = a2v(1,
                                         self.parent.parent.man.adc_bit,
                                         self.parent.parent.man.vol_ref_adc,
                                         v_adc)
