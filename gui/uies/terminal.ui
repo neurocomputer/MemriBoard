@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>879</width>
-    <height>83</height>
+    <width>600</width>
+    <height>244</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,9 +29,9 @@
     </layout>
    </item>
    <item>
-    <widget class="QLabel" name="label_answer">
-     <property name="text">
-      <string> </string>
+    <widget class="QTextEdit" name="textEdit_answer">
+     <property name="readOnly">
+      <bool>true</bool>
      </property>
     </widget>
    </item>

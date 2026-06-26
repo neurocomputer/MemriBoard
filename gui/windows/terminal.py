@@ -46,14 +46,14 @@ class Terminal(QDialog):
         if command == '100':
             status, info = self.parent.man.conn.get_tech_info()
             if status:
-                self.ui.label_answer.setText(str(info))
+                self.ui.textEdit_answer.setPlainText(str(info))
         else:
             if self.parent.man.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:  # VISA instruments
                 res = self.parent.man.conn.custom_impact(command, 0, 0)
                 if res.startswith('ERROR'):
                     show_warning_messagebox(parent=self, message=self.lang_pack.get('error_occurred') + '\n' + res)
                 else:
-                    self.ui.label_answer.setText(res)
+                    self.ui.textEdit_answer.setPlainText(res)
             else:
                 command = command.replace("-", "")
                 res = self.parent.man.conn.custom_impact(command + '\n', 0.01, 10)
@@ -61,9 +61,9 @@ class Terminal(QDialog):
                     if ''.join(command.strip().split(',')).isdigit():
                         res = self.parent.man.conn.custom_impact(command + '\n', 0.01, 10)
                         if len(res) == 2:
-                            self.ui.label_answer.setText(f'adc: {res[0]}, id: {res[1]}')
+                            self.ui.textEdit_answer.setPlainText(f'adc: {res[0]}, id: {res[1]}')
                         else:
-                            self.ui.label_answer.setText(self.lang_pack.get("no_answer"))
+                            self.ui.textEdit_answer.setPlainText(self.lang_pack.get("no_answer"))
                     else:
                         show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
                 else:
