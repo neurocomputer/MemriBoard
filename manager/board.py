@@ -208,6 +208,21 @@ class Connector():
                     open_flag = True
                 except ModuleNotFoundError:
                     pass
+            elif self.board_type == 'pico_client':
+                try:
+                    self.portnum = kwargs['com_port']
+                    self.addr = kwargs['addr']
+                    self.interface = kwargs['pico']
+                    self.interface.init(self.addr, mode=1) # MODE_7 = 1, MODE_MVM = 2, MODE_CORE = 3
+                    time.sleep(10)
+                    try:
+                        self.meta_info['task_time'] = self.interface.meta_info['task_time']
+                    except AttributeError:
+                        self.meta_info['task_time'] = 0
+                    open_flag = True
+                except ModuleNotFoundError:
+                    print("ModuleNotFound: pico_client")
+                    pass
         return open_flag
 
     def close_port(self) -> bool:
@@ -413,6 +428,18 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             # можно добавить работу с другими платами
+            elif self.board_type in ['pico_client']:
+                if task['mode_flag'] == 7:
+                    # self.interface.init(self.addr, mode=1) # MODE_7 = 1, MODE_MVM = 2, MODE_CORE = 3
+                    task['vol'] = abs(task['vol'])
+                    adc = self.interface.mode_7(addr=self.addr,
+                                                vDAC=200, 
+                                                tms=task['t_ms'], 
+                                                tus=task['t_us'], 
+                                                rev=task['sign'], 
+                                                wl=task['wl'], 
+                                                bl=task['bl'])
+                    res = (adc, 0)
             # time.sleep(55/1000)
         # режим симулятор
         elif self.cb_type == 'simulator':

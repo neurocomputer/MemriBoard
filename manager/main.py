@@ -138,6 +138,12 @@ class Manager(Application):
         # подключаемся к плате
         if 'com_port' in kwargs:
             # подключение по COM порту
+            if 'pico' in kwargs:
+                self.connected_flag = self.conn.open_port(com_port=kwargs['com_port'],
+                                                        attempts = int(self.ap_config['connector']['attempts_to_kick']),
+                                                        timeout = float(self.ap_config["connector"]["timeout"]),
+                                                        addr=kwargs['addr'],
+                                                        pico=kwargs['pico'])
             self.connected_flag = self.conn.open_port(com_port=kwargs['com_port'],
                                                       attempts = int(self.ap_config['connector']['attempts_to_kick']),
                                                       timeout = float(self.ap_config["connector"]["timeout"]))
