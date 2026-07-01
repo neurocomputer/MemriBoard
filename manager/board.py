@@ -459,7 +459,14 @@ class Connector():
                         trig_flag = False
                     if 'skip_one' in task and task['skip_one']:  # Skip one value for endurance
                         self.interface.sense(trigger=trig_flag)
-                    sense_data = self.interface.sense(trigger=trig_flag)  # (R, timestamp)
+                    if 'vol' in task:
+                        if 'read' in task and task['read']:
+                            vol = self.config['board']['vol_read']
+                        else:
+                            vol = task['vol']
+                    else:
+                        vol = None
+                    sense_data = self.interface.sense(trigger=trig_flag, vol=vol)  # (R, timestamp)
                     if isinstance(sense_data, str):
                         self.logger.critical(f'Sense error: {sense_data}')
                         res = 0 

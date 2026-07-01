@@ -286,12 +286,13 @@ def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -
                     'current_compliance': params['rev_cc']}  # Reset
     yield [read_config, terminator]  # Read after experiment task
     sense_data = {'mode_flag': 'sense',
-                    'vol': 0,
-                    't_ms': params['t_rev_msec_inc'],
-                    't_us': params['t_rev_usec_inc'],
-                    'id': params['id'],
-                    'sign': 1,
-                    'triggered': True}
+                  'read': True,
+                  'vol': 0,
+                  't_ms': params['t_rev_msec_inc'],
+                  't_us': params['t_rev_usec_inc'],
+                  'id': params['id'],
+                  'sign': 1,
+                  'triggered': True}
     yield [sense_data, terminator]
         
         
@@ -336,6 +337,7 @@ def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> 
                 config_data['pulse_sequence'] = pulse_sequence
                 yield [config_data, terminator]  # Config task
                 sense_data = {'mode_flag': 'sense',
+                              'read': False,
                             'vol': 0,
                             't_ms': params[f't_{dir}_msec_inc'],
                             't_us': params[f't_{dir}_usec_inc'],
@@ -345,11 +347,13 @@ def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> 
                 for pulse in pulse_sequence:
                     if pulse == 'read':
                         sense_data['mode_flag'] = 'sense'  # Read pulse by trigger
-                        yield [sense_data, terminator]
                         sense_data['vol'] = 0
+                        sense_data['read'] = True
+                        yield [sense_data, terminator]
                     else:
                         sense_data['mode_flag'] = 'trigger'  # Apply pulse by trigger
                         sense_data['vol'] = abs(int(pulse))
+                        sense_data['read'] = False
                         yield [sense_data, terminator]
                             
                             
@@ -380,6 +384,7 @@ def _smu_pulsed_retention_gen(params, n_points, v_arrays, double, terminator, bl
             data['rev_interval'] = params['rev_interval']
         yield [data, terminator]  # Config task
         sense_data = {'mode_flag': 'sense',
+                      'read': True,
                       'vol': 0,
                       't_ms': params['t_dir_msec_inc'],
                       't_us': params['t_dir_usec_inc'],
@@ -411,6 +416,7 @@ def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_typ
         data['trigger_interval'] = params['dir_interval']
     yield [data, terminator]  # Config task
     sense_data_dir = {'mode_flag': 'sense',  # Sensing dir pulse
+                      'read': True,
                       'vol': params['v_dir_stop_inc'],
                       't_ms': params['t_dir_msec_inc'],
                       't_us': params['t_dir_usec_inc'],
@@ -418,6 +424,7 @@ def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_typ
                       'sign': 1,
                       'skip_one': True}
     sense_data_rev = {'mode_flag': 'sense',  # Sensing rev pulse
+                      'read': True,
                       'vol': params['v_rev_stop_inc'],
                       't_ms': params['t_dir_msec_inc'],
                       't_us': params['t_dir_usec_inc'],
@@ -502,6 +509,7 @@ def _visa_crossbar_scan_gen(params, n_points, v_arrays, double, terminator, blan
     yield [config_task, terminator]
     sense_data = {'mode_flag': 'sense',
                   'vol': 0,
+                  'read': True,
                   't_ms': params['t_dir_msec_inc'],
                   't_us': params['t_dir_usec_inc'],
                   'id': params['id'],
