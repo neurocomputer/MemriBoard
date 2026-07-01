@@ -513,7 +513,7 @@ class DBOperate():
                     Experiments.name,
                     Experiments.status,
                     Experiments.last_resistance
-                ).where(Experiments.memristor_id == memristor_id)
+                ).where(Experiments.memristor_id == memristor_id).order_by(Experiments.datestamp.desc())
                 history = session.execute(output).fetchall()
             status = True
             return status, history
