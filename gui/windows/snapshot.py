@@ -69,6 +69,7 @@ class Snapshot(QWidget):
             self.setWindowTitle(self.lang_pack['window_title'])
             if update_widgets:
                 self.export_btn.setText(self.lang_pack.get('export'))
+                self.checkbox_log.setText(self.lang_pack.get('log_scale'))
                 self.plot_matrix()
         
         
@@ -80,7 +81,7 @@ class Snapshot(QWidget):
         layout.addWidget(self.canvas)
         self.export_btn = QPushButton(self, text=self.lang_pack.get('export'))
         self.export_btn.clicked.connect(self.save_matrix)
-        self.checkbox_log = QCheckBox(parent=self, text='Log scale')
+        self.checkbox_log = QCheckBox(parent=self, text=self.lang_pack.get('log_scale'))
         self.checkbox_log.stateChanged.connect(self.on_checkbox_state_change)
         bottom_layout.addWidget(self.toolbar)
         bottom_layout.addWidget(self.checkbox_log)
