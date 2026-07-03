@@ -18,6 +18,7 @@ class Connector():
     logger: Logger
     cb_type: str
     board_type: str
+    driver_attr: dict
     request_id: int = 0
 
     serial = None # COM порт
@@ -26,11 +27,12 @@ class Connector():
     # для симулятора
     config: ConfigParser
 
-    def __init__(self, silent, logger, cb_type, board_type, **kwargs):
+    def __init__(self, silent, logger, cb_type, board_type, driver_attr, **kwargs):
         self.silent = silent
         self.logger = logger
         self.cb_type = cb_type
         self.board_type = board_type
+        self.driver_attr = driver_attr
         # для симулятора
         if 'config' in kwargs:
             self.config = kwargs['config']
@@ -181,7 +183,7 @@ class Connector():
             close_flag = True
         elif self.cb_type == 'real':
             # для плат на базе Arduino
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano', 'rp5_rram_elbear_nano',  'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            if self.driver_attr['disconnect'] == 'com_close':
                 self.interface.com_close()
                 if self.interface.com_is_open():
                     self.logger.info('Fail to close')
@@ -189,7 +191,7 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
+            elif self.driver_attr['disconnect'] is None:
                 # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -259,7 +261,7 @@ class Connector():
         rec_data = []
         send_flag = False
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+            if self.driver_attr['get_tech_info'] == '100':
                 send_flag = self.push('100\n')
                 self.interface.com_whait_ready(float(self.config['connector']['timeout']))
                 if self.interface.com_can_read_line():
@@ -268,10 +270,10 @@ class Connector():
                         rec_data = str(rx, 'utf-8').strip().split(',')
                     except ValueError:
                         pass
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
+            elif self.driver_attr['get_tech_info'] == 'rpi':
                 send_flag = True
                 rec_data = ['raspberry pi 5']
-            elif self.board_type in ['elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            elif self.driver_attr['get_tech_info'] == 'elbear':
                 send_flag = True
                 rec_data = ['elbear_nano']
                 # todo: добавить служебную инфу в драйвер
@@ -293,7 +295,7 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+            if self.driver_attr['impact'] == 'arduino':
                 self.inc_req_id() # увеличиваем счечик id
                 task["id"] = self.request_id # записываем id в тикет
                 task['vol'] = abs(task['vol'])
@@ -310,7 +312,7 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.board_type in ['elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            elif self.driver_attr['impact'] == 'elbear':
                 status = False
                 for _ in range(100):
                     try:
@@ -343,7 +345,7 @@ class Connector():
                         pass
                     if status: 
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
+            elif self.driver_attr['impact'] == 'rpi':
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
                     adc = self.interface.mode_7(task['vol'],
@@ -412,7 +414,7 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+            if self.driver_attr['custom_impact'] == 'arduino':
                 _ = self.push(command)
                 while attempts:
                     time.sleep(timeout)
@@ -425,7 +427,7 @@ class Connector():
                     attempts -= 1
                     if attempts == 0:
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            elif self.driver_attr['custom_impact'] is None:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
@@ -441,7 +443,7 @@ class Connector():
         Connect cell to the external terminals on the board
         """
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_crossbar']:
+            if self.driver_attr['connect_to_ext'] == 'arduino':
                 if mode == 'connect':
                     self.push(f'3,{wl},{bl},333\n')
                     connected = False

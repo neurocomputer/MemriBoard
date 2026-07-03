@@ -37,10 +37,7 @@ Union[str, None]: 'normal' | 'no_crossbar' | None
 
 # TODO в connect.py и crossbar.py встречался драйвер 'rp5_rram_c', а в Connector его нет. Надо его добавить, если такой существует.
 
-def get_driver_attr(driver: str) -> dict:
-    """Get driver attributes"""
-    
-    DRIVERS = [
+DRIVERS = [
         ['',                       'family',	        'commutation', 'disconnect', 'get_tech_info', 'impact',	 'custom_impact', 'connect_to_ext', 'connect_args', 'math_mode',   ],
         ['memardboard_single',	   'COM',               True,	       'com_close',	 '100',	          'arduino', 'arduino',	      None,             'com_port',     'no_crossbar', ],
         ['memardboard_crossbar',   'COM',               True,	       'com_close',	 '100',	          'arduino', 'arduino',	      'arduino',        'com_port',     'normal',      ],
@@ -57,17 +54,20 @@ def get_driver_attr(driver: str) -> dict:
         ['ITC_1T1R_probe_station', 'RRAM_VISA_Drivers', False,	       'disconnect', 'tech_data',	  'visa',	 'visa',	      None,             'visa_adr',     None,          ],
         ['ITC_probe_station',	   'RRAM_VISA_Drivers', False,	       'disconnect', 'tech_data',	  'visa',	 'visa',	      None,             'visa_adr',     None,          ],
     ]
-    
-    avail_drivers = [row[0] for row in DRIVERS[1:]]
-    if driver not in avail_drivers:
+
+AVAILABLE_DRIVERS = [row[0] for row in DRIVERS[1:]]
+
+def get_driver_attr(driver: str) -> dict:
+    """Get driver attributes"""    
+    if driver not in AVAILABLE_DRIVERS:
         raise Exception(f'Unknown driver: {driver}')
-    driver_index = np.where(driver == np.array(avail_drivers))[0][0] + 1
+    driver_index = np.where(driver == np.array(AVAILABLE_DRIVERS))[0][0] + 1
     attributes = {}
     for attr, value in zip(DRIVERS[0][1:], DRIVERS[driver_index][1:]):
         attributes[attr] = value
     return attributes
-    
 
 
-if __name__ == '__main__':  # TODO remove
-    print(get_driver_attr('memardboard_single'))
+def get_driver_list() -> list[str]:
+    """Get driver list from the table"""
+    return AVAILABLE_DRIVERS

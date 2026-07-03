@@ -16,6 +16,7 @@ from manager.service.saves import save_list_to_bytearray
 from manager.service import a2r
 from manager.model.src import create_empty_db_crossbar
 from manager.service.global_settings import DB_PATH
+from manager.service.drivers import get_driver_attr
 from manager.model.db import DBOperate
 
 class Manager(Application):
@@ -127,6 +128,13 @@ class Manager(Application):
                     from simulator.src import create_crossbar_array
                     create_crossbar_array(serial, row_num, col_num)
         return status_add
+    
+    def init_board(self, board_type) -> None:
+        """
+        Initialize board attributes
+        """
+        self.board_type = board_type
+        self.driver_attr = get_driver_attr(self.board_type)
 
     def connect(self, **kwargs) -> bool:
         """
@@ -136,6 +144,7 @@ class Manager(Application):
                               self.ap_logger,
                               self.cb_type,
                               self.board_type,
+                              self.driver_attr,
                               crossbar_serial = self.crossbar_serial,
                               config = self.ap_config)
         # подключаемся к плате

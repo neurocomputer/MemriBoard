@@ -32,7 +32,7 @@ class CellInfo(QDialog):
         # инфо
         self.fill_info()
         # Connection to external terminals
-        if self.parent.man.board_type not in ['memardboard_crossbar']:  # TODO add other boards
+        if self.parent.man.driver_attr['connect_to_ext'] is None:
             self.ui.groupBox_ext_connection.setVisible(False)
         self.adjustSize()
         # обработчики кнопок
