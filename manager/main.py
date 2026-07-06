@@ -14,8 +14,6 @@ from manager.app import Application
 from manager.board import Connector
 from manager.service.saves import save_list_to_bytearray
 from manager.service import a2r
-from manager.model.src import create_empty_db_crossbar
-from manager.service.global_settings import DB_PATH
 from manager.service.drivers import get_driver_attr
 from manager.model.db import DBOperate
 
@@ -47,7 +45,7 @@ class Manager(Application):
         _worker_work_state -- работает ли воркер
         _need_save -- запущен сейвер
     """
-
+    db = DBOperate
     tickets: Queue
     tasks: Queue
     results: Queue
@@ -97,8 +95,6 @@ class Manager(Application):
             self.cb_type = chip_data[3]
             # внесения изменений в БД в новых версиях
             # добавление поля last_resistance в таблицу Experiments
-            _ = self.db.add_column_if_not_exist('Experiments', 'last_resistance', 'INTEGER')
-            _ = self.db.add_column_if_not_exist('Experiments', 'meta_info', 'BLOB')
         return status, chip_data
 
     def add_chip(self,
@@ -115,8 +111,7 @@ class Manager(Application):
         if status:
             self.ap_logger.critical('crossbar #%d with serial %s already in db', chip_data[0], serial)
         else:
-            status, crossbar_id = create_empty_db_crossbar(DB_PATH,
-                                                           serial,
+            status, crossbar_id = self.db.create_empty_db_crossbar(serial,
                                                            comment,
                                                            row_num,
                                                            col_num,
@@ -150,6 +145,12 @@ class Manager(Application):
         # подключаемся к плате
         if 'com_port' in kwargs:
             # подключение по COM порту
+            if 'pico' in kwargs:
+                self.connected_flag = self.conn.open_port(com_port=kwargs['com_port'],
+                                                        attempts = int(self.ap_config['connector']['attempts_to_kick']),
+                                                        timeout = float(self.ap_config["connector"]["timeout"]),
+                                                        addr=kwargs['addr'],
+                                                        pico=kwargs['pico'])
             self.connected_flag = self.conn.open_port(com_port=kwargs['com_port'],
                                                       attempts = int(self.ap_config['connector']['attempts_to_kick']),
                                                       timeout = float(self.ap_config["connector"]["timeout"]))
@@ -162,7 +163,6 @@ class Manager(Application):
         """
         Администратор очередей
         """
-        db = DBOperate()
         ticket_count = 0 # счетчик принятых тикетов
         # цикл работает пока не поднят флаг _need_stop
         while not self._need_stop:
@@ -185,7 +185,7 @@ class Manager(Application):
             self._accepted_tickets += 1
             self._total_accepted_tickets += 1
             # сохраняем в БД
-            status, exp_id, mem_id = db.add_not_completed_ticket(ticket, self.crossbar_id)
+            status, exp_id, mem_id = self.db.add_not_completed_ticket(ticket, self.crossbar_id)
             assert status # ошибка БД не возможно добавить тикет
             # добавляем в очередь генератор задач
             ticket_count += 1
@@ -203,7 +203,6 @@ class Manager(Application):
         """
         Работник с платой
         """
-        db = DBOperate()
         total_task_count = 0 # счетчик задач всего сделано
         ticket_count = 0 # счетчик всего принято тикетов
         # цикл работает пока не поднят флаг _need_stop
@@ -312,7 +311,7 @@ class Manager(Application):
                                           self.vol_ref_adc,
                                           self.res_switches,
                                           result[0]))
-                status_update_complited_ticket = db.update_complited_ticket(exp_id, mem_id, last_resistance)
+                status_update_complited_ticket = self.db.update_complited_ticket(exp_id, mem_id, last_resistance)
                 if not status_update_complited_ticket:
                     self.ap_logger.critical("db exp_id:%d mem_id:%d result:%s", exp_id, mem_id, str(result))
             else:
@@ -348,7 +347,6 @@ class Manager(Application):
         5) но - Exception
         6) всё остальное pass
         """
-        db = DBOperate()
         files_created = 0 # счетчик файлов
         file_opened = False # флаг открытия файла
         file = None
@@ -374,7 +372,7 @@ class Manager(Application):
                     file_path = os.path.join(os.getcwd(),'results', fname)
                     # сохраняем в БД
                     exp_id = int(result.split('_')[1])
-                    _ = db.update_ticket_result_path(exp_id, fname)
+                    _ = self.db.update_ticket_result_path(exp_id, fname)
                 # 3 открыть файл и записать
                 elif isinstance(result, tuple) and self.save_flag and not file_opened:
                     file = open(file_path, 'wb')

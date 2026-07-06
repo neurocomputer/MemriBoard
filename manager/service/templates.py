@@ -86,7 +86,9 @@ lock_board_type=0
 language=English
 
 ; бэкап датабазы
-[backup]
+[database]
 ; путь для бэкапа
 backup_path=
+; режим базы данных (sqlite/postgress)
+database_mode=sqlite
 """

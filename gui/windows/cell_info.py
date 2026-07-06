@@ -101,6 +101,9 @@ class CellInfo(QDialog):
         self.ui.label_bl.setText(self.lang_pack.get("bl") + str(self.parent.current_bl))
         self.ui.label_wl.setText(self.lang_pack.get("wl") + str(self.parent.current_wl))
         self.ui.label_resistance.setText(self.lang_pack.get("res") + str(self.parent.current_last_resistance) + self.lang_pack.get("ohm"))
+        _, mem_id = self.parent.man.db.get_memristor_id(self.parent.current_wl, self.parent.current_bl, self.parent.man.crossbar_id)
+        _, tasks = self.parent.man.db.count_tasks_on_memristor_id(mem_id)
+        self.ui.label_tasks.setText(f"Запросы = {tasks}")
 
     def set_up_init_values(self) -> None:
         """

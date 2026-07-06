@@ -23,6 +23,7 @@ class ConnectDialog(QDialog):
     cb_serial: str
     com_port: str = ''
     lang_pack: dict
+    core_scanned = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -37,10 +38,12 @@ class ConnectDialog(QDialog):
         self.ui.button_quit.clicked.connect(self.close)
         self.ui.button_settings.clicked.connect(self._settings)
         self.ui.button_new_crossbar.clicked.connect(lambda: self.show_new_cb_layout(True))
+        self.ui.button_scan_core.clicked.connect(self.core_scan)
         # обработка комбо
         self.ui.combo_com_name.currentIndexChanged.connect(self.on_com_name_changed)
         self.ui.edit_com_name.textChanged.connect(self.on_com_name_changed)
         self.ui.combo_board_type.currentIndexChanged.connect(self.on_combo_board_type_changed)
+        self.ui.combo_core_name.currentIndexChanged.connect(self.on_core_name_changed)
         # обновление отображения
         self.show_new_cb_layout(False)
         self.update_crossbar_list()
@@ -87,6 +90,12 @@ class ConnectDialog(QDialog):
         else: # адрес в списке
             self.com_port = combo_com_name
 
+    def on_core_name_changed(self) -> None:
+        """
+        Выбрали core
+        """
+        self.addr = self.ui.combo_core_name.currentData()
+
     def show_new_cb_layout(self, state) -> None:
         """
         Показать настройки нового кроссбара
@@ -111,6 +120,14 @@ class ConnectDialog(QDialog):
         self.ui.button_update.setVisible(state)
         self.ui.label_com_entry.setVisible(state)
         self.ui.edit_com_name.setVisible(state)
+
+    def show_core_settings_layout(self, state):
+        """
+        Показать параметры CORE если в COM выбран pico драйвер
+        """
+        self.ui.label_core_name.setVisible(state)
+        self.ui.combo_core_name.setVisible(state)
+        self.ui.button_scan_core.setVisible(state)
 
     def _settings(self) -> None:
         """
@@ -189,8 +206,13 @@ class ConnectDialog(QDialog):
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText(self.lang_pack.get("status_1"))
+            if combo_board_type in ['pico_client']:  # TODO move to driver table
+                self.show_core_settings_layout(True)
+            else:
+                self.show_core_settings_layout(False)
         else:
             self.show_com_settings_layout(False)
+            self.show_core_settings_layout(False)
             self.ui.label_status.setText(self.lang_pack.get("status"))
         self.update_window_size()
 
@@ -242,6 +264,12 @@ class ConnectDialog(QDialog):
                     self.accept_connet()
                 else:
                     if get_driver_attr(combo_board_type)['connect_args'] == 'com_port':
+                        if combo_board_type == 'pico_client':  # TODO: move to driver table
+                            if self.core_scanned:
+                                connected_flag = self.parent.man.connect(com_port=self.com_port, addr=self.addr, pico=self.pico)
+                            else:
+                                self.ui.label_status.setText("Core не выбран")    
+                                return
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
                     else:
                         connected_flag = self.parent.man.connect()
@@ -275,6 +303,26 @@ class ConnectDialog(QDialog):
         self.parent.number_cells = self.parent.man.col_num*self.parent.man.row_num
         self.parent.all_resistances = [[0 for _ in range(self.parent.man.col_num)] for _ in range(self.parent.man.row_num)]
         self.close()
+
+    def core_scan(self):
+        """
+        Сканирование CORE
+        """
+        try:
+            from MemriCORE.Pico_PC.pico_client import PicoClient
+            pico = PicoClient.over_serial(self.com_port, 115200)
+            addrs = pico.scan()
+            for addr in addrs:
+                self.ui.combo_core_name.addItem(
+                    f'0x{addr:02X}',
+                    addr
+                )
+            self.pico = pico
+            self.core_scanned = True
+        except ImportError:
+            print("Нет драйвера PicoClient")
+        except Exception as e:
+            print(f"Ошибка при инициализации CORE: {e}")
 
     def closeEvent(self, event): # pylint: disable=C0103,W0613
         """

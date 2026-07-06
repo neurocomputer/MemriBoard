@@ -472,5 +472,8 @@
     "help":{
         "name":"Help",
         "path":"docs/README.md"
+    },
+    "wait":{
+        "window_title":"Wait..."
     }
 }

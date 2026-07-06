@@ -24,8 +24,17 @@ class Wait(QDialog):
         self.opener = opener
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.change_language()
         # доп настройки
         self.setModal(True)
+        
+    def change_language(self):
+        """
+        Изменение языка интерфейса
+        """
+        ok, self.lang_pack = self.parent.read_language_json("wait")
+        if ok:
+            self.ui.setWindowTitle(self.lang_pack.get("window_title"))
 
     def closeEvent(self, event) -> None:
         self.stop_experiment.emit()
