@@ -206,7 +206,7 @@ class ConnectDialog(QDialog):
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText(self.lang_pack.get("status_1"))
-            if combo_board_type in ['pico_client']:  # TODO move to driver table
+            if get_driver_attr(combo_board_type)['core_scan']:
                 self.show_core_settings_layout(True)
             else:
                 self.show_core_settings_layout(False)
@@ -264,7 +264,7 @@ class ConnectDialog(QDialog):
                     self.accept_connet()
                 else:
                     if get_driver_attr(combo_board_type)['connect_args'] == 'com_port':
-                        if combo_board_type == 'pico_client':  # TODO: move to driver table
+                        if get_driver_attr(combo_board_type)['core_scan']:
                             if self.core_scanned:
                                 connected_flag = self.parent.man.connect(com_port=self.com_port, addr=self.addr, pico=self.pico)
                             else:
@@ -309,7 +309,7 @@ class ConnectDialog(QDialog):
         Сканирование CORE
         """
         try:
-            from MemriCORE.Pico_PC.pico_client import PicoClient
+            from MemriCORE.Pico_PC.pico_client import PicoClient  # type: ignore
             pico = PicoClient.over_serial(self.com_port, 115200)
             addrs = pico.scan()
             for addr in addrs:

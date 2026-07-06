@@ -332,6 +332,9 @@ class Connector():
             elif self.driver_attr['get_tech_info'] == 'elbear':
                 send_flag = True
                 rec_data = ['elbear_nano']
+            elif self.driver_attr['get_tech_info'] == 'pico':
+                send_flag = True
+                rec_data = ['pico_client']
                 # todo: добавить служебную инфу в драйвер
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -430,7 +433,7 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             # можно добавить работу с другими платами
-            elif self.board_type in ['pico_client']:
+            elif self.driver_attr['impact'] == 'pico':
                 if task['mode_flag'] == 7:
                     # self.interface.init(self.addr, mode=1) # MODE_7 = 1, MODE_MVM = 2, MODE_CORE = 3
                     task['vol'] = abs(task['vol'])
