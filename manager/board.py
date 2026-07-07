@@ -5,20 +5,22 @@
 # pylint: disable=no-name-in-module
 
 import time
+from typing import Union
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
+from manager.service.drivers import get_driver_attr
 
 class Connector():
     """
     Взаимодействие с платой
     """
 
-    silent: int
+    silent: bool
     logger: Logger
     cb_type: str
     board_type: str
-    driver_attr: dict
+    driver_attr: Union[dict, None]
     request_id: int = 0
     meta_info = {'task_time': 0.0}
 
@@ -28,12 +30,35 @@ class Connector():
     # для симулятора
     config: ConfigParser
 
-    def __init__(self, silent, logger, cb_type, board_type, driver_attr, **kwargs):
+    def __init__(
+        self, 
+        silent: bool, 
+        logger: Logger, 
+        cb_type: str, 
+        board_type: str, 
+        driver_attr: Union[dict, None] = None, 
+        **kwargs
+    ):
+        """Connector class used for communicating with the measurement board.
+
+        Args:
+            silent (bool): If True, some logging at info level is omitted.
+            logger (logging.Logger): Logger for the connector.
+            cb_type (str): `simulator` for simulating the memristive crossbar array, 
+                `real` for connecting to real measurement boards.
+            board_type (str): Board type (driver name) for real measurement boards. Available
+                drivers are listed in `MemriBoard/manager/service/drivers.py`.
+            driver_attr (dict | None, optional): Dict with driver attributes. If None, takes default attributes from 
+                `MemriBoard/manager/service/drivers.py`. Defaults to None.
+        """
         self.silent = silent
         self.logger = logger
         self.cb_type = cb_type
         self.board_type = board_type
-        self.driver_attr = driver_attr
+        if driver_attr is None:
+            self.driver_attr = get_driver_attr(board_type)
+        else:
+            self.driver_attr = driver_attr
         # для симулятора
         if 'config' in kwargs:
             self.config = kwargs['config']

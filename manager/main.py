@@ -135,7 +135,7 @@ class Manager(Application):
         """
         Подключение к плате
         """
-        self.conn = Connector(int(self.ap_config['connector']['silent']),
+        self.conn = Connector(bool(int(self.ap_config['connector']['silent'])),
                               self.ap_logger,
                               self.cb_type,
                               self.board_type,
