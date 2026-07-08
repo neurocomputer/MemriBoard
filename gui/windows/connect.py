@@ -201,6 +201,9 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
+        if combo_board_type == 'offline':
+            self.update_window_size()
+            return
         if get_driver_attr(combo_board_type)['connect_args'] == 'com_port':
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
