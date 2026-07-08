@@ -22,6 +22,7 @@ from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
 from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
+from manager.algorithms import ticket_generator, Algorithm
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Apply(QWidget):
@@ -506,9 +507,16 @@ class ApplyExp(QThread):
             status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
             if not status:
                 self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
+            _, initial_resistance = self.parent.parent.man.db.get_last_resistance(memristor_id)
             # инициируем цикл по тикетам
             counter = 0
-            for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, count
+            for ticket_info in ticket_generator(self.parent.parent.exp_list, initial_resistance=initial_resistance): # ticket["name"], ticket, count
+                print(ticket_info)
+                if len(ticket_info) == 4:  # An algorithm is running
+                    algorithm: Algorithm = ticket_info[3]
+                    print(algorithm.last_resistance())
+                else:
+                    algorithm = None
                 ticket = ticket_info[1]
                 # терминатор
                 term_left, term_right = self.parent.parent.man.get_term_values(ticket['terminate'])
@@ -580,6 +588,10 @@ class ApplyExp(QThread):
                     status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_res"))
+                    # Changing values in the algorithm
+                    if algorithm is not None:
+                        algorithm.set_last_resistance(last_resistance)
+                        algorithm = None  # Resetting algorithm variable
                 if self.need_stop:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:
