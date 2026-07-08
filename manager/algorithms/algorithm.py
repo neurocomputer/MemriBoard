@@ -1,4 +1,7 @@
 """Algorithm class that contains methods used in user algorithms"""
+from typing import Union
+
+from manager.service.global_settings import TICKET_PATH
 
 
 GENERATOR_FUNCTIONS = [  # Functions that generate tickets
@@ -23,30 +26,45 @@ class Algorithm:
         """
         self.last_res: float = initial_resistance
         self.need_db_resistance: bool = False
-    
-    
-    def measure_resistance(self):
-        """Measure the resistance"""
-        return (*example_ticket, self)
+        
+        
+    def last_resistance(self) -> float:
+        """Get last measured resistance.
 
-    
-    def send_ticket(self, voltage):
-        """Send a ticket"""
-        ticket = example_ticket[1]
-        ticket['params']['v_dir_stop_inc'] = voltage
-        return (example_ticket[0], ticket, example_ticket[2], self)
-        
-        
-    def last_resistance(self):
-        """Get last measured resistance"""
+        Returns:
+            resistance (float): Last measured resistance.
+        """
         return self.last_res
     
     
-    def set_last_resistance(self, resistance: float):
+    def set_last_resistance(self, resistance: float) -> None:
         """Set last measured resistance
 
         Args:
             resistance (float): resistance value.
         """
         self.last_res = resistance
+        
+        
+    def send_ticket(self, ticket_name: str, folder_path: Union[str, None] = None) -> None:
+        """Send a ticket from a file (by default, from `MemriBoard/tickets`).
+
+        Args:
+            ticket_name (str): Ticket name.
+            folder_path (str | None, optional): Full path to a folder containing ticket. 
+                If left `None`, default ticket folder is used (`MemriBoard/tickets`). Defaults to None.
+
+        Returns:
+            None: This function generates a ticket when the algorithm is running, 
+                it **should not be used in an expression**.
+        """
+        # ticket = example_ticket[1]
+        # ticket['params']['v_dir_stop_inc'] = voltage
+        # return (example_ticket[0], ticket, example_ticket[2], self)
+        raise RuntimeError('erere')
+    
+    
+    def measure_resistance(self) -> None:
+        """Measure the resistance"""
+        return (*example_ticket, self)
         

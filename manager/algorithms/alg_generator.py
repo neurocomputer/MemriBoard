@@ -52,7 +52,9 @@ def algorithm_generator(algorithm_code: str, initial_resistance: float = 0) -> G
     Yields:
         Generator[list, None, None]: Ticket generator.
     """
+    print('CHECKING')
     status, result = check_algorithm_code(algorithm_code)
+    print('CHECKING DONE:', status, result)
     if not status:
         raise RuntimeError(f'Could not create a generator from code! Algorithm:\n{algorithm_code}\nError:{result}')
     tree = ast.parse(result)
