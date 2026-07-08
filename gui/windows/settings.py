@@ -5,7 +5,6 @@
 # pylint: disable=E0611, C0103, R0903, W0212
 
 import os
-import platform
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
 

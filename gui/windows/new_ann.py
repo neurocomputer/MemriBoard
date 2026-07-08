@@ -606,10 +606,10 @@ class NewAnn(QDialog):
                     self.ticket['terminate']['type'] = "><"
                     self.ticket['terminate']['value'] = self.get_tolerance_ranges()
                     # заполняем список экспериментов
-                    task_list, count = calculate_counts_for_ticket(self.parent.man, self.ticket.copy())
+                    count = calculate_counts_for_ticket(self.parent.man, self.ticket.copy())
                     self.parent.exp_list_params['total_tickets'] += 1
                     self.parent.exp_list_params['total_tasks'] += count
-                    self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), task_list.copy(), count)]
+                    self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), count)]
                     # параметры прогресс бара
                     self.ui.progress_bar_mapping.setValue(0)
                     self.ui.progress_bar_mapping.setMaximum(len(self.target_resistances))
@@ -670,7 +670,7 @@ class NewAnn(QDialog):
         self.counter += 1
         if self.counter < len(self.target_resistances):
             self.ticket['terminate']['value'] = self.get_tolerance_ranges()
-            self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), self.parent.exp_list[0][2].copy(), self.parent.exp_list[0][3])]
+            self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), self.parent.exp_list[0][2])]
         # рисунок для базы в matplotlib
         plt.clf()
         plt.plot(data_for_plot_y, marker='o', linewidth=0.5)
