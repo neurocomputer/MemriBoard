@@ -246,7 +246,6 @@ class Window(QMainWindow):
                 self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
                 self.math_dialog = Math(parent=self, mode=mode)
                 self.math_dialog.show()
-                self.showMinimized()
    
     def show_new_ann_dialog(self, mode=None) -> None: 
         """
@@ -344,7 +343,6 @@ class Window(QMainWindow):
         self.opener = 'testing'
         self.testing_dialog = Testing(parent=self)
         self.testing_dialog.show()
-        self.showMinimized()
 
     def show_map_dialog(self) -> None:
         """
@@ -375,7 +373,6 @@ class Window(QMainWindow):
         self.opener = 'rram'
         self.rram_dialog = Rram(parent=self)
         self.rram_dialog.show()
-        self.showMinimized()
 
     def show_wait_dialog(self, opener) -> None:
         """
