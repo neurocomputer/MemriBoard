@@ -327,7 +327,7 @@ class ExpSettings(QDialog):
             filepath = ''
             if mode == 'dblclick':
                 self.importing_experiment = True
-                filepath = os.path.join(os.getcwd(), "tickets", self.ui.exp_list.currentIndex().data()) + ".json"
+                filepath = os.path.join(TICKET_PATH, self.ui.exp_list.currentIndex().data()) + ".json"
             if not filepath:
                 filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
             if filepath:

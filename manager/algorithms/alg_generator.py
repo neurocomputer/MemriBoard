@@ -42,12 +42,12 @@ def check_algorithm_code(algorithm_code: str) -> tuple[bool, str]:
         return False, traceback.format_exc()
 
 
-def algorithm_generator(algorithm_code: str, initial_resistance: float = 0) -> Generator[list, None, None]:
+def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[list, None, None]:
     """Ticket generator for algorithms.
 
     Args:
         algorithm_code (str): Algorithm code.
-        initial_resistance (float, optional): Initial resistance (from the database). Defaults to 0.
+        algorithm (Algorithm): Algorithm instance for the ticket sequence.
 
     Yields:
         Generator[list, None, None]: Ticket generator.
@@ -56,12 +56,11 @@ def algorithm_generator(algorithm_code: str, initial_resistance: float = 0) -> G
     status, result = check_algorithm_code(algorithm_code)
     print('CHECKING DONE:', status, result)
     if not status:
-        raise RuntimeError(f'Could not create a generator from code! Algorithm:\n{algorithm_code}\nError:{result}')
+        raise RuntimeError(f'Could not create a generator from code! Algorithm:\n{algorithm_code}\n{result}')
     tree = ast.parse(result)
     # Creating namespace based on Algorithm methods
-    alg = Algorithm(initial_resistance=initial_resistance)
     namespace = {}
-    for name, method in inspect.getmembers(alg, inspect.ismethod):
+    for name, method in inspect.getmembers(algorithm, inspect.ismethod):
         if name in GENERATOR_FUNCTIONS or name in VALUE_FUNCTIONS:
             namespace[name] = method
     # Creating generator
@@ -107,7 +106,18 @@ class CodeValidator(ast.NodeVisitor):
             if isinstance(node.parent, (ast.Assign, ast.Call, ast.If, ast.BinOp)):
                 self.error(node, f'{node.func.id}() does not return a value')  
             if not isinstance(node.parent, ast.Expr):
-                self.error(node, f'{node.func.id} cannot be transformed to a generator in this expression')    
+                self.error(node, f'{node.func.id} cannot be transformed to a generator in this expression')
+            # Checking if the function can be executed
+            try:
+                alg = Algorithm(parent=None, validate=True)
+                method = getattr(alg, node.func.id)
+                args = [arg.value for arg in node.args]
+                kwargs = {keyword.arg: keyword.value.value for keyword in node.keywords}
+                method(*args, **kwargs)  # Trying to execute
+            except RuntimeError as e:
+                self.error(node, e)
+            except Exception:
+                self.error(node, traceback.format_exc())
     
 
 

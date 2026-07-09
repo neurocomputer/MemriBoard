@@ -1,7 +1,7 @@
 """Ticket generator that supports algorithms"""
 from typing import Generator
 
-from manager.algorithms import algorithm_generator
+from manager.algorithms import algorithm_generator, Algorithm
 
 
 
@@ -9,18 +9,18 @@ user_alg = """def user_algorithm():
     measure_resistance()
     print('LAST_RES:', last_resistance())
     if last_resistance() > 50:
-        send_ticket(100)
+        send_ticket('iv-curve')
     else:
-        send_ticket(200)
+        send_ticket('measure')
 """
 
 
-def ticket_generator(ticket_list: list, initial_resistance: float = 0) -> Generator[list, None, None]:
+def ticket_generator(ticket_list: list, algorithm: Algorithm) -> Generator[list, None, None]:
     """Ticket generator that supports algorithms.
 
     Args:
         ticket_list (list): Ticket list (`MainWindow.exp_list`).
-        initial_resistance (float, optional): Initial resistance (from the database). Defaults to 0.
+        algorithm (Algorithm): Algorithm instance for the ticket sequence.
 
     Yields:
         Generator[list, None, None]: Ticket generator.
@@ -30,5 +30,5 @@ def ticket_generator(ticket_list: list, initial_resistance: float = 0) -> Genera
     #         yield from algorithm_generator(user_alg)
     #     else:
     #         yield ticket
-    yield from algorithm_generator(user_alg, initial_resistance=initial_resistance)  # ticket_name, ticket, count, Algorithm
+    yield from algorithm_generator(user_alg, algorithm=algorithm)  # ticket_name, ticket, count, Algorithm
     

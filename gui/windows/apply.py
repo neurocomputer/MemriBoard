@@ -454,6 +454,7 @@ class ApplyExp(QThread):
         self.need_stop = False # нужна остановка
         self.image_saved = False # рисунок создан и сохранен на диск
         _, self.lang_pack = self.parent.parent.read_language_json("apply")
+        self.algorithm = Algorithm(parent=self)  # For algorithms
 
     def setup_image_saved(self, status):
         """
@@ -507,16 +508,13 @@ class ApplyExp(QThread):
             status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
             if not status:
                 self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
-            _, initial_resistance = self.parent.parent.man.db.get_last_resistance(memristor_id)
+            _, self.last_resistance = self.parent.parent.man.db.get_last_resistance(memristor_id)
+            self.algorithm.set_last_resistance(self.last_resistance)
             # инициируем цикл по тикетам
             counter = 0
-            for ticket_info in ticket_generator(self.parent.parent.exp_list, initial_resistance=initial_resistance): # ticket["name"], ticket, count
+            for ticket_info in ticket_generator(self.parent.parent.exp_list, algorithm=self.algorithm): # ticket["name"], ticket, count
                 print(ticket_info)
-                if len(ticket_info) == 4:  # An algorithm is running
-                    algorithm: Algorithm = ticket_info[3]
-                    print(algorithm.last_resistance())
-                else:
-                    algorithm = None
+                print(self.algorithm.last_resistance())
                 ticket = ticket_info[1]
                 # терминатор
                 term_left, term_right = self.parent.parent.man.get_term_values(ticket['terminate'])
@@ -575,23 +573,21 @@ class ApplyExp(QThread):
                 result_file.close()
                 # сохраняем в БД статус завершения
                 if result:
-                    last_resistance = int(a2r(self.parent.parent.man.gain,
+                    self.last_resistance = int(a2r(self.parent.parent.man.gain,
                                               self.parent.parent.man.res_load,
                                               self.parent.parent.man.vol_read,
                                               self.parent.parent.man.adc_bit,
                                               self.parent.parent.man.vol_ref_adc,
                                               self.parent.parent.man.res_switches,
                                               result[0]))
-                    status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
+                    status = self.parent.parent.man.db.update_last_resistance(memristor_id, self.last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_info"))
-                    status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
+                    status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', self.last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_res"))
                     # Changing values in the algorithm
-                    if algorithm is not None:
-                        algorithm.set_last_resistance(last_resistance)
-                        algorithm = None  # Resetting algorithm variable
+                    self.algorithm.set_last_resistance(self.last_resistance)
                 if self.need_stop:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:
