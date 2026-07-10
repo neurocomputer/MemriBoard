@@ -229,12 +229,10 @@ class Window(QMainWindow):
         if self.math_dialog is Math:
             mode = ''
             if self.man.cb_type == "real":
-                if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c', 'rp5_rram_elbear_nano']:
-                    mode = "no_crossbar"
-                if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
-                    mode = "normal"
-                else:
+                if self.man.driver_attr['math_mode'] is None:
                     show_warning_messagebox(parent=self, message=self.lang_pack.get("warn"))
+                else:
+                    mode = self.man.driver_attr['math_mode']  # no_crossbar | normal                    
             elif self.man.cb_type == "simulator":
                 mode = "normal"
             if mode != '':
@@ -248,7 +246,6 @@ class Window(QMainWindow):
                 self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
                 self.math_dialog = Math(parent=self, mode=mode)
                 self.math_dialog.show()
-                self.showMinimized()
    
     def show_new_ann_dialog(self, mode=None) -> None: 
         """
@@ -346,7 +343,6 @@ class Window(QMainWindow):
         self.opener = 'testing'
         self.testing_dialog = Testing(parent=self)
         self.testing_dialog.show()
-        self.showMinimized()
 
     def show_map_dialog(self) -> None:
         """
@@ -377,7 +373,6 @@ class Window(QMainWindow):
         self.opener = 'rram'
         self.rram_dialog = Rram(parent=self)
         self.rram_dialog.show()
-        self.showMinimized()
 
     def show_wait_dialog(self, opener) -> None:
         """

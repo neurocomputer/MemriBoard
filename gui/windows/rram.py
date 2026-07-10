@@ -16,6 +16,7 @@ from gui.src import show_warning_messagebox, show_choose_window
 from gui.windows.apply import ApplyExp
 from gui.windows.snapshot import Snapshot
 from manager.service import a2r
+from manager.service.plots import calculate_counts_for_ticket
 
 def save_binary_string_to_file(binary_str: str, filename: str) -> None:
     """
@@ -330,13 +331,11 @@ class Rram(QWidget):
             if status and tickets != []:
                 for ticket in tickets:
                     ticket = pickle.loads(ticket[0])
-                    task_list, count = self.calculate_counts_for_ticket(self.parent.man,
-                                                                        ticket.copy())
+                    count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
                     self.parent.exp_list_params['total_tickets'] += 1
                     self.parent.exp_list_params['total_tasks'] += count
                     self.parent.exp_list.append((ticket["name"],
                                                  ticket.copy(),
-                                                 task_list.copy(),
                                                  count))
                 # параметры прогресс бара
                 self.counter = 0
@@ -379,13 +378,11 @@ class Rram(QWidget):
         if status and tickets != []:
             for ticket in tickets:
                 ticket = pickle.loads(ticket[0])
-                task_list, count = self.calculate_counts_for_ticket(self.parent.man,
-                                                                    ticket.copy())
+                count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
                 self.parent.exp_list_params['total_tickets'] += 1
                 self.parent.exp_list_params['total_tasks'] += count
                 self.parent.exp_list.append((ticket["name"],
                                              ticket.copy(),
-                                             task_list.copy(),
                                              count))
             # параметры прогресс бара
             self.counter = self.binary.count("0")
@@ -416,13 +413,11 @@ class Rram(QWidget):
         if status and tickets != []:
             for ticket in tickets:
                 ticket = pickle.loads(ticket[0])
-                task_list, count = self.calculate_counts_for_ticket(self.parent.man,
-                                                                    ticket.copy())
+                count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
                 self.parent.exp_list_params['total_tickets'] += 1
                 self.parent.exp_list_params['total_tasks'] += count
                 self.parent.exp_list.append((ticket["name"],
                                                 ticket.copy(),
-                                                task_list.copy(),
                                                 count))
             # параметры прогресс бара
             self.counter = 0
@@ -438,21 +433,6 @@ class Rram(QWidget):
             self.start_thread.ticket_finished.connect(self.on_ticket_finished)
             self.start_thread.finished_exp.connect(self.on_finished_exp)
             self.start_thread.start()
-
-    def calculate_counts_for_ticket(self, parent, ticket):
-        """
-        Посчитать количество задач для тикета
-        """
-        # получаем генератор задач
-        task = parent.menu[ticket['mode']], (ticket['params'],
-                                            ticket['terminate'],
-                                            parent.blank_type)
-        count = 0
-        task_list = []
-        for tsk in task[0](*task[1]):
-            count += 1
-            task_list.append(tsk)
-        return task_list, count
 
     def on_ticket_finished(self, value):
         pass

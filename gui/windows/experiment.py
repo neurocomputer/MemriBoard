@@ -170,11 +170,11 @@ class ExpSettings(QDialog):
             ticket["params"]["wl"] = self.parent.current_wl
             ticket["params"]["bl"] = self.parent.current_bl
             # 4 считаем сколько тикетов и тасков в списке
-            task_list, count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+            count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
             self.parent.exp_list_params['total_tickets'] += 1
             self.parent.exp_list_params['total_tasks'] += count
             # 5 отображаем название тикета в списке
-            self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+            self.parent.exp_list.append((ticket["name"], ticket.copy(), count))
             self._refresh_exp_list()
             # 6 обновляем значение лейблов
             self.label_total_update()
@@ -200,7 +200,7 @@ class ExpSettings(QDialog):
             ticket_for_del = self.parent.exp_list.pop(self.ui.plan_list.currentIndex().row())
             # 4 считаем сколько тикетов и тасков в списке
             self.parent.exp_list_params['total_tickets'] -= 1
-            self.parent.exp_list_params['total_tasks'] -= ticket_for_del[3]
+            self.parent.exp_list_params['total_tasks'] -= ticket_for_del[2]
             # 5 обновляем значение лейблов
             self.label_total_update()
             # обновляем список
@@ -239,13 +239,12 @@ class ExpSettings(QDialog):
         #указываем ячейку
         new_ticket["params"]["wl"] = self.parent.current_wl
         new_ticket["params"]["bl"] = self.parent.current_bl
-        task_list, count = calculate_counts_for_ticket(self.parent.man, new_ticket.copy())
+        count = calculate_counts_for_ticket(self.parent.man, new_ticket.copy())
         ticket_position = self.ui.plan_list.currentIndex().row()
-        self.parent.exp_list_params['total_tasks'] -= self.parent.exp_list[ticket_position][3]
+        self.parent.exp_list_params['total_tasks'] -= self.parent.exp_list[ticket_position][2]
         self.parent.exp_list_params['total_tasks'] += count
         self.parent.exp_list[ticket_position] = (new_ticket["name"],
                                                  new_ticket.copy(),
-                                                 task_list.copy(),
                                                  count)
         self.label_total_update()
 
@@ -349,9 +348,9 @@ class ExpSettings(QDialog):
         # определяем номер тикета
         ticket_position = self.ui.plan_list.currentIndex().row()
         ticket = deepcopy(self.parent.exp_list[ticket_position][1])
-        task_list, count = calculate_counts_for_ticket(self.parent.man, deepcopy(ticket))
+        count = calculate_counts_for_ticket(self.parent.man, deepcopy(ticket))
         # копируем выбранный тикет
-        self.parent.exp_list.append((ticket["name"], deepcopy(ticket), deepcopy(task_list), count))
+        self.parent.exp_list.append((ticket["name"], deepcopy(ticket), count))
         # обновляем параметры
         self.parent.exp_list_params['total_tickets'] += 1
         self.parent.exp_list_params['total_tasks'] += count

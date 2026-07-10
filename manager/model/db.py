@@ -4,12 +4,11 @@
 
 import os
 import pickle
-import datetime
+from datetime import datetime
 import sqlalchemy as sqla
-from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean, func
+from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound, MultipleResultsFound
-from datetime import datetime
 from typing import Optional, List
 from manager.service.saves import results_from_bytes
 # from manager.service.global_settings import DB_PATH
@@ -135,7 +134,7 @@ class DBOperate():
             elif base == 'postgress':
                 # поднятие сервера
                 data_dir = os.path.join(os.getcwd(), 'postgress')
-                import pgembed as pg
+                import pgembed as pg # type: ignore
                 server = pg.get_server(data_dir)
                 uri = server.get_uri()
                 # создание базы, если отсутствует
