@@ -4,7 +4,7 @@
 
 import os
 import pickle
-import datetime
+from datetime import datetime
 import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
