@@ -54,6 +54,7 @@ class ExpSettings(QDialog):
         self.list_experiments = QStandardItemModel()
         self.ui.plan_list.setModel(self.list_experiments)
         self._refresh_exp_list()
+        self.label_total_update()
         self.ui.plan_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.plan_list.doubleClicked.connect(self._edit_ticket)
         try:
@@ -71,17 +72,13 @@ class ExpSettings(QDialog):
         self.ui.button_edit_ticket.clicked.connect(self._edit_ticket)
         self.ui.button_view_requets.clicked.connect(self._view_requests)
         self.ui.button_cancel_exp.clicked.connect(self.close)
-        self.ui.button_apply_exp.clicked.connect(self.apply_exp)
-        self.ui.button_check_exp.clicked.connect(self.check_exp)
         self.ui.button_load_exp.clicked.connect(lambda: self.parent.show_history_dialog(mode="all"))
-        self.ui.button_apply_all.clicked.connect(self.apply_exp_all)
         self.ui.button_duplicate.clicked.connect(self.duplicate_ticket)
         self.ui.button_import.clicked.connect(self.import_experiment_json)
-        # блок кнопок
         if parent.opener == 'testing':
-            self.ui.button_apply_exp.setEnabled(False)
+            self.ui.button_apply_exp.clicked.connect(self.apply_exp_all)
         else:
-            self.ui.button_apply_all.setEnabled(False)
+            self.ui.button_apply_exp.clicked.connect(self.apply_exp)
 
     def change_language(self):
         """
@@ -90,23 +87,17 @@ class ExpSettings(QDialog):
         ok, self.lang_pack = self.parent.read_language_json("experiment")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
-            self.ui.groupBox.setTitle(self.lang_pack.get("signal"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("signals"))
             self.ui.groupBox_2.setTitle(self.lang_pack.get("exp_plan"))
             self.ui.button_new_signal.setText(self.lang_pack.get("new"))
-            self.ui.button_delete.setText(self.lang_pack.get("delete"))
             self.ui.button_add_exp.setText(self.lang_pack.get("add_to_plan"))
             self.ui.label.setText(self.lang_pack.get("exp_name"))
             self.ui.button_load_exp.setText(self.lang_pack.get("upload"))
             self.ui.button_import.setText(self.lang_pack.get("import"))
             self.ui.button_edit_ticket.setText(self.lang_pack.get("edit"))
             self.ui.button_duplicate.setText(self.lang_pack.get("duplicate"))
-            self.ui.button_up_plan.setText(self.lang_pack.get("up"))
-            self.ui.button_down_plan.setText(self.lang_pack.get("down"))
-            self.ui.button_delete_plan.setText(self.lang_pack.get("remove"))
             self.ui.button_view_requets.setText(self.lang_pack.get("view_req"))
-            self.ui.button_check_exp.setText(self.lang_pack.get("check"))
             self.ui.button_apply_exp.setText(self.lang_pack.get("apply_cell"))
-            self.ui.button_apply_all.setText(self.lang_pack.get("apply_all"))
             self.ui.button_cancel_exp.setText(self.lang_pack.get("cancel"))
 
     def set_up_init_values(self):
@@ -304,7 +295,7 @@ class ExpSettings(QDialog):
                                                                 self.parent.current_last_resistance)
         event.accept()
 
-    def check_exp(self) -> None:
+    def check_exp(self) -> None:  # TODO можно доделать и вернуть кнопку
         """
         Проверить эксперимент
         """

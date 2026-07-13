@@ -1,0 +1,3 @@
+delete-bin-line.svg: https://remixicon.com/icon/delete-bin-line
+arrow-up-line.svg: https://remixicon.com/icon/arrow-up-line
+arrow-down-line.svg: https://remixicon.com/icon/arrow-down-line
