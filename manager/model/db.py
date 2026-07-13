@@ -4,7 +4,7 @@
 
 import os
 import pickle
-import datetime
+from datetime import datetime
 import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
@@ -512,7 +512,7 @@ class DBOperate():
                     Experiments.name,
                     Experiments.status,
                     Experiments.last_resistance
-                ).where(Experiments.memristor_id == memristor_id)
+                ).where(Experiments.memristor_id == memristor_id).order_by(Experiments.datestamp.desc())
                 history = session.execute(output).fetchall()
             status = True
             return status, history
