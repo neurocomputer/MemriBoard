@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
-from manager.service.global_settings import TICKET_PATH
+from manager.service.global_settings import TICKET_PATH, ALGORITHM_PATH
 from manager.service.plots import calculate_counts_for_ticket
 from gui.src import show_warning_messagebox, show_choose_window, open_file_dialog
 
@@ -64,13 +64,14 @@ class ExpSettings(QDialog):
         # обработка кнопок
         self.ui.button_new_signal.clicked.connect(lambda: self.parent.show_signal_dialog("blank",
                                                                                          "create"))
+        self.ui.button_new_algorithm.clicked.connect(self.show_algorithm_dialog)
         self.ui.button_delete.clicked.connect(self._delete_json)
         self.ui.button_add_exp.clicked.connect(self._add_exp_to_list)
         self.ui.button_up_plan.clicked.connect(lambda: self._exp_list_up_exp(-1))
         self.ui.button_down_plan.clicked.connect(lambda: self._exp_list_up_exp(1))
         self.ui.button_delete_plan.clicked.connect(self._exp_list_delete)
         self.ui.button_edit_ticket.clicked.connect(self._edit_ticket)
-        self.ui.button_view_requets.clicked.connect(self._view_requests)
+        self.ui.button_view_requests.clicked.connect(self._view_requests)
         self.ui.button_cancel_exp.clicked.connect(self.close)
         self.ui.button_load_exp.clicked.connect(lambda: self.parent.show_history_dialog(mode="all"))
         self.ui.button_duplicate.clicked.connect(self.duplicate_ticket)
@@ -89,14 +90,17 @@ class ExpSettings(QDialog):
             self.ui.setWindowTitle(self.lang_pack.get("name"))
             self.ui.groupBox.setTitle(self.lang_pack.get("signals"))
             self.ui.groupBox_2.setTitle(self.lang_pack.get("exp_plan"))
+            self.ui.groupBox_3.setTitle(self.lang_pack.get("algorithms"))
             self.ui.button_new_signal.setText(self.lang_pack.get("new"))
             self.ui.button_add_exp.setText(self.lang_pack.get("add_to_plan"))
+            self.ui.button_new_algorithm.setText(self.lang_pack.get("new"))
+            self.ui.button_add_algorithm.setText(self.lang_pack.get("add_to_plan"))
             self.ui.label.setText(self.lang_pack.get("exp_name"))
             self.ui.button_load_exp.setText(self.lang_pack.get("upload"))
             self.ui.button_import.setText(self.lang_pack.get("import"))
             self.ui.button_edit_ticket.setText(self.lang_pack.get("edit"))
             self.ui.button_duplicate.setText(self.lang_pack.get("duplicate"))
-            self.ui.button_view_requets.setText(self.lang_pack.get("view_req"))
+            self.ui.button_view_requests.setText(self.lang_pack.get("view_req"))
             self.ui.button_apply_exp.setText(self.lang_pack.get("apply_cell"))
             self.ui.button_cancel_exp.setText(self.lang_pack.get("cancel"))
 
@@ -347,3 +351,9 @@ class ExpSettings(QDialog):
         self.parent.exp_list_params['total_tasks'] += count
         self._refresh_exp_list()
         self.label_total_update()
+        
+    def show_algorithm_dialog(self) -> None:
+        """
+        Показать окно редактирования алгоритма
+        """
+        pass

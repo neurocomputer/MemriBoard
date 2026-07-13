@@ -138,7 +138,10 @@ class Window(QMainWindow):
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # диалоговое окно подключения
-        self.show_connect_dialog()
+        # self.show_connect_dialog()
+        from gui.windows.algorithm_editor import AlgorithmEditor
+        alg = AlgorithmEditor(self)
+        alg.show()
         
     def set_shortcuts(self):
         """

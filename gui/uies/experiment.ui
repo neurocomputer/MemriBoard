@@ -17,7 +17,7 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1">
+      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1,0">
        <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
@@ -198,6 +198,50 @@
          </layout>
         </widget>
        </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>Алгоритмы</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <item>
+           <widget class="QListView" name="listView"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="1,1,0">
+            <item>
+             <widget class="QPushButton" name="button_new_algorithm">
+              <property name="text">
+               <string>Новый</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_add_algorithm">
+              <property name="text">
+               <string>Добавить в план</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="botton_delete_algorithm">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
@@ -207,7 +251,7 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_10">
         <item>
-         <widget class="QPushButton" name="button_view_requets">
+         <widget class="QPushButton" name="button_view_requests">
           <property name="text">
            <string>Просмотреть запросы</string>
           </property>

@@ -183,6 +183,7 @@
     "experiment":{
         "name":"Experiment plan",
         "signals":"Tickets (Signals)",
+        "algorithms": "Algorithms",
         "exp_plan":"Experiment plan",
         "new":"New",
         "add_to_plan":"Add to plan",
