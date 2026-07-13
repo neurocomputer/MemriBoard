@@ -8,10 +8,10 @@ from manager.algorithms import algorithm_generator, Algorithm
 user_alg = """def user_algorithm():
     measure_resistance()
     print('LAST_RES:', last_resistance())
-    if last_resistance() > 50:
-        send_ticket('iv-curve')
+    if last_resistance() > 10000:
+        send_experiment('Experiment_SET')
     else:
-        send_ticket('measure')
+        send_experiment('Experiment_RESET')
 """
 
 

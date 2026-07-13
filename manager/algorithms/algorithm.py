@@ -2,36 +2,54 @@
 from typing import Union
 import os
 import json
+import traceback
 
 from manager.service.global_settings import TICKET_PATH
 
 
-GENERATOR_FUNCTIONS = [  # Functions that generate tickets
+GENERATOR_FUNCTIONS = [  # Functions that generate a single ticket
     'measure_resistance',
-    'send_ticket'
+    'send_ticket',
+    'send_ticket_dict'
+]
+
+MULTI_GENERATOR_FUNCTIONS = [  # Functions that generate multiple tickets
+    'send_experiment',
+    'send_experiment_dict'
 ]
 
 VALUE_FUNCTIONS = [  # Function that return or set values (do not yield a ticket)
     'last_resistance',
-    'set_last_resistance'
+    'set_last_resistance',
+    'get_ticket_dict'
 ]
 
 
-example_ticket = ('iv-curve', {'name': 'iv-curve', 'mode': 'std', 'params': {'v_dir_strt_inc': 0, 'v_dir_stop_inc': 1392, 'v_dir_step_inc': 41, 't_dir_msec_inc': 0, 't_dir_usec_inc': 100, 'dir_inc_countr': 1, 'v_dir_strt_dec': 1392, 'v_dir_stop_dec': 0, 'v_dir_step_dec': 41, 't_dir_msec_dec': 0, 't_dir_usec_dec': 100, 'dir_dec_countr': 1, 'v_rev_strt_inc': 0, 'v_rev_stop_inc': 1392, 'v_rev_step_inc': 41, 't_rev_msec_inc': 0, 't_rev_usec_inc': 100, 'rev_inc_countr': 1, 'v_rev_strt_dec': 1392, 'v_rev_stop_dec': 0, 'v_rev_step_dec': 41, 't_rev_msec_dec': 0, 't_rev_usec_dec': 100, 'rev_dec_countr': 1, 'count': 1, 'reverse': 0, 'id': 0, 'wl': 0, 'bl': 0}, 'terminate': {'type': 'pass', 'value': 0}}, 140)
+
 class Algorithm:
     """Algorithm class that contains methods used in user algorithms"""
-    def __init__(self, parent=None, initial_resistance: float = 0, validate: bool = False):
+    def __init__(
+        self, parent=None, 
+        initial_resistance: float = 0, 
+        measure_ticket_name: Union[str, None] = None,
+        validate: bool = False
+    ):
         """Algorithm class that implements algorithm functions; Attributes can be modified from the ApplyExp.
 
         Args:
             parent (gui.windows.apply.ApplyExp | None): Parent object.
             initial_resistance (float, optional): Initial resistance (self.last_res). Defaults to 0.
+            measure_ticket_name (str | None, optional): Name of the measure ticket (in `MemriBoard/tickets`), 
+                used in `.measure_resistance()` method. If None, defaults to `tickets/measure.json`.
             validate (bool, optional): If True, the methods are used for code validation.
         """
         self.parent = parent  # ApplyExp
-        self.validate = validate
         self.last_res: float = initial_resistance
-        self.need_db_resistance: bool = False
+        if measure_ticket_name is None:
+            self.measure_ticket_name = 'measure.json'
+        else:
+            self.measure_ticket_name = measure_ticket_name
+        self.validate = validate
         
         
     def last_resistance(self) -> float:
@@ -78,20 +96,154 @@ class Algorithm:
                 raise RuntimeError(f"Ticket does not exist! Path: '{full_path}'")
             try:
                 with open(full_path, 'r') as file:
-                    json.load(file)
+                    ticket = json.load(file)
+                self._validate_ticket(ticket)
             except Exception as e:
                 raise RuntimeError(f'Could not open the ticket: {type(e).__name__}: {e}')
         # Generating ticket
-        return example_ticket
-        # ticket = example_ticket[1]
-        # ticket['params']['v_dir_stop_inc'] = voltage
-        # return (example_ticket[0], ticket, example_ticket[2], self)
-        # print('Executing!', ticket_name)
+        with open(full_path, 'r') as file:
+            ticket = json.load(file)
+        return (None, ticket, None)
+    
+    
+    def send_ticket_dict(self, ticket: dict) -> None:
+        """Send a ticket as a dict.
+
+        Args:
+            ticket (dict): Ticket to send.
+            
+        Returns:
+            None: This function generates a ticket when the algorithm is running, 
+                it **should not be used in an expression**.
+        """
+        if self.validate:
+            if not isinstance(ticket, dict):
+                raise RuntimeError(f"Wrong type for 'ticket' variable: '{type(ticket)}'. Expected type is 'dict'")            
+            self._validate_ticket(ticket)
+        return (None, ticket, None)
     
     
     def measure_resistance(self) -> None:
-        """Measure the resistance"""
-        return example_ticket
+        """Measure the resistance (send measure ticket).
+        
+        Returns:
+            None: This function generates a ticket when the algorithm is running, 
+                it **should not be used in an expression**.
+        """
+        return self.send_ticket(ticket_name=self.measure_ticket_name)
+    
+    
+    def send_experiment(self, experiment_name: str, folder_path: Union[str, None] = None) -> None:
+        """Send an experiment from a file (by default, from `MemriBoard/tickets`).
+
+        Args:
+            experiment_name (str): Experiment name.
+            folder_path (str | None, optional): Full path to a folder containing the experiment. 
+                If left `None`, default ticket folder is used (`MemriBoard/tickets`). Defaults to None.
+
+        Returns:
+            None: This function generates tickets when the algorithm is running, 
+                it **should not be used in an expression**.
+        """
+        if self.validate:  # Variable validation
+            if not isinstance(experiment_name, str):
+                raise RuntimeError(f"Wrong type for 'experiment_name' variable: '{type(experiment_name)}'. Expected type is 'str'")
+            if not (isinstance(folder_path, str) or folder_path is None):
+                raise RuntimeError(f"Wrong type for 'folder_path' variable: '{type(folder_path)}'. Expected type is 'str' or 'None'") 
+        if folder_path is None:
+            full_path = os.path.join(TICKET_PATH, self._add_json_to_path(experiment_name))
+        else:
+            full_path = os.path.join(folder_path, self._add_json_to_path(experiment_name))
+        if self.validate:  # Ticket validation
+            if not os.path.exists(full_path):
+                raise RuntimeError(f"Experiment does not exist! Path: '{full_path}'")
+            try:
+                with open(full_path, 'r') as file:
+                    experiment = json.load(file)
+                    for i, ticket in experiment.items():
+                        self._validate_ticket(ticket)
+            except Exception as e:
+                raise RuntimeError(f'Could not open the ticket number {i}: {type(e).__name__}: {e}')
+        # Generating tickets
+        with open(full_path, 'r') as file:
+            experiment = json.load(file)
+        return [(None, ticket, None) for ticket in experiment.values()]
+    
+    
+    def send_experiment_dict(self, experiment: dict) -> None:
+        """Send an experiment as a dict in format {'number': ticket}.
+
+        Args:
+            experiment (dict): Experiment to send.
+
+        Returns:
+            None: This function generates tickets when the algorithm is running, 
+                it **should not be used in an expression**.
+        """
+        if self.validate:
+            if not isinstance(experiment, dict):
+                raise RuntimeError(f"Wrong type for 'experiment' variable: '{type(experiment)}'. Expected type is 'dict'")
+            for i, ticket in experiment.items():
+                if not isinstance(ticket, dict):
+                    raise RuntimeError(f"Wrong type for ticket number {i}: '{type(ticket)}'. Expected type is 'dict'")        
+                self._validate_ticket(ticket)
+        return [(None, ticket, None) for ticket in experiment.values()]
+    
+    
+    def get_ticket_dict(self, filename: str, folder_path: Union[str, None] = None) -> dict:
+        """Get ticket or experiment dict in the algorithm code.
+
+        Args:
+            filename (str): Filename of the ticket or experiment json.
+            folder_path (str | None, optional): Full path to a folder containing the ticket or experiment. 
+                If left `None`, default ticket folder is used (`MemriBoard/tickets`). Defaults to None.
+
+        Returns:
+            dict: Ticket or experiment.
+        """
+        if self.validate:  # Variable validation
+            if not isinstance(filename, str):
+                raise RuntimeError(f"Wrong type for 'filename' variable: '{type(filename)}'. Expected type is 'str'")
+            if not (isinstance(folder_path, str) or folder_path is None):
+                raise RuntimeError(f"Wrong type for 'folder_path' variable: '{type(folder_path)}'. Expected type is 'str' or 'None'") 
+        if folder_path is None:
+            full_path = os.path.join(TICKET_PATH, self._add_json_to_path(filename))
+        else:
+            full_path = os.path.join(folder_path, self._add_json_to_path(filename))
+        if self.validate:  # Ticket validation
+            if not os.path.exists(full_path):
+                raise RuntimeError(f"File does not exist! Path: '{full_path}'")
+            try:
+                with open(full_path, 'r') as file:
+                    ticket = json.load(file)
+            except Exception as e:
+                raise RuntimeError(f'Could not open the .json file: {type(e).__name__}: {e}')
+        # Returning the ticket
+        with open(full_path, 'r') as file:
+            ticket = json.load(file)
+        return ticket
+    
+        
+    def _validate_ticket(self, ticket: dict) -> None:
+        """Validate a ticket. If something is wrong, an exception is risen.
+
+        Args:
+            ticket (dict): Ticket to validate.
+        """
+        if 'mode' not in ticket:
+            raise RuntimeError("Ticket should have 'mode' key!")
+        if 'params' not in ticket:
+            raise RuntimeError("Ticket should have 'params' key!")
+        if 'terminate' not in ticket:
+            raise RuntimeError("Ticket should have 'terminate' key!")
+        if self.parent is not None:
+            # Trying to yield tasks
+            # TODO: rewrite for VISA merge
+            try:
+                for _ in self.parent.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.parent.man.blank_type):
+                    pass
+            except Exception:
+                raise RuntimeError('Could not yield tasks from ticket! Error occurred:\n', traceback.format_exc())
     
     
     def _add_json_to_path(self, path: str) -> str:

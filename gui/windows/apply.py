@@ -454,7 +454,10 @@ class ApplyExp(QThread):
         self.need_stop = False # нужна остановка
         self.image_saved = False # рисунок создан и сохранен на диск
         _, self.lang_pack = self.parent.parent.read_language_json("apply")
-        self.algorithm = Algorithm(parent=self)  # For algorithms
+        self.algorithm = Algorithm(  # For algorithms
+            parent=self, 
+            measure_ticket_name=self.parent.parent.man.ap_config['gui']['measure_ticket']
+        )  
 
     def setup_image_saved(self, status):
         """

@@ -5,7 +5,7 @@ import inspect
 from typing import Generator
 
 from manager.algorithms import Algorithm
-from manager.algorithms.algorithm import GENERATOR_FUNCTIONS, VALUE_FUNCTIONS
+from manager.algorithms.algorithm import GENERATOR_FUNCTIONS, MULTI_GENERATOR_FUNCTIONS, VALUE_FUNCTIONS
 
 
 
@@ -61,7 +61,7 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
     # Creating namespace based on Algorithm methods
     namespace = {}
     for name, method in inspect.getmembers(algorithm, inspect.ismethod):
-        if name in GENERATOR_FUNCTIONS or name in VALUE_FUNCTIONS:
+        if name in GENERATOR_FUNCTIONS or name in VALUE_FUNCTIONS or name in MULTI_GENERATOR_FUNCTIONS:
             namespace[name] = method
     # Creating generator
     compiled = compile(tree, '<algorithm>', 'exec')
@@ -101,7 +101,7 @@ class CodeValidator(ast.NodeVisitor):
     def visit_Call(self, node):
         self.generic_visit(node)
         if (isinstance(node.func, ast.Name) and 
-            node.func.id in GENERATOR_FUNCTIONS):
+            (node.func.id in GENERATOR_FUNCTIONS or node.func.id in MULTI_GENERATOR_FUNCTIONS)):
             # Checking if the generator is expected to return values
             if isinstance(node.parent, (ast.Assign, ast.Call, ast.If, ast.BinOp)):
                 self.error(node, f'{node.func.id}() does not return a value')  
@@ -128,8 +128,10 @@ class GeneratorTransformer(ast.NodeTransformer):
         self.generic_visit(node)
         # Replacing generator_function() with yield from generator_function()
         if (isinstance(node.value, ast.Call) and 
-            isinstance(node.value.func, ast.Name) and 
-            node.value.func.id in GENERATOR_FUNCTIONS):
-            return ast.Expr(value=ast.Yield(value=node.value))
+            isinstance(node.value.func, ast.Name)):
+                if node.value.func.id in GENERATOR_FUNCTIONS:
+                    return ast.Expr(value=ast.Yield(value=node.value))
+                if node.value.func.id in MULTI_GENERATOR_FUNCTIONS:
+                    return ast.Expr(value=ast.YieldFrom(value=node.value))
         return node
     
