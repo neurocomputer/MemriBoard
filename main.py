@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5 import QtCore
 
 from gui.windows.crossbar import Window
+from doom_api import doom_drawer
 
 def main() -> None:
     """
@@ -23,7 +24,8 @@ def main() -> None:
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    _ = Window()
+    window = Window()
+    doom_drawer(window)
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
