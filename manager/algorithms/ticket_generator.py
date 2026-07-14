@@ -30,5 +30,5 @@ def ticket_generator(ticket_list: list, algorithm: Algorithm) -> Generator[list,
     #         yield from algorithm_generator(user_alg)
     #     else:
     #         yield ticket
-    yield from algorithm_generator(user_alg, algorithm=algorithm)  # ticket_name, ticket, count, Algorithm
+    yield from algorithm_generator(ticket_list, algorithm=algorithm)  # ticket_name, ticket, count, Algorithm
     

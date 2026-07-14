@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>791</width>
-    <height>561</height>
+    <width>939</width>
+    <height>589</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -27,6 +27,16 @@
       <widget class="QLineEdit" name="lineEdit_alg_name"/>
      </item>
      <item>
+      <widget class="QPushButton" name="btn_show_funcs">
+       <property name="text">
+        <string>Показать встроенные функции</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btn_help">
        <property name="text">
         <string>Справка (F1)</string>
@@ -36,66 +46,46 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,0">
-     <item>
-      <widget class="QGroupBox" name="groupBox_code_editor">
-       <property name="title">
-        <string>Python</string>
-       </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
-        <item>
-         <widget class="QPlainTextEdit" name="code_editor"/>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupBox_funcs">
-       <property name="title">
-        <string>Встроенные функции</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <item>
-         <widget class="QLabel" name="label_utility_funcs">
-          <property name="text">
-           <string>Служебные функции</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QListWidget" name="listWidget_utility_funcs"/>
-        </item>
-        <item>
-         <widget class="QLabel" name="label_exp_funcs">
-          <property name="text">
-           <string>Проведение эксперимента</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QListWidget" name="listWidget_exp_funcs"/>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QSplitter" name="splitter">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <widget class="QGroupBox" name="groupBox_code_editor">
+         <property name="title">
+          <string>Алгоритм (python)</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch=""/>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_check_result">
+         <property name="title">
+          <string>Результат проверки</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QPlainTextEdit" name="plainTextEdit_check"/>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_funcs">
+         <property name="title">
+          <string>Встроенные функции</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QPlainTextEdit" name="textEdit_functions"/>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QPushButton" name="btn_import">
-       <property name="text">
-        <string>Импорт из .py</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btn_export">
-       <property name="text">
-        <string>Экспорт в .py</string>
-       </property>
-      </widget>
-     </item>
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">

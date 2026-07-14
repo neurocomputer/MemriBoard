@@ -470,5 +470,22 @@
     },
     "wait":{
         "window_title":"Wait..."
+    },
+    "algorithm_editor":{
+        "window_title":"Algorithm editor",
+        "alg_name":"Algorithm name",
+        "algorithm":"Algorithm (Python)",
+        "check_result":"Checking output",
+        "builtin_funcs":"Built-in functions",
+        "show_builtins":"Show built-in functions",
+        "help":"Help (F1)",
+        "check":"Check",
+        "save":"Save",
+        "cancel":"Cancel",
+        "util_funcs":"Utility functions:",
+        "ticket_funcs":"Functions that send tickets:",
+        "default_check_out":"Press the 'check' button to check the code",
+        "alg_compiles":"The algorithm compiles ✓\n\nProduced python generator:\n\n",
+        "alg_could_not_compile":"Could not compile the algorithm! ✕\n\nError(s) occurred:\n\n"
     }
 }

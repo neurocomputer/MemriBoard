@@ -32,12 +32,14 @@ def check_algorithm_code(algorithm_code: str) -> tuple[bool, str]:
         # Validating code
         validator = CodeValidator()
         validator.visit(tree)
+        if not validator.found_algorithm:
+            return False, 'The code should define the algorithm() function!'
         if len(validator.errors) > 0:
-            return False, 'Error(s) occurred:\n' + '\n'.join(validator.errors)
+            return False, '\n'.join(validator.errors)
         # Transforming generator statements
         new_tree = GeneratorTransformer().visit(tree)
         ast.fix_missing_locations(new_tree)
-        return True, new_tree
+        return True, ast.unparse(new_tree)
     except Exception:
         return False, traceback.format_exc()
 
@@ -66,14 +68,14 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
     # Creating generator
     compiled = compile(tree, '<algorithm>', 'exec')
     exec(compiled, namespace)
-    yield from namespace['user_algorithm']()
+    yield from namespace['algorithm']()
 
 
 class CodeValidator(ast.NodeVisitor):
     """Validator for the algorithm"""
     def __init__(self):
         self.errors = []
-    
+        self.found_algorithm = False
     
     def error(self, node: ast.Expr, message:str):
         """Add an error to error queue.
@@ -97,8 +99,8 @@ class CodeValidator(ast.NodeVisitor):
     def visit_AsyncWith(self, node):
         self.error(node, 'Async is forbidden')
         
-    # Semantic check
     def visit_Call(self, node):
+        """Semantic check for generator function calls"""
         self.generic_visit(node)
         if (isinstance(node.func, ast.Name) and 
             (node.func.id in GENERATOR_FUNCTIONS or node.func.id in MULTI_GENERATOR_FUNCTIONS)):
@@ -118,6 +120,13 @@ class CodeValidator(ast.NodeVisitor):
                 self.error(node, e)
             except Exception:
                 self.error(node, traceback.format_exc())
+                
+    def visit_FunctionDef(self, node):
+        """Searching for algorithm() function"""
+        if node.name == 'algorithm':
+            self.found_algorithm = True
+            if len(node.args.args) != 0:
+               self.error(node, 'algorithm() should not have any parameters')
     
 
 
