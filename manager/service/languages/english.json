@@ -481,7 +481,13 @@
         "help":"Help (F1)",
         "check":"Check",
         "save":"Save",
+        "save_to_file":"Save to algorithms folder",
         "cancel":"Cancel",
+        "ticket_import":"Ticket import",
+        "ticket_import_tooltip":"Import tickets used in algorithm to tickets folder",
+        "check_tooltip":"Check if algorithm can be executed",
+        "save_tooltip":"Save algorithm to the experiment plan",
+        "save_to_file_tooltip":"Save algorithm to the experiment plan and to the algorithms folder",
         "util_funcs":"Utility functions:",
         "ticket_funcs":"Functions that send tickets:",
         "default_check_out":"Press the 'check' button to check the code",
@@ -491,6 +497,17 @@
         "no_alg_name":"Fill in the algorithm name to save it",
         "could_not_save":"Could not save the algorithm! An exception occurred:\n",
         "could_not_read":"Could not read algorithm form disk! And exception occurred:\n",
-        "choose_closing":"The algorithm code was changed. A you sure you want to close without saving?"
+        "choose_closing":"The algorithm code was changed. A you sure you want to close without saving?",
+        "bad_code_on_ticket_import":"Could not import tickets because algorithm can not be compiled!",
+        "ticket_name":"A ticket or experiment with name ",
+        "already_exists":" already exists. Do you want to rewrite the file?"
+    },
+    "filename_dialog_algorithms":{
+        "window_title":"The file already exists",
+        "label_text_1":"The ticket with name '",
+        "label_text_2":"' already exists. Do you want to rewrite it, change it's name or skip it?",
+        "filename":"Ticket name:",
+        "save":"Save",
+        "skip":"Skip"
     }
 }

@@ -16,6 +16,8 @@ def calculate_counts_for_ticket(parent, ticket: dict):
     """
     Посчитать количество задач для тикета
     """
+    if ticket['mode'] == 'algorithm':  # Calculating for algorithms
+        return 0 # TODO: complete
     # получаем генератор задач
     task = parent.menu[ticket['mode']], (ticket['params'],
                                         ticket['terminate'],

@@ -265,12 +265,13 @@ class ExpSettings(QDialog):
         else:
             self.parent.show_signal_dialog(ticket, "edit")
 
-    def apply_edit_to_exp_list(self) -> None:
+    def apply_edit_to_exp_list(self, new_ticket: Union[dict, None] = None) -> None:
         """
         Применить правки тикета
         """
-        new_ticket = self.parent.read_ticket_from_disk("temp.json")
-        os.remove(os.path.join(TICKET_PATH,"temp.json"))
+        if new_ticket is None:  # Ticket is passed from Signal window via temp.json file
+            new_ticket = self.parent.read_ticket_from_disk("temp.json")
+            os.remove(os.path.join(TICKET_PATH,"temp.json"))
         #указываем ячейку
         new_ticket["params"]["wl"] = self.parent.current_wl
         new_ticket["params"]["bl"] = self.parent.current_bl
@@ -281,6 +282,7 @@ class ExpSettings(QDialog):
         self.parent.exp_list[ticket_position] = (new_ticket["name"],
                                                  new_ticket.copy(),
                                                  count)
+        self._refresh_exp_list()
         self.label_total_update()
 
     def apply_exp(self) -> None:

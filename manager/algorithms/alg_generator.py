@@ -74,6 +74,23 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
     compiled = compile(tree, '<algorithm>', 'exec')
     exec(compiled, namespace)
     yield from namespace['algorithm']()
+    
+    
+def replace_ticket_names(algorithm_code: str, tickets_to_replace: dict) -> str:
+    """Replace ticket names in the algorithm.
+
+    Args:
+        algorithm_code (str): Algorithm code.
+        tickets_to_replace (dict): Ticket names to replace (in format old_name: new_name).
+
+    Returns:
+        str: New algorithm code.
+    """
+    tree = ast.parse(algorithm_code)
+    transformer = TicketNameReplacer(tickets_to_replace)
+    new_tree = transformer.visit(tree)
+    ast.fix_missing_locations(new_tree)
+    return ast.unparse(new_tree)
 
 
 class CodeValidator(ast.NodeVisitor):
@@ -177,3 +194,15 @@ class GeneratorTransformer(ast.NodeTransformer):
                     return ast.Expr(value=ast.YieldFrom(value=node.value))
         return node
     
+    
+class TicketNameReplacer(ast.NodeTransformer):
+    """Transformer that replaces ticket names"""
+    def __init__(self, tickets_to_replace: dict):
+        self.tickets = tickets_to_replace
+        super().__init__()
+        
+    def visit_Call(self, node):
+        """Visit a method call"""
+        if isinstance(node.func, ast.Name) and node.func.id in GENERATOR_FUNCTIONS:
+            print(node.args)
+             
