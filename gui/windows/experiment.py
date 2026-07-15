@@ -9,12 +9,14 @@ check_exp
 import os
 import pickle
 import json
+from typing import Union
 from copy import deepcopy
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
+from gui.windows.algorithm_editor import AlgorithmEditor
 from manager.service.global_settings import TICKET_PATH, ALGORITHM_PATH
 from manager.service.plots import calculate_counts_for_ticket
 from gui.src import show_warning_messagebox, show_choose_window, open_file_dialog
@@ -50,6 +52,12 @@ class ExpSettings(QDialog):
         self.refresh_list()
         self.ui.exp_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.exp_list.doubleClicked.connect(self._add_exp_to_list)
+        # Список алгоритмов
+        self.alg_list_model = QStandardItemModel()
+        self.ui.alg_list.setModel(self.alg_list_model)
+        self.refresh_alg_list()
+        self.ui.alg_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.alg_list.doubleClicked.connect(self._add_alg_to_list)
         # список экспериментов
         self.list_experiments = QStandardItemModel()
         self.ui.plan_list.setModel(self.list_experiments)
@@ -128,6 +136,18 @@ class ExpSettings(QDialog):
         for file in file_list:
             self.list_model.appendRow(QStandardItem(file.replace('.json','')))
             self.ticket_files.append(file.replace('.json',''))
+            
+    def refresh_alg_list(self) -> None:
+        """
+        Обновить список алгоритмов
+        """
+        self.alg_list_model.removeRows(0, self.alg_list_model.rowCount())
+        if not os.path.exists(ALGORITHM_PATH):
+            os.makedirs(ALGORITHM_PATH)
+        for filename in sorted(os.listdir(ALGORITHM_PATH)):
+            if filename.lower().endswith('.json'):
+                self.alg_list_model.appendRow(QStandardItem(filename.replace('.json','')))
+        
 
     def _delete_json(self) -> None:
         """
@@ -178,6 +198,22 @@ class ExpSettings(QDialog):
             if not self.importing_experiment:
                 self.importing_experiment = False
                 show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
+                
+    def _add_alg_to_list(self, **kwargs) -> None:
+        """
+        Добавить алгоритм в план
+        """
+        if 'ticket' in kwargs:
+            ticket = kwargs['ticket'].copy()
+        else:
+            filename = self.ui.alg_list.currentIndex().data()
+            with open(os.path.join(ALGORITHM_PATH, filename + '.json'), 'r', encoding='utf-8') as file:
+                ticket = json.load(file)
+        # TODO counts
+        self.parent.exp_list.append((ticket['name'], ticket.copy(), 0))
+        self._refresh_exp_list()
+        self.label_total_update()
+        
 
     def _refresh_exp_list(self) -> None:
         """
@@ -223,7 +259,11 @@ class ExpSettings(QDialog):
         ticket_position = self.ui.plan_list.currentIndex().row()
         ticket = self.parent.exp_list[ticket_position][1].copy()
         # открываем для редактирования
-        self.parent.show_signal_dialog(ticket, "edit")
+        
+        if ticket['mode'] == 'algorithm':
+            self.show_algorithm_dialog(ticket)
+        else:
+            self.parent.show_signal_dialog(ticket, "edit")
 
     def apply_edit_to_exp_list(self) -> None:
         """
@@ -352,8 +392,9 @@ class ExpSettings(QDialog):
         self._refresh_exp_list()
         self.label_total_update()
         
-    def show_algorithm_dialog(self) -> None:
+    def show_algorithm_dialog(self, ticket: Union[dict, None] = None) -> None:
         """
         Показать окно редактирования алгоритма
         """
-        pass
+        self.algorithm_dialog = AlgorithmEditor(self, ticket=ticket)
+        self.algorithm_dialog.show()

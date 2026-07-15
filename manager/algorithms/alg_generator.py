@@ -9,39 +9,44 @@ from manager.algorithms.algorithm import GENERATOR_FUNCTIONS, MULTI_GENERATOR_FU
 
 
 
-def check_algorithm_code(algorithm_code: str) -> tuple[bool, str]:
+def check_algorithm_code(algorithm_code: str, get_used_tickets: bool = False) -> tuple[bool, str]:
     """Check if algorithm code can be compiled.
 
     Args:
         algorithm_code (str): Algorithm code.
+        get_used_tickets (bool): If True, validator creates a dict with tickets used in the experiment.
 
     Returns:
-        status, result (tuple[bool, str]]): Status: if True, algorithm compiles fine.
-            result: Transformed generator or errors if occurred.
+        status, result, tickets (tuple[bool, str, dict | None]]): Status: if True, algorithm compiles fine.
+            result: Transformed generator or errors if occurred. tickets: tickets used in the experiment.
     """
     try:
         tree = ast.parse(algorithm_code)
     except Exception:
-        return False, traceback.format_exc()
-        
+        return False, traceback.format_exc(), None
     # Adding parents
     for parent in ast.walk(tree):
         for child in ast.iter_child_nodes(parent):
             child.parent = parent
     try:      
         # Validating code
-        validator = CodeValidator()
+        validator = CodeValidator(get_used_tickets=get_used_tickets)
         validator.visit(tree)
         if not validator.found_algorithm:
-            return False, 'The code should define the algorithm() function!'
+            return False, 'The code should define the algorithm() function!', None
         if len(validator.errors) > 0:
-            return False, '\n'.join(validator.errors)
+            return False, '\n'.join(validator.errors), None
         # Transforming generator statements
         new_tree = GeneratorTransformer().visit(tree)
         ast.fix_missing_locations(new_tree)
-        return True, ast.unparse(new_tree)
+        # Getting tickets used in the experiment
+        if get_used_tickets:
+            used_tickets = validator.used_tickets
+        else:
+            used_tickets = None
+        return True, ast.unparse(new_tree), used_tickets
     except Exception:
-        return False, traceback.format_exc()
+        return False, traceback.format_exc(), None
 
 
 def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[list, None, None]:
@@ -55,7 +60,7 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
         Generator[list, None, None]: Ticket generator.
     """
     print('CHECKING')
-    status, result = check_algorithm_code(algorithm_code)
+    status, result, _ = check_algorithm_code(algorithm_code)
     print('CHECKING DONE:', status, result)
     if not status:
         raise RuntimeError(f'Could not create a generator from code! Algorithm:\n{algorithm_code}\n{result}')
@@ -73,9 +78,17 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
 
 class CodeValidator(ast.NodeVisitor):
     """Validator for the algorithm"""
-    def __init__(self):
+    def __init__(self, get_used_tickets: bool = False):
+        """Code validator.
+
+        Args:
+            get_used_tickets (bool, optional): If True, validator gets tickets used in the 
+                experiment. Defaults to False.
+        """
         self.errors = []
         self.found_algorithm = False
+        self.get_used_tickets = get_used_tickets
+        self.used_tickets = {}
     
     def error(self, node: ast.Expr, message:str):
         """Add an error to error queue.
@@ -115,7 +128,26 @@ class CodeValidator(ast.NodeVisitor):
                 method = getattr(alg, node.func.id)
                 args = [arg.value for arg in node.args]
                 kwargs = {keyword.arg: keyword.value.value for keyword in node.keywords}
-                method(*args, **kwargs)  # Trying to execute
+                result = method(*args, **kwargs)  # Trying to execute
+                if self.get_used_tickets:
+                    if node.func.id in GENERATOR_FUNCTIONS:
+                        _, ticket, _ = result
+                        self.used_tickets[ticket['name']] = ticket
+                    if node.func.id in MULTI_GENERATOR_FUNCTIONS:
+                        name, experiment = result
+                        if name == 'dict_experiment':
+                            if 'dict_experiment' in self.used_tickets:  # Experiment sent from dict, it has no name
+                                flag = True
+                                i = 0
+                                while flag:
+                                    i += 1
+                                    if f'dict_experiment_{i}' not in self.used_tickets:
+                                        flag = False
+                                self.used_tickets[f'dict_experiment{i}'] = experiment
+                            else:
+                                self.used_tickets['dict_experiment'] = experiment
+                        else:  # Save experiment by its name
+                            self.used_tickets[name] = experiment
             except RuntimeError as e:
                 self.error(node, e)
             except Exception:
@@ -123,6 +155,7 @@ class CodeValidator(ast.NodeVisitor):
                 
     def visit_FunctionDef(self, node):
         """Searching for algorithm() function"""
+        self.generic_visit(node)
         if node.name == 'algorithm':
             self.found_algorithm = True
             if len(node.args.args) != 0:

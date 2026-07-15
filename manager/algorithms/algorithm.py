@@ -162,6 +162,7 @@ class Algorithm:
                     experiment = json.load(file)
                     for i, ticket in experiment.items():
                         self._validate_ticket(ticket)
+                    return experiment_name, experiment
             except Exception as e:
                 raise RuntimeError(f'Could not open the ticket number {i}: {type(e).__name__}: {e}')
         # Generating tickets
@@ -187,6 +188,7 @@ class Algorithm:
                 if not isinstance(ticket, dict):
                     raise RuntimeError(f"Wrong type for ticket number {i}: '{type(ticket)}'. Expected type is 'dict'")        
                 self._validate_ticket(ticket)
+            return 'dict_experiment', experiment
         return [(None, ticket, None) for ticket in experiment.values()]
     
     

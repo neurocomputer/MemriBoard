@@ -1,6 +1,8 @@
 """Algorithm editor"""
 import os
 import inspect
+import json
+from typing import Union
 
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QPlainTextEdit
@@ -8,41 +10,44 @@ from PyQt5.QtGui import QFontDatabase, QFontMetricsF, QTextCursor
 
 from gui.widgets.QCodeEditor import QCodeEditor
 from gui.widgets.syntax_highlighter import PythonHighlighter
-from manager.algorithms import Algorithm, check_algorithm_code, ticket_generator
+from gui.src import show_warning_messagebox, show_choose_window
+from manager.service.global_settings import ALGORITHM_PATH
+from manager.algorithms import Algorithm, check_algorithm_code
 from manager.algorithms.algorithm import VALUE_FUNCTIONS, GENERATOR_FUNCTIONS, MULTI_GENERATOR_FUNCTIONS
 
 
 # TODO remove
-user_alg = """import numpy as np
-
-def a1():
-    print(np.arange(1, 100))
-
-def algorithm():
-    measure_resistance()
-    print('LAST_RES:', last_resistance())
-    if last_resistance() > 10000:
-        send_experiment('Experiment_SET')
-    else:
-        send_experiment('Experiment_RESET')
+BASE_ALGORITHM = """def algorithm():
+    
 """
 
 
 class AlgorithmEditor(QDialog):
     """Algorithm editor"""
-    def __init__(self, parent=None):
+    
+    lang_pack: dict
+    safe_to_close: bool
+    
+    def __init__(self, parent=None, ticket: Union[dict, None] = None):
         super().__init__(parent)
         self.parent = parent
         self.ui = uic.loadUi(os.path.join(os.getcwd(), 'gui', 'uies', 'algorithm_editor.ui'), self)
+        self.setModal(True)
         self.change_language()
+        if ticket is None:
+            self.mode = 'create'
+        else:
+            self.mode = 'edit'
+        self.safe_to_close = False
         # Setting widgets
-        self.setup_code_editor()
+        self.setup_code_editor(ticket)
         self.setup_function_lists()
         self.setup_check_result()
         # Binding buttons
-        self.btn_check.clicked.connect(self.on_check_btn)
+        self.btn_check.clicked.connect(self.check_algorithm)
         self.btn_help.clicked.connect(self.on_help_btn)
         self.btn_save.clicked.connect(self.on_save_btn)
+        self.btn_save_to_file.clicked.connect(self.on_save_to_file_btn)
         self.btn_cancel.clicked.connect(self.close)
         self.btn_show_funcs.clicked.connect(self.on_show_funcs_btn)
         
@@ -51,17 +56,7 @@ class AlgorithmEditor(QDialog):
         """
         Change interface language
         """
-        # ok, self.lang_pack = self.parent.read_language_json("cell_info")
-        #TODO: change
-        import json
-        lang = 'eng'
-        if lang == 'rus':
-            path = os.path.join(os.getcwd(), 'manager', 'service', 'languages', 'russian.json')
-        else:
-            path = os.path.join(os.getcwd(), 'manager', 'service', 'languages', 'english.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            localization_data = json.load(f)
-            self.lang_pack = localization_data['algorithm_editor']
+        ok, self.lang_pack = self.parent.parent.read_language_json("algorithm_editor")
         ok = True
         if ok:
             self.setWindowTitle(self.lang_pack.get('window_title'))
@@ -75,9 +70,16 @@ class AlgorithmEditor(QDialog):
             self.btn_cancel.setText(self.lang_pack.get('cancel'))
             self.btn_show_funcs.setText(self.lang_pack.get('show_builtins'))
             self.plainTextEdit_check.setPlainText(self.lang_pack.get('default_check_out'))
+            
+            
+    def read_algorithm_ticket(self, algorithm_name: str) -> dict:
+        """Read algorithm from disk by its name"""  # TODO remove???
+        with open(os.path.join(ALGORITHM_PATH, algorithm_name), 'r', encoding='utf-8') as file:
+            ticket = json.load(file)
+        return ticket
         
         
-    def setup_code_editor(self) -> None:
+    def setup_code_editor(self, ticket: Union[str, None]) -> None:
         """Set the code editor parameters"""
         self.code_editor = QCodeEditor()
         self.groupBox_code_editor.layout().addWidget(self.code_editor)
@@ -85,10 +87,22 @@ class AlgorithmEditor(QDialog):
         # Tabulation
         space_width = QFontMetricsF(self.code_editor.font()).horizontalAdvance(' ')
         self.code_editor.setTabStopDistance(space_width * 4)  # 4 spaces
+        # Parsing initial algorithm ticket
+        if ticket is None:
+            self.code_editor.setPlainText(BASE_ALGORITHM)
+            self.code_at_start = BASE_ALGORITHM
+        else:
+            try:
+                self.code_editor.setPlainText(ticket['code'])
+                self.code_at_start = ticket['code']
+            except Exception as e:
+                show_warning_messagebox(self, self.lang_pack.get('could_not_read') + f'{type(e).__name__}: {e}')
+                self.code_editor.setPlainText(BASE_ALGORITHM)
+                self.code_at_start = BASE_ALGORITHM
         # Displaying algorithm
-        self.code_editor.setPlainText(user_alg)
         self.code_editor.setFocus()
         self.code_editor.moveCursor(QTextCursor.End)
+        self.code_at_start = self.code_editor.toPlainText()
         
     
     def setup_function_lists(self) -> None:
@@ -138,32 +152,73 @@ class AlgorithmEditor(QDialog):
     def on_show_funcs_btn(self) -> None:
         """Show or hide built-in functions"""
         self.groupBox_funcs.setVisible(self.btn_show_funcs.isChecked())
-        
-        
-    def on_check_btn(self) -> None:
-        """Check the algorithm code"""
-        status, result = check_algorithm_code(self.code_editor.toPlainText())
+            
+            
+    def check_algorithm(self) -> tuple[bool, dict]:
+        """Check the algorithm and get tickets used in it.
+
+        Returns:
+            status, used_tickets: (tuple[bool, dict]): Status and used tickets.
+        """
+        status, result, used_tickets = check_algorithm_code(self.code_editor.toPlainText(), get_used_tickets=True)
         if status:
             self.plainTextEdit_check.setPlainText(self.lang_pack.get('alg_compiles') + result)
         else:
             self.plainTextEdit_check.setPlainText(self.lang_pack.get('alg_could_not_compile') + result)
-        # TODO remove
-        alg = Algorithm()
-        for ticket in ticket_generator(self.code_editor.toPlainText(), alg):
-            print(ticket)
+        return status, used_tickets
         
         
     def on_help_btn(self) -> None:
         pass
     
     
+    def get_ticket_for_saving(self) -> dict:
+        """Get algorithm ticket before saving"""
+        status, used_tickets = self.check_algorithm()
+        if not status:
+            show_warning_messagebox(self, self.lang_pack.get('bad_code_on_save'))
+            return
+        name = self.lineEdit_alg_name.text().strip()
+        if name == '':
+            show_warning_messagebox(self, self.lang_pack.get('no_alg_name'))
+            return
+        alg_ticket = {
+            'name': name,
+            'mode': 'algorithm',
+            'code': self.code_editor.toPlainText(),
+            'tickets': used_tickets
+        }
+        return alg_ticket
+    
+    
     def on_save_btn(self) -> None:
-        pass
-        
+        """Save algorithm to experiment plan"""
+        alg_ticket = self.get_ticket_for_saving() # TODO WIP
+            
+            
+    def on_save_to_file_btn(self) -> None:
+        """Save algorithm to experiment plan and file"""
+        alg_ticket = self.get_ticket_for_saving()
+        try:
+            with open(os.path.join(ALGORITHM_PATH, alg_ticket['name'] + '.json'), mode='w', encoding='utf-8') as file:
+                json.dump(alg_ticket, file, ensure_ascii=False, indent=4)
+            self.safe_to_close = True
+            self.close()
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get('could_not_save') + f'{type(e).__name__}: {e}')
+                                            
         
     def closeEvent(self, event):
-        event.accept()
-        self.parent.close()
+        if self.safe_to_close:
+            event.accept()
+        else:
+            if self.code_editor.toPlainText() != self.code_at_start:
+                if show_choose_window(self, self.lang_pack.get('choose_closing')):
+                    event.accept()
+                else:
+                    event.ignore()
+            else:
+                event.accept()
         
         
 # TODO: custom QPlainEditText for tabulation

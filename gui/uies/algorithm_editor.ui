@@ -57,7 +57,7 @@
          <property name="title">
           <string>Алгоритм (python)</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch=""/>
+         <layout class="QHBoxLayout" name="horizontalLayout_3"/>
         </widget>
         <widget class="QGroupBox" name="groupBox_check_result">
          <property name="title">
@@ -110,6 +110,13 @@
       <widget class="QPushButton" name="btn_save">
        <property name="text">
         <string>Сохранить</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_save_to_file">
+       <property name="text">
+        <string>Сохранить в файл</string>
        </property>
       </widget>
      </item>
