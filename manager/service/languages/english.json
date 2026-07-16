@@ -199,7 +199,8 @@
         "view_req":"View requests",
         "apply_cell":"Apply the experiment",
         "cancel":"Cancel",
-        "delete_file":"Delete file?",
+        "delete_file":"Are you sure you want to delete the file?",
+        "json_protected":"This ticket can not be deleted!",
         "ticket_unreadable":"Ticket is unreadable!",
         "nothing_to_remove":"Nothing to remove!",
         "exp_name_expected":"Experiment name is expected!",
@@ -373,7 +374,7 @@
         "err_add_exp":"DB error: Couldn't add experiment!",
         "err_conn":"Connection error: Couldn't get meta info!",
         "err_meta":"DB_error: Couldn't add meta!",
-        "err_tic":"DB error: Couldn't add ticket!",
+        "err_ticket_add_to_db":"DB error: Couldn't add ticket!",
         "err_info":"DB error: Couldn't update resistance info!",
         "err_res":"DB error: Couldn't update experiment resistance!",
         "err_upd_tic":"DB error: Couldn't update ticket!",
@@ -483,8 +484,8 @@
         "save":"Save",
         "save_to_file":"Save to algorithms folder",
         "cancel":"Cancel",
-        "ticket_import":"Ticket import",
-        "ticket_import_tooltip":"Import tickets used in algorithm to tickets folder",
+        "ticket_export":"Ticket export",
+        "ticket_export_tooltip":"Export tickets used in algorithm to a folder",
         "check_tooltip":"Check if algorithm can be executed",
         "save_tooltip":"Save algorithm to the experiment plan",
         "save_to_file_tooltip":"Save algorithm to the experiment plan and to the algorithms folder",
@@ -500,14 +501,8 @@
         "choose_closing":"The algorithm code was changed. A you sure you want to close without saving?",
         "bad_code_on_ticket_import":"Could not import tickets because algorithm can not be compiled!",
         "ticket_name":"A ticket or experiment with name ",
-        "already_exists":" already exists. Do you want to rewrite the file?"
-    },
-    "filename_dialog_algorithms":{
-        "window_title":"The file already exists",
-        "label_text_1":"The ticket with name '",
-        "label_text_2":"' already exists. Do you want to rewrite it, change it's name or skip it?",
-        "filename":"Ticket name:",
-        "save":"Save",
-        "skip":"Skip"
+        "already_exists":" already exists. Do you want to rewrite the file?",
+        "choose_folder":"Choose a folder for exporting tickets used in the algorithm",
+        "no_tickets_to_export":"There are no tickets to export in this algorithm!"
     }
 }

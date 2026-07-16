@@ -1,34 +1,64 @@
 """Ticket generator that supports algorithms"""
-from typing import Generator
+from logging import Logger
 
 from manager.algorithms import algorithm_generator, Algorithm
+from manager.model.db import DBOperate
 
+            
+            
+class TicketGenerator:
+    """Ticket generator that supports algorithms. Also handles adding ticket to the database"""
+    def __init__(self, parent, ticket_list: list, algorithm: Algorithm, db: DBOperate, experiment_id: int, ap_logger: Logger) -> None:
+        """Ticket generator that supports algorithms.
 
+        Args:
+            parent (ApplyExp): ApplyExp object.
+            ticket_list (list): Ticket list (`MainWindow.exp_list`).
+            algorithm (Algorithm): Algorithm instance for the ticket sequence.
+            db (manager.model.DBOperate): Database for adding ticket entries.
+            experiment_id (int): Experiment id for adding ticket to the database.
+            ap_logger (logging.Logger): Logger for writing exceptions.
 
-user_alg = """def user_algorithm():
-    measure_resistance()
-    print('LAST_RES:', last_resistance())
-    if last_resistance() > 10000:
-        send_experiment('Experiment_SET')
-    else:
-        send_experiment('Experiment_RESET')
-"""
+        Yields:
+            Generator[list, None, None]: Ticket generator.
+        """
+        self.parent = parent
+        self.ticket_list = ticket_list
+        self.algorithm = algorithm
+        self.db = db
+        self.experiment_id = experiment_id
+        self.ap_logger = ap_logger
+        self.ticket_id = None
+        
+        
+    def __iter__(self):
+        """Ticket iteration"""
+        for ticket in self.ticket_list:
+            self.add_ticket_to_database(ticket[1])
+            if ticket[1]['mode'] == 'algorithm':  # Algorithm: generate multiple tickets
+                yield from algorithm_generator(ticket[1]['code'], algorithm=self.algorithm)
+            else:
+                yield ticket[1]
+                
+                
+    def add_ticket_to_database(self, ticket: dict) -> None:
+        """Add a ticket to the database
 
+        Args:
+            ticket (dict): Ticket.
+        """
+        status, self.ticket_id = self.db.add_ticket(ticket, self.experiment_id)
+        if not status:
+            self.ap_logger.critical(self.parent.lang_pack.get('err_ticket_add_to_db'))
+            
+            
+    def get_ticket_id(self) -> int:
+        """Get current ticket id in the database.
 
-def ticket_generator(ticket_list: list, algorithm: Algorithm) -> Generator[list, None, None]:
-    """Ticket generator that supports algorithms.
-
-    Args:
-        ticket_list (list): Ticket list (`MainWindow.exp_list`).
-        algorithm (Algorithm): Algorithm instance for the ticket sequence.
-
-    Yields:
-        Generator[list, None, None]: Ticket generator.
-    """
-    # for ticket in ticket_list:
-    #     if ticket[0] == 'algorithm':
-    #         yield from algorithm_generator(user_alg)
-    #     else:
-    #         yield ticket
-    yield from algorithm_generator(ticket_list, algorithm=algorithm)  # ticket_name, ticket, count, Algorithm
+        Returns:
+            int: ticket id.
+        """
+        if self.ticket_id is None:
+            raise RuntimeError('Ticket id was asked before it was changed from None')
+        return self.ticket_id
     

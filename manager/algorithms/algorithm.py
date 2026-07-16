@@ -103,7 +103,7 @@ class Algorithm:
         # Generating ticket
         with open(full_path, 'r') as file:
             ticket = json.load(file)
-        return (None, ticket, None)
+        return ticket
     
     
     def send_ticket_dict(self, ticket: dict) -> None:
@@ -120,7 +120,7 @@ class Algorithm:
             if not isinstance(ticket, dict):
                 raise RuntimeError(f"Wrong type for 'ticket' variable: '{type(ticket)}'. Expected type is 'dict'")            
             self._validate_ticket(ticket)
-        return (None, ticket, None)
+        return ticket
     
     
     def measure_resistance(self) -> None:
@@ -168,7 +168,7 @@ class Algorithm:
         # Generating tickets
         with open(full_path, 'r') as file:
             experiment = json.load(file)
-        return [(None, ticket, None) for ticket in experiment.values()]
+        return [ticket for ticket in experiment.values()]
     
     
     def send_experiment_dict(self, experiment: dict) -> None:
@@ -189,7 +189,7 @@ class Algorithm:
                     raise RuntimeError(f"Wrong type for ticket number {i}: '{type(ticket)}'. Expected type is 'dict'")        
                 self._validate_ticket(ticket)
             return 'dict_experiment', experiment
-        return [(None, ticket, None) for ticket in experiment.values()]
+        return [ticket for ticket in experiment.values()]
     
     
     def get_ticket_dict(self, filename: str, folder_path: Union[str, None] = None) -> dict:

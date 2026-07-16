@@ -59,9 +59,7 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
     Yields:
         Generator[list, None, None]: Ticket generator.
     """
-    print('CHECKING')
     status, result, _ = check_algorithm_code(algorithm_code)
-    print('CHECKING DONE:', status, result)
     if not status:
         raise RuntimeError(f'Could not create a generator from code! Algorithm:\n{algorithm_code}\n{result}')
     tree = ast.parse(result)
@@ -75,22 +73,6 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
     exec(compiled, namespace)
     yield from namespace['algorithm']()
     
-    
-def replace_ticket_names(algorithm_code: str, tickets_to_replace: dict) -> str:
-    """Replace ticket names in the algorithm.
-
-    Args:
-        algorithm_code (str): Algorithm code.
-        tickets_to_replace (dict): Ticket names to replace (in format old_name: new_name).
-
-    Returns:
-        str: New algorithm code.
-    """
-    tree = ast.parse(algorithm_code)
-    transformer = TicketNameReplacer(tickets_to_replace)
-    new_tree = transformer.visit(tree)
-    ast.fix_missing_locations(new_tree)
-    return ast.unparse(new_tree)
 
 
 class CodeValidator(ast.NodeVisitor):
@@ -132,43 +114,48 @@ class CodeValidator(ast.NodeVisitor):
     def visit_Call(self, node):
         """Semantic check for generator function calls"""
         self.generic_visit(node)
-        if (isinstance(node.func, ast.Name) and 
-            (node.func.id in GENERATOR_FUNCTIONS or node.func.id in MULTI_GENERATOR_FUNCTIONS)):
-            # Checking if the generator is expected to return values
-            if isinstance(node.parent, (ast.Assign, ast.Call, ast.If, ast.BinOp)):
-                self.error(node, f'{node.func.id}() does not return a value')  
-            if not isinstance(node.parent, ast.Expr):
-                self.error(node, f'{node.func.id} cannot be transformed to a generator in this expression')
-            # Checking if the function can be executed
-            try:
-                alg = Algorithm(parent=None, validate=True)
-                method = getattr(alg, node.func.id)
-                args = [arg.value for arg in node.args]
-                kwargs = {keyword.arg: keyword.value.value for keyword in node.keywords}
-                result = method(*args, **kwargs)  # Trying to execute
-                if self.get_used_tickets:
-                    if node.func.id in GENERATOR_FUNCTIONS:
-                        _, ticket, _ = result
-                        self.used_tickets[ticket['name']] = ticket
-                    if node.func.id in MULTI_GENERATOR_FUNCTIONS:
-                        name, experiment = result
-                        if name == 'dict_experiment':
-                            if 'dict_experiment' in self.used_tickets:  # Experiment sent from dict, it has no name
-                                flag = True
-                                i = 0
-                                while flag:
-                                    i += 1
-                                    if f'dict_experiment_{i}' not in self.used_tickets:
-                                        flag = False
-                                self.used_tickets[f'dict_experiment{i}'] = experiment
-                            else:
-                                self.used_tickets['dict_experiment'] = experiment
-                        else:  # Save experiment by its name
-                            self.used_tickets[name] = experiment
-            except RuntimeError as e:
-                self.error(node, e)
-            except Exception:
-                self.error(node, traceback.format_exc())
+        if isinstance(node.func, ast.Name):
+            if node.func.id in GENERATOR_FUNCTIONS or node.func.id in MULTI_GENERATOR_FUNCTIONS:
+                # Checking if the generator is expected to return values
+                if isinstance(node.parent, (ast.Assign, ast.Call, ast.If, ast.BinOp)):
+                    self.error(node, f'{node.func.id}() does not return a value')  
+                if not isinstance(node.parent, ast.Expr):
+                    self.error(node, f'{node.func.id} cannot be transformed to a generator in this expression')
+                # Checking if the function can be executed
+                try:
+                    alg = Algorithm(parent=None, validate=True)
+                    method = getattr(alg, node.func.id)
+                    args = [arg.value for arg in node.args]
+                    kwargs = {keyword.arg: keyword.value.value for keyword in node.keywords}
+                    result = method(*args, **kwargs)  # Trying to execute
+                    if self.get_used_tickets:
+                        if node.func.id in GENERATOR_FUNCTIONS:
+                            _, ticket, _ = result
+                            if ticket['mode'] == 'algorithm':  # Checking if ticket is not an algorithm
+                                self.error(node, 'An algorithm can not call another algorithm!')
+                            self.used_tickets[ticket['name']] = ticket
+                        if node.func.id in MULTI_GENERATOR_FUNCTIONS:
+                            name, experiment = result
+                            for i, ticket in experiment.items():  # Checking if ticket is not an algorithm
+                                if ticket['mode'] == 'algorithm':
+                                    self.error(node, f'Ticket {i} is an algorithm, an algorithm can not call another algorithm!')
+                            if name == 'dict_experiment':
+                                if 'dict_experiment' in self.used_tickets:  # Experiment sent from dict, it has no name
+                                    flag = True
+                                    i = 0
+                                    while flag:
+                                        i += 1
+                                        if f'dict_experiment_{i}' not in self.used_tickets:
+                                            flag = False
+                                    self.used_tickets[f'dict_experiment{i}'] = experiment
+                                else:
+                                    self.used_tickets['dict_experiment'] = experiment
+                            else:  # Save experiment by its name
+                                self.used_tickets[name] = experiment
+                except RuntimeError as e:
+                    self.error(node, e)
+                except Exception:
+                    self.error(node, traceback.format_exc())
                 
     def visit_FunctionDef(self, node):
         """Searching for algorithm() function"""
@@ -193,16 +180,4 @@ class GeneratorTransformer(ast.NodeTransformer):
                 if node.value.func.id in MULTI_GENERATOR_FUNCTIONS:
                     return ast.Expr(value=ast.YieldFrom(value=node.value))
         return node
-    
-    
-class TicketNameReplacer(ast.NodeTransformer):
-    """Transformer that replaces ticket names"""
-    def __init__(self, tickets_to_replace: dict):
-        self.tickets = tickets_to_replace
-        super().__init__()
-        
-    def visit_Call(self, node):
-        """Visit a method call"""
-        if isinstance(node.func, ast.Name) and node.func.id in GENERATOR_FUNCTIONS:
-            print(node.args)
              

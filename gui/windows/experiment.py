@@ -72,9 +72,11 @@ class ExpSettings(QDialog):
         # обработка кнопок
         self.ui.button_new_signal.clicked.connect(lambda: self.parent.show_signal_dialog("blank",
                                                                                          "create"))
-        self.ui.button_new_algorithm.clicked.connect(self.show_algorithm_dialog)
-        self.ui.button_delete.clicked.connect(self._delete_json)
+        self.ui.button_new_algorithm.clicked.connect(lambda: self.show_algorithm_dialog(ticket=None))
+        self.ui.button_delete.clicked.connect(lambda: self._delete_json(ticket_group='tickets'))
+        self.ui.button_delete_algorithm.clicked.connect(lambda: self._delete_json(ticket_group='algorithms'))
         self.ui.button_add_exp.clicked.connect(self._add_exp_to_list)
+        self.ui.button_add_algorithm.clicked.connect(self._add_alg_to_list)
         self.ui.button_up_plan.clicked.connect(lambda: self._exp_list_up_exp(-1))
         self.ui.button_down_plan.clicked.connect(lambda: self._exp_list_up_exp(1))
         self.ui.button_delete_plan.clicked.connect(self._exp_list_delete)
@@ -149,18 +151,30 @@ class ExpSettings(QDialog):
                 self.alg_list_model.appendRow(QStandardItem(filename.replace('.json','')))
         
 
-    def _delete_json(self) -> None:
+    def _delete_json(self, ticket_group: str = 'tickets') -> None:
         """
         Удаляем json файл с диска
         """
         # получаем имя файла
-        file_name = self.ui.exp_list.currentIndex().data()
-        if file_name and file_name not in self.parent.protected_modes: # защита .json
+        if ticket_group == 'tickets':
+            file_name = self.ui.exp_list.currentIndex().data()
+            protected = file_name in self.parent.protected_modes  # Защита .json
+            path = TICKET_PATH
+        elif ticket_group == 'algorithms':
+            file_name = self.ui.alg_list.currentIndex().data()
+            protected = False
+            path = ALGORITHM_PATH
+        if file_name:
+            if protected:
+                show_warning_messagebox(self, self.lang_pack.get('json_protected'))
+                return
             answer = show_choose_window(self, self.lang_pack.get("delete_file"))
             if answer:
-                os.remove(os.path.join(TICKET_PATH,
-                          file_name+'.json'))
-                self.refresh_list() # обновляем список
+                os.remove(os.path.join(path, file_name+'.json'))
+                if ticket_group == 'tickets':
+                    self.refresh_list() # обновляем список
+                elif ticket_group == 'algorithms':
+                    self.refresh_alg_list()
 
     def label_total_update(self) -> None:
         """
@@ -209,8 +223,12 @@ class ExpSettings(QDialog):
             filename = self.ui.alg_list.currentIndex().data()
             with open(os.path.join(ALGORITHM_PATH, filename + '.json'), 'r', encoding='utf-8') as file:
                 ticket = json.load(file)
-        # TODO counts
-        self.parent.exp_list.append((ticket['name'], ticket.copy(), 0))
+        ticket["params"]["wl"] = self.parent.current_wl
+        ticket["params"]["bl"] = self.parent.current_bl
+        count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+        self.parent.exp_list_params['total_tickets'] += 1
+        self.parent.exp_list_params['total_tasks'] += count
+        self.parent.exp_list.append((ticket["name"], ticket.copy(), count))
         self._refresh_exp_list()
         self.label_total_update()
         
@@ -398,5 +416,5 @@ class ExpSettings(QDialog):
         """
         Показать окно редактирования алгоритма
         """
-        self.algorithm_dialog = AlgorithmEditor(self, ticket=ticket)
+        self.algorithm_dialog = AlgorithmEditor(parent=self, ticket=ticket)
         self.algorithm_dialog.show()

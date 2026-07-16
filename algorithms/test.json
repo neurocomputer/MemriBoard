@@ -1,6 +1,10 @@
 {
     "name": "test",
     "mode": "algorithm",
+    "params": {
+        "wl": 0,
+        "bl": 0
+    },
     "code": "import numpy as np\n\ndef a1():\n    print(np.arange(1, 100))\n\ndef algorithm():\n    measure_resistance()\n    print('LAST_RES:', last_resistance())\n    if last_resistance() > 10000:\n        send_experiment('Experiment_SET')\n    else:\n        send_experiment('Experiment_RESET')\n",
     "tickets": {
         "measure": {

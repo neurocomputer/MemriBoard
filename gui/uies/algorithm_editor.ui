@@ -87,9 +87,9 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QPushButton" name="btn_ticket_import">
+      <widget class="QPushButton" name="btn_ticket_export">
        <property name="text">
-        <string>Импорт тикетов</string>
+        <string>Экспорт тикетов</string>
        </property>
       </widget>
      </item>

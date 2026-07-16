@@ -22,7 +22,7 @@ from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
 from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
-from manager.algorithms import ticket_generator, Algorithm
+from manager.algorithms import TicketGenerator, Algorithm
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Apply(QWidget):
@@ -515,19 +515,22 @@ class ApplyExp(QThread):
             self.algorithm.set_last_resistance(self.last_resistance)
             # инициируем цикл по тикетам
             counter = 0
-            for ticket_info in ticket_generator(self.parent.parent.exp_list, algorithm=self.algorithm): # ticket["name"], ticket, count
-                print(ticket_info)
-                print(self.algorithm.last_resistance())
-                ticket = ticket_info[1]
+            ticket_gen = TicketGenerator(
+                self,
+                ticket_list=self.parent.parent.exp_list,
+                algorithm=self.algorithm,
+                db=self.parent.parent.man.db,
+                experiment_id=experiment_id,
+                ap_logger=self.parent.parent.man.ap_logger
+            )
+            for ticket in ticket_gen:
                 # терминатор
                 term_left, term_right = self.parent.parent.man.get_term_values(ticket['terminate'])
                 # вбиваем координаты
                 ticket['params']['wl'] = item[0]
                 ticket['params']['bl'] = item[1]
-                # сохраняем в БД
-                status, ticket_id = self.parent.parent.man.db.add_ticket(ticket, experiment_id)
-                if not status:
-                    self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_tic"))
+                # получаем id с генератора. Генератор теперь сам создает запись в бд
+                ticket_id = ticket_gen.get_ticket_id()
                 # временный файл для результата
                 result_file_path = time.strftime("%Y%m%d-%H%M%S")
                 result_file = open(result_file_path, 'wb')

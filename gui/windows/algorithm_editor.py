@@ -5,15 +5,14 @@ import json
 from typing import Union
 
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QPlainTextEdit
+from PyQt5.QtWidgets import QDialog, QPlainTextEdit, QFileDialog
 from PyQt5.QtGui import QFontDatabase, QFontMetricsF, QTextCursor
 
 from gui.widgets.QCodeEditor import QCodeEditor
 from gui.widgets.syntax_highlighter import PythonHighlighter
-from gui.windows.filename_dialog import FileNameDialog
 from gui.src import show_warning_messagebox, show_choose_window
 from manager.service.global_settings import ALGORITHM_PATH, TICKET_PATH
-from manager.algorithms import Algorithm, check_algorithm_code, replace_ticket_names
+from manager.algorithms import Algorithm, check_algorithm_code
 from manager.algorithms.algorithm import VALUE_FUNCTIONS, GENERATOR_FUNCTIONS, MULTI_GENERATOR_FUNCTIONS
 
 
@@ -36,8 +35,10 @@ class AlgorithmEditor(QDialog):
         self.ui = uic.loadUi(os.path.join(os.getcwd(), 'gui', 'uies', 'algorithm_editor.ui'), self)
         self.setModal(True)
         self.change_language()
+        self.ticket_at_start = ticket  # Ticket on opening the window
         if ticket is None:
             self.mode = 'create'
+            self.btn_save.setVisible(False)  # Hiding the save button, only saving to file
         else:
             self.mode = 'edit'
         self.safe_to_close = False
@@ -52,7 +53,7 @@ class AlgorithmEditor(QDialog):
         self.btn_save_to_file.clicked.connect(self.on_save_to_file_btn)
         self.btn_cancel.clicked.connect(self.close)
         self.btn_show_funcs.clicked.connect(self.on_show_funcs_btn)
-        self.btn_ticket_import.clicked.connect(self.on_ticket_import_btn)
+        self.btn_ticket_export.clicked.connect(self.on_ticket_import_btn)
         
         
     def change_language(self):
@@ -72,9 +73,9 @@ class AlgorithmEditor(QDialog):
             self.btn_save_to_file.setText(self.lang_pack.get('save_to_file'))
             self.btn_cancel.setText(self.lang_pack.get('cancel'))
             self.btn_show_funcs.setText(self.lang_pack.get('show_builtins'))
-            self.btn_ticket_import.setText(self.lang_pack.get('ticket_import'))
+            self.btn_ticket_export.setText(self.lang_pack.get('ticket_export'))
             self.plainTextEdit_check.setPlainText(self.lang_pack.get('default_check_out'))
-            self.btn_ticket_import.setToolTip(self.lang_pack.get('ticket_import_tooltip'))
+            self.btn_ticket_export.setToolTip(self.lang_pack.get('ticket_export_tooltip'))
             self.btn_check.setToolTip(self.lang_pack.get('check_tooltip'))
             self.btn_save.setToolTip(self.lang_pack.get('save_tooltip'))
             self.btn_save_to_file.setToolTip(self.lang_pack.get('save_to_file_tooltip'))
@@ -98,20 +99,16 @@ class AlgorithmEditor(QDialog):
         # Parsing initial algorithm ticket
         if ticket is None:
             self.code_editor.setPlainText(BASE_ALGORITHM)
-            self.code_at_start = BASE_ALGORITHM
         else:
             try:
                 self.code_editor.setPlainText(ticket['code'])
-                self.code_at_start = ticket['code']
                 self.lineEdit_alg_name.setText(ticket['name'])
             except Exception as e:
                 show_warning_messagebox(self, self.lang_pack.get('could_not_read') + f'{type(e).__name__}: {e}')
                 self.code_editor.setPlainText(BASE_ALGORITHM)
-                self.code_at_start = BASE_ALGORITHM
         # Displaying algorithm
         self.code_editor.setFocus()
         self.code_editor.moveCursor(QTextCursor.End)
-        self.code_at_start = self.code_editor.toPlainText()
         
     
     def setup_function_lists(self) -> None:
@@ -185,18 +182,26 @@ class AlgorithmEditor(QDialog):
         """Import tickets used in the code to ticket folder"""
         status, used_tickets = self.check_algorithm()
         if not status:
-            show_warning_messagebox(self, self.lang_pack.get('bad_code_on_ticket_import'))
+            # If algorithm does not compile, try to export from base algorithm ticket
+            if self.ticket_at_start is None:  # No ticket at start, nothing to export from
+                show_warning_messagebox(self, self.lang_pack.get('bad_code_on_ticket_import'))
+                return
+            used_tickets = self.ticket_at_start['tickets']  # Exporting from algorithm ticket
+        if len(used_tickets) == 0:  # No tickets in the algorithm
+            show_warning_messagebox(self, self.lang_pack.get('no_tickets_to_export'))
             return
+        folder = QFileDialog.getExistingDirectory(self, 
+                                                  caption=self.lang_pack.get('choose_folder'),
+                                                  directory=TICKET_PATH)
         for name, ticket in used_tickets.items():
-            path = os.path.join(TICKET_PATH, name + '.json')
+            path = os.path.join(folder, name + '.json')
             if os.path.exists(path):
+                # Ask if user wants to rewrite the ticket
                 if not show_choose_window(self, self.lang_pack.get('ticket_name') + "'" + name + "'" + self.lang_pack.get('already_exists')):
                     continue
-                _, lang_pack = self.parent.parent.read_language_json('filename_dialog_algorithms')
-                choose_window = FileNameDialog(ticket, lang_pack, parent=self)
-                choose_window.signal.connect()
             with open(path, 'w', encoding='utf-8') as file:
                 json.dump(ticket, file, ensure_ascii=False, indent=4)
+        self.parent.refresh_list()
     
     
     def get_ticket_for_saving(self) -> dict:
@@ -221,19 +226,17 @@ class AlgorithmEditor(QDialog):
     
     def on_save_btn(self) -> None:
         """Save algorithm to experiment plan"""
-        if self.mode == 'create':
-            self.on_save_to_file_btn()  # Also saving to file
-        elif self.mode == 'edit':
-            alg_ticket = self.get_ticket_for_saving()
-            self.parent.apply_edit_to_exp_list(alg_ticket)
-            self.safe_to_close = True
-            self.close()
+        alg_ticket = self.get_ticket_for_saving()
+        self.parent.apply_edit_to_exp_list(alg_ticket)
+        self.safe_to_close = True
+        self.close()
             
             
     def on_save_to_file_btn(self) -> None:
         """Save algorithm to experiment plan and file"""
         alg_ticket = self.get_ticket_for_saving()
-        self.parent.apply_edit_to_exp_list(alg_ticket)
+        if self.mode == 'edit':
+            self.parent.apply_edit_to_exp_list(alg_ticket)
         try:  # Saving to file
             with open(os.path.join(ALGORITHM_PATH, alg_ticket['name'] + '.json'), mode='w', encoding='utf-8') as file:
                 json.dump(alg_ticket, file, ensure_ascii=False, indent=4)
@@ -244,10 +247,15 @@ class AlgorithmEditor(QDialog):
                                             
         
     def closeEvent(self, event):
-        if self.safe_to_close:
+        if self.safe_to_close:  # This flag is True if closing after saving the algorithm
             event.accept()
         else:
-            if self.code_editor.toPlainText() != self.code_at_start:
+            if self.ticket_at_start is None:
+                code_at_start = BASE_ALGORITHM
+            else:
+                code_at_start = self.ticket_at_start['code']
+            # Checking if code was changed, confirming if user wants to close
+            if self.code_editor.toPlainText() != code_at_start:
                 if show_choose_window(self, self.lang_pack.get('choose_closing')):
                     event.accept()
                 else:
