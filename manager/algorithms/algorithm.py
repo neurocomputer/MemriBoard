@@ -226,6 +226,7 @@ class Algorithm:
                     ticket = json.load(file)
             except Exception as e:
                 raise RuntimeError(f'Could not open the .json file: {type(e).__name__}: {e}')
+            return filename, ticket
         # Returning the ticket
         with open(full_path, 'r') as file:
             ticket = json.load(file)

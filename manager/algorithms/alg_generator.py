@@ -158,7 +158,7 @@ class CodeValidator(ast.NodeVisitor):
                 try:
                     alg = Algorithm(parent=None, validate=True)
                     method = getattr(alg, node.func.id)
-                    args, kwargs = [], []
+                    args, kwargs = [], {}
                     for arg in node.args:
                         if isinstance(arg, ast.Name):
                             return
@@ -192,6 +192,33 @@ class CodeValidator(ast.NodeVisitor):
                                     self.used_tickets['dict_experiment'] = experiment
                             else:  # Save experiment by its name
                                 self.used_tickets[name] = experiment
+                except RuntimeError as e:
+                    self.error(node, e)
+                except Exception:
+                    self.error(node, traceback.format_exc())
+            elif node.func.id == 'get_ticket_dict':
+                try:
+                    alg = Algorithm(parent=None, validate=True)
+                    method = getattr(alg, node.func.id)
+                    args, kwargs = [], {}
+                    for arg in node.args:
+                        if isinstance(arg, ast.Name):
+                            return
+                        args.append(arg.value)
+                    for keyword in node.keywords:
+                        if isinstance(keyword.value, ast.Name):
+                            return
+                        kwargs[keyword.arg] = keyword.value.value
+                    name, ticket = method(*args, **kwargs)  # Trying to execute
+                    if self.get_used_tickets:
+                        if 'mode' in ticket:
+                            if ticket['mode'] == 'algorithm':  # Checking if ticket is not an algorithm
+                                self.error(node, 'An algorithm can not call another algorithm!')
+                        else:  # Its an experiment
+                            for i, tick in ticket.items():
+                                if tick['mode'] == 'algorithm':
+                                    self.error(node, f'Ticket {i}: An algorithm can not call another algorithm!')
+                        self.used_tickets[name] = ticket
                 except RuntimeError as e:
                     self.error(node, e)
                 except Exception:
