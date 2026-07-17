@@ -1,11 +1,11 @@
 {
-    "name": "test",
+    "name": "example_if",
     "mode": "algorithm",
     "params": {
         "wl": 0,
         "bl": 0
     },
-    "code": "import numpy as np\n\ndef a1():\n    print(np.arange(1, 100))\n\ndef algorithm():\n    measure_resistance()\n    print('LAST_RES:', last_resistance())\n    if last_resistance() > 10000:\n        send_experiment('Experiment_SET')\n    else:\n        send_experiment('Experiment_RESET')\n",
+    "code": "\"\"\" \nAn example of a branching algorithm\nПример реализации алгоритма с ветвлением\n\nAlgorithm uses experiments as .json files, you need to export them\nto some folder via 'Ticket export' button and specify this folder in\n'send_experiment' function via 'folder_path' argument. If the experiments\nare in the standart 'tickets' folder, the argument may be omitted.\n\nАлгоритм ссылается на эксперименты в виде .json файлов, их нужно\nэкспортировать в какую-нибудь папку при помощи кнопки 'Экспорт тикетов'\nи указать в функции 'send_experiment' аргументом 'folder_path'. Если \nэкспортировать в стандартную папку 'tickets', то аргумент можно не указывать.\n\"\"\"\n    \n\ndef algorithm():\n    # Measuring resistance | Измеряем сопротивление\n    measure_resistance()\n    # Doing an experiment based on measured resistance\n    # Делаем эксперимент в зависимости от измеренного сопротвления\n    if last_resistance() > 10000:\n        # Sending SET experiment | Делаем SET\n        send_experiment('Experiment_SET')  # Voltage sweep from 0 to -2 V\n    else:\n        # Sending RESET experiment | Делаем RESET\n        send_experiment('Experiment_RESET')  # Voltage sweep from 0 to +2 V",
     "tickets": {
         "measure": {
             "name": "measure",
@@ -64,12 +64,12 @@
                     "t_dir_usec_dec": 0,
                     "dir_dec_countr": 0,
                     "v_rev_strt_inc": 0,
-                    "v_rev_stop_inc": 1392,
+                    "v_rev_stop_inc": 1638,
                     "v_rev_step_inc": 41,
                     "t_rev_msec_inc": 0,
                     "t_rev_usec_inc": 100,
                     "rev_inc_countr": 1,
-                    "v_rev_strt_dec": 1392,
+                    "v_rev_strt_dec": 1638,
                     "v_rev_stop_dec": 0,
                     "v_rev_step_dec": 41,
                     "t_rev_msec_dec": 0,
@@ -93,12 +93,12 @@
                 "mode": "std",
                 "params": {
                     "v_dir_strt_inc": 0,
-                    "v_dir_stop_inc": 1392,
+                    "v_dir_stop_inc": 1638,
                     "v_dir_step_inc": 41,
                     "t_dir_msec_inc": 0,
                     "t_dir_usec_inc": 100,
                     "dir_inc_countr": 1,
-                    "v_dir_strt_dec": 1392,
+                    "v_dir_strt_dec": 1638,
                     "v_dir_stop_dec": 0,
                     "v_dir_step_dec": 41,
                     "t_dir_msec_dec": 0,

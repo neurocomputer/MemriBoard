@@ -12,13 +12,12 @@ from gui.widgets.QCodeEditor import QCodeEditor
 from gui.widgets.syntax_highlighter import PythonHighlighter
 from gui.src import show_warning_messagebox, show_choose_window
 from manager.service.global_settings import ALGORITHM_PATH, TICKET_PATH
-from manager.algorithms import Algorithm, check_algorithm_code
+from manager.algorithms import Algorithm, check_algorithm_code, execute_algorithm
 from manager.algorithms.algorithm import VALUE_FUNCTIONS, GENERATOR_FUNCTIONS, MULTI_GENERATOR_FUNCTIONS
 
 
 
 BASE_ALGORITHM = """def algorithm():
-    
 """
 
 
@@ -79,13 +78,6 @@ class AlgorithmEditor(QDialog):
             self.btn_check.setToolTip(self.lang_pack.get('check_tooltip'))
             self.btn_save.setToolTip(self.lang_pack.get('save_tooltip'))
             self.btn_save_to_file.setToolTip(self.lang_pack.get('save_to_file_tooltip'))
-            
-            
-    def read_algorithm_ticket(self, algorithm_name: str) -> dict:
-        """Read algorithm from disk by its name"""  # TODO remove???
-        with open(os.path.join(ALGORITHM_PATH, algorithm_name), 'r', encoding='utf-8') as file:
-            ticket = json.load(file)
-        return ticket
         
         
     def setup_code_editor(self, ticket: Union[str, None]) -> None:
@@ -167,10 +159,14 @@ class AlgorithmEditor(QDialog):
             status, used_tickets: (tuple[bool, dict]): Status and used tickets.
         """
         status, result, used_tickets = check_algorithm_code(self.code_editor.toPlainText(), get_used_tickets=True)
+        if not status:
+            self.plainTextEdit_check.setPlainText(self.lang_pack.get('alg_could_not_compile') + result)
+            return status, used_tickets
+        status, exec_result = execute_algorithm(self.code_editor.toPlainText(), manager=self.parent.parent.man)
         if status:
             self.plainTextEdit_check.setPlainText(self.lang_pack.get('alg_compiles') + result)
         else:
-            self.plainTextEdit_check.setPlainText(self.lang_pack.get('alg_could_not_compile') + result)
+            self.plainTextEdit_check.setPlainText(self.lang_pack.get('alg_could_not_compile') + exec_result)
         return status, used_tickets
         
         
@@ -209,17 +205,18 @@ class AlgorithmEditor(QDialog):
         status, used_tickets = self.check_algorithm()
         if not status:
             show_warning_messagebox(self, self.lang_pack.get('bad_code_on_save'))
-            return
+            return None
         name = self.lineEdit_alg_name.text().strip()
         if name == '':
             show_warning_messagebox(self, self.lang_pack.get('no_alg_name'))
-            return
+            return None
         alg_ticket = {
             'name': name,
             'mode': 'algorithm',
             'params': {},
             'code': self.code_editor.toPlainText(),
-            'tickets': used_tickets
+            'tickets': used_tickets,
+            'executed_tickets': []
         }
         return alg_ticket
     
@@ -235,6 +232,8 @@ class AlgorithmEditor(QDialog):
     def on_save_to_file_btn(self) -> None:
         """Save algorithm to experiment plan and file"""
         alg_ticket = self.get_ticket_for_saving()
+        if alg_ticket is None: 
+            return
         if self.mode == 'edit':
             self.parent.apply_edit_to_exp_list(alg_ticket)
         try:  # Saving to file

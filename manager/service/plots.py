@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes._axes import Axes
 from manager.service import d2v
+from manager.algorithms import execute_algorithm
 
 # pylint: disable=C0103,W0212
 
@@ -17,18 +18,11 @@ def calculate_counts_for_ticket(parent, ticket: dict):
     Посчитать количество задач для тикета или алгоритма
     """
     if ticket['mode'] == 'algorithm':  # Calculating for algorithms
-        sum_count = 0
-        for exp in ticket['tickets'].values():
-            if 'mode' in exp:  # Its a ticket
-                sum_count += calculate_counts_for_one_ticket(parent, exp)
-            else:  # Its an experiment
-                for tick in exp.values():
-                    sum_count += calculate_counts_for_one_ticket(parent, tick)
-        return sum_count
-    return calculate_counts_for_one_ticket(parent, ticket)        
-            
-def calculate_counts_for_one_ticket(parent, ticket: dict):
-    """Посчитать количество задач для одного тикета"""
+        status, count = execute_algorithm(algorithm_code=ticket['code'], manager=parent)
+        if status:
+            return count
+        else: 
+            return 0
     # получаем генератор задач
     task = parent.menu[ticket['mode']], (ticket['params'],
                                         ticket['terminate'],

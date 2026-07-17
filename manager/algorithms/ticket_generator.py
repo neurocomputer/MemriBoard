@@ -36,7 +36,9 @@ class TicketGenerator:
         for ticket in self.ticket_list:
             self.add_ticket_to_database(ticket[1])
             if ticket[1]['mode'] == 'algorithm':  # Algorithm: generate multiple tickets
+                self.algorithm.reset_executed_tickets()
                 yield from algorithm_generator(ticket[1]['code'], algorithm=self.algorithm)
+                self.add_executed_tickets_to_db()  # TODO: finish
             else:
                 yield ticket[1]
                 
@@ -61,4 +63,15 @@ class TicketGenerator:
         if self.ticket_id is None:
             raise RuntimeError('Ticket id was asked before it was changed from None')
         return self.ticket_id
+    
+    
+    def add_executed_tickets_to_db(self) -> None:
+        """Add a list of tickets executed during the algorithm to the database
+        
+        Args:
+            executed_tickets (list): List of executed tickets.
+        """
+        #tickets = self.algorithm.get_executed_tickets()
+        # TODO add to database
+        pass
     

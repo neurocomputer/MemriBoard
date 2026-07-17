@@ -3,6 +3,7 @@ from typing import Union
 import os
 import json
 import traceback
+from copy import deepcopy
 
 from manager.service.global_settings import TICKET_PATH
 
@@ -50,6 +51,7 @@ class Algorithm:
         else:
             self.measure_ticket_name = measure_ticket_name
         self.validate = validate
+        self.executed_tickets = []  # Tickets executed during a single algorithm
         
         
     def last_resistance(self) -> float:
@@ -103,6 +105,7 @@ class Algorithm:
         # Generating ticket
         with open(full_path, 'r') as file:
             ticket = json.load(file)
+        self.executed_tickets.append(deepcopy(ticket))
         return ticket
     
     
@@ -120,6 +123,7 @@ class Algorithm:
             if not isinstance(ticket, dict):
                 raise RuntimeError(f"Wrong type for 'ticket' variable: '{type(ticket)}'. Expected type is 'dict'")            
             self._validate_ticket(ticket)
+        self.executed_tickets.append(deepcopy(ticket))
         return ticket
     
     
@@ -168,6 +172,7 @@ class Algorithm:
         # Generating tickets
         with open(full_path, 'r') as file:
             experiment = json.load(file)
+        self.executed_tickets.append(deepcopy(experiment))
         return [ticket for ticket in experiment.values()]
     
     
@@ -189,6 +194,7 @@ class Algorithm:
                     raise RuntimeError(f"Wrong type for ticket number {i}: '{type(ticket)}'. Expected type is 'dict'")        
                 self._validate_ticket(ticket)
             return 'dict_experiment', experiment
+        self.executed_tickets.append(deepcopy(experiment))
         return [ticket for ticket in experiment.values()]
     
     
@@ -260,4 +266,14 @@ class Algorithm:
         if path.lower().endswith('.json'):
             return path
         return path + '.json'
+    
+    
+    def reset_executed_tickets(self) -> None:
+        """Reset list of tickets executed during algorithm"""
+        self.executed_tickets = []
+        
+        
+    def get_executed_tickets(self) -> list[dict]:
+        """Get a list of executed tickets"""
+        return self.executed_tickets
         

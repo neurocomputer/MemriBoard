@@ -9,7 +9,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
 from manager.blanks import gather
 from gui.src import show_warning_messagebox
-from manager.service.plots import calculate_counts_for_one_ticket
+from manager.service.plots import calculate_counts_for_ticket
 
 class RequestsList(QDialog):
     """
@@ -45,7 +45,7 @@ class RequestsList(QDialog):
             
     def get_requests_for_ticket(self, ticket: dict) -> str:
         """Get requests string for one ticket"""
-        count = calculate_counts_for_one_ticket(self.parent.man, ticket)
+        count = calculate_counts_for_ticket(self.parent.man, ticket)
         text = f"{self.lang_pack.get('ticket')}{ticket['name']}{self.lang_pack.get('tasks')}{count}\n"
         task_gen = self.parent.man.menu[ticket['mode']]
         for req in task_gen(ticket['params'], ticket['terminate'], self.parent.man.blank_type):

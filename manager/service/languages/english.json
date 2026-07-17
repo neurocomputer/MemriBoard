@@ -492,7 +492,7 @@
         "util_funcs":"Utility functions:",
         "ticket_funcs":"Functions that send tickets:",
         "default_check_out":"Press the 'check' button to check the code",
-        "alg_compiles":"The algorithm compiles ✓\n\nProduced python generator:\n\n",
+        "alg_compiles":"The algorithm compiled ✓\n\nProduced python generator:\n\n",
         "alg_could_not_compile":"Could not compile the algorithm! ✕\n\nError(s) occurred:\n\n",
         "bad_code_on_save":"Could not compile the algorithm! Fix all errors to save it or press 'Cancel' button to quit",
         "no_alg_name":"Fill in the algorithm name to save it",

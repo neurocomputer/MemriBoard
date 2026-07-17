@@ -2,9 +2,10 @@
 import ast
 import traceback
 import inspect
-from typing import Generator
+from typing import Generator, Union
 
 from manager.algorithms import Algorithm
+from manager.main import Manager
 from manager.algorithms.algorithm import GENERATOR_FUNCTIONS, MULTI_GENERATOR_FUNCTIONS, VALUE_FUNCTIONS
 
 
@@ -73,7 +74,39 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
     exec(compiled, namespace)
     yield from namespace['algorithm']()
     
+    
+def execute_algorithm(algorithm_code: str, manager: Manager) -> tuple[bool, Union[int, str]]:
+    """Execute an algorithm to check if it can be compiled and get its count.
 
+    Args:
+        algorithm_code (str): Algorithm code.
+
+    Returns:
+        status, result (tuple[bool, int|str): If status is True, the algorithm executed correctly;
+            result is the algorithm task count. If status is False, there was an error, result is 
+            the error message.
+    """
+    try:
+        tree = ast.parse(algorithm_code)
+        new_tree = GeneratorTransformer().visit(tree)
+        ast.fix_missing_locations(new_tree)
+        # Creating namespace based on Algorithm methods
+        alg = Algorithm()
+        namespace = {}
+        for name, method in inspect.getmembers(alg, inspect.ismethod):
+            if name in GENERATOR_FUNCTIONS or name in VALUE_FUNCTIONS or name in MULTI_GENERATOR_FUNCTIONS:
+                namespace[name] = method
+        # Creating generator
+        compiled = compile(new_tree, '<algorithm>', 'exec')
+        exec(compiled, namespace)
+        count = 0
+        for ticket in namespace['algorithm']():
+            task_gen = manager.menu[ticket['mode']]
+            for _ in task_gen(ticket['params'], ticket['terminate'], manager.blank_type):
+                count += 1
+        return True, count
+    except Exception:
+        return False, traceback.format_exc()
 
 class CodeValidator(ast.NodeVisitor):
     """Validator for the algorithm"""
@@ -125,15 +158,22 @@ class CodeValidator(ast.NodeVisitor):
                 try:
                     alg = Algorithm(parent=None, validate=True)
                     method = getattr(alg, node.func.id)
-                    args = [arg.value for arg in node.args]
-                    kwargs = {keyword.arg: keyword.value.value for keyword in node.keywords}
+                    args, kwargs = [], []
+                    for arg in node.args:
+                        if isinstance(arg, ast.Name):
+                            return
+                        args.append(arg.value)
+                    for keyword in node.keywords:
+                        if isinstance(keyword.value, ast.Name):
+                            return
+                        kwargs[keyword.arg] = keyword.value.value
                     result = method(*args, **kwargs)  # Trying to execute
                     if self.get_used_tickets:
                         if node.func.id in GENERATOR_FUNCTIONS:
-                            _, ticket, _ = result
-                            if ticket['mode'] == 'algorithm':  # Checking if ticket is not an algorithm
+                            # result is a ticket
+                            if result['mode'] == 'algorithm':  # Checking if ticket is not an algorithm
                                 self.error(node, 'An algorithm can not call another algorithm!')
-                            self.used_tickets[ticket['name']] = ticket
+                            self.used_tickets[result['name']] = result
                         if node.func.id in MULTI_GENERATOR_FUNCTIONS:
                             name, experiment = result
                             for i, ticket in experiment.items():  # Checking if ticket is not an algorithm
