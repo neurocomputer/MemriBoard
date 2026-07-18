@@ -467,7 +467,11 @@
     },
     "help":{
         "name":"Help",
-        "path":"docs/README.md"
+        "manual_path":"docs/README.md",
+        "algorithms_path":"docs/algorithms_eng.md",
+        "section":"Section:",
+        "manual":"MemriBoard manual",
+        "algorithms":"Algorithms"
     },
     "wait":{
         "window_title":"Wait..."

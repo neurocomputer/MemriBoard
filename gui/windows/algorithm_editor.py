@@ -5,8 +5,8 @@ import json
 from typing import Union
 
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QPlainTextEdit, QFileDialog
-from PyQt5.QtGui import QFontDatabase, QFontMetricsF, QTextCursor
+from PyQt5.QtWidgets import QDialog, QPlainTextEdit, QFileDialog, QShortcut
+from PyQt5.QtGui import QFontDatabase, QFontMetricsF, QTextCursor, QKeySequence
 
 from gui.widgets.QCodeEditor import QCodeEditor
 from gui.widgets.syntax_highlighter import PythonHighlighter
@@ -53,6 +53,8 @@ class AlgorithmEditor(QDialog):
         self.btn_cancel.clicked.connect(self.close)
         self.btn_show_funcs.clicked.connect(self.on_show_funcs_btn)
         self.btn_ticket_export.clicked.connect(self.on_ticket_import_btn)
+        # Shortcuts
+        QShortcut(QKeySequence('F1'), self).activated.connect(self.on_help_btn)
         
         
     def change_language(self):
@@ -171,7 +173,8 @@ class AlgorithmEditor(QDialog):
         
         
     def on_help_btn(self) -> None:
-        pass
+        """Show help window with algorithm manual"""
+        self.parent.parent.show_help(parent=self, section='algorithms')
     
     
     def on_ticket_import_btn(self) -> None:

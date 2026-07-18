@@ -471,7 +471,11 @@
     },
     "help":{
         "name":"Справка",
-        "path":"docs/README_rus.md"
+        "manual_path":"docs/README_rus.md",
+        "algorithms_path":"docs/algorithms_rus.md",
+        "section":"Раздел:",
+        "manual":"Инструкция к MemriBoard",
+        "algorithms":"Алгоритмы"
     },
     "wait":{
         "window_title":"Ждите..."

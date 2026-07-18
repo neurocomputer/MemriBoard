@@ -14,6 +14,7 @@ import json
 import csv
 import numpy as np
 from numpy import inf
+from typing import Union
 from PyQt5 import uic
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu
@@ -398,20 +399,26 @@ class Window(QMainWindow):
                 self.snapshot_dialog.plot_matrix()
                 self.snapshot_dialog.activateWindow()     
             
-    def show_help(self) -> None:
+    def show_help(self, parent=None, section: Union[str, None] = None) -> None:
         """
         Окно со справкой
         """
+        if parent is None: 
+            parent = self
         if self.help_dialog is None:
-            self.help_dialog = Help(self)
+            self.help_dialog = Help(main_window=self, parent=parent, section=section)
             self.help_dialog.show()
         else:
             session_type = os.environ.get('XDG_SESSION_TYPE')
             if session_type is not None and session_type == 'wayland':  # Workaround for wayland
                 self.help_dialog.close()
-                self.show_help()
+                self.show_help(parent, section)
             else:
-                self.help_dialog.activateWindow()
+                if self.help_dialog.parent != parent:
+                    self.help_dialog.close()
+                    self.show_help(parent, section)
+                else:
+                    self.help_dialog.activateWindow()
 
     # обработчики кнопок
 
