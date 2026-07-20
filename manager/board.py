@@ -461,9 +461,12 @@ class Connector():
                         self.interface.sense(trigger=trig_flag)
                     if 'vol' in task:
                         if 'read' in task and task['read']:
-                            vol = self.config['board']['vol_read']
+                            vol = float(self.config['board']['vol_read'])
                         else:
-                            vol = task['vol']
+                            vol = d2v(int(self.config['board']['dac_bit']), 
+                                      float(self.config['board']['vol_ref_dac']),
+                                      task['vol'],
+                                      sign=task['sign'])
                     else:
                         vol = None
                     sense_data = self.interface.sense(trigger=trig_flag, vol=vol)  # (R, timestamp)
