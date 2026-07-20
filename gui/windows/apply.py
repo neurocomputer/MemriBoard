@@ -587,7 +587,7 @@ class ApplyExp(QThread):
                                                       result[0])
                                         file_wr.writerow([
                                             task[0]['sign'],
-                                            task[0]['vol'],
+                                            d2v(self.parent.parent.man.dac_bit,self.parent.parent.man.vol_ref_dac,task[0]['vol'],sign=task[0]['sign']),
                                             res_ohm,  # res
                                             result[2],  # timestamp
                                             result[5],  # temperature(C)
