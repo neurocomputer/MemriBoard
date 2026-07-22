@@ -192,6 +192,8 @@ class AlgorithmEditor(QDialog):
         folder = QFileDialog.getExistingDirectory(self, 
                                                   caption=self.lang_pack.get('choose_folder'),
                                                   directory=TICKET_PATH)
+        if folder == '':
+            return
         for name, ticket in used_tickets.items():
             path = os.path.join(folder, name + '.json')
             if os.path.exists(path):
