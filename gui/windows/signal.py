@@ -8,13 +8,19 @@ import os
 import json
 from functools import partial
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QGraphicsView, QGraphicsScene
+from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QPixmap
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 
 from manager.service.plots import plot_with_save
 from manager.service import v2d, r2a, d2v, a2r
 from manager.service.global_settings import TICKET_PATH
 from gui.src import show_warning_messagebox, show_choose_window
+from gui.widgets.voltage_config import VoltageConfig
 
 class SignalMod(QDialog):
     """
@@ -43,11 +49,16 @@ class SignalMod(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.graphicsView: QGraphicsView
+        self.volt_config = VoltageConfig(self)
+        self.horizontalLayout_2.addWidget(self.volt_config)
+        self._init_plot()
         self.change_language()
         self.setModal(True)
-        self.adjustSize()
+        # self.adjustSize()
         # обработчики кнопок
-        self.ui.button_graph.clicked.connect(self._plot_ticket)
+        # self.ui.button_graph.clicked.connect(self._plot_ticket)
+        self.ui.button_graph.clicked.connect(self.test)
         self.ui.button_save.clicked.connect(self._save_json)
         self.ui.button_cancel.clicked.connect(self.close)
         # другие события
@@ -76,6 +87,19 @@ class SignalMod(QDialog):
             self.ui.terminator_combobox.setEnabled(False)
             self.ui.json_name.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
+        self.groupBox.setVisible(False)
+        self.groupBox_2.setVisible(False)
+        # Centering QSplitter after the window is rendered
+        QTimer.singleShot(0, self.center_splitter)
+        
+    def test(self):  # TODO remove
+        sizes = self.splitter.sizes()
+        print(sizes)
+        s1 = int(sum(sizes) / 2)
+        s2 = sum(sizes) - s1
+        self.splitter.setSizes([s1, s2])
+        print(s1, s2)
+        print(self.splitter.sizes())
 
     def change_language(self):
         """
@@ -117,7 +141,7 @@ class SignalMod(QDialog):
             self.ui.label.setText(self.lang_pack.get("exp_name"))
             self.ui.button_save.setText(self.lang_pack.get("save"))
             self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
-            self.ui.label_png.setPixmap(QPixmap(os.path.join(os.getcwd(),"gui","uies",self.lang_pack.get("hold_path"))))
+            # self.ui.label_png.setPixmap(QPixmap(os.path.join(os.getcwd(),"gui","uies",self.lang_pack.get("hold_path"))))
 
     def set_up_init_values(self) -> None:
         """
@@ -144,6 +168,21 @@ class SignalMod(QDialog):
         for widget, unit in self.scientific_widgets.items():
             widget.set_unit(unit)
             widget.bad_value.connect(partial(warn, widget))
+            
+    def _init_plot(self) -> None:
+        """
+        Initialize the matplotlib widget
+        """
+        # TODO: Reimplement via a class
+        self.plot_scene = QGraphicsScene(self)
+        self.graphicsView.setScene(self.plot_scene)
+        self.figure = Figure()
+        self.ax = self.figure.add_subplot(111)
+        self.ax.plot([1, 2, 3], [1, 4, 9])
+        self.canvas = FigureCanvas(self.figure)
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        self.plot_scene.addWidget(self.canvas)
+        self.plot_scene.addWidget(self.toolbar)
 
     def _plot_ticket(self) -> None:
         """
@@ -163,8 +202,8 @@ class SignalMod(QDialog):
         """
         Отобразить png
         """
-        pixmap = QPixmap(self.IMG_PATH)
-        self.ui.label_png.setPixmap(pixmap)
+        # pixmap = QPixmap(self.IMG_PATH)
+        # self.ui.label_png.setPixmap(pixmap)
 
     def _make_json(self) -> bool:
         """
@@ -291,7 +330,7 @@ class SignalMod(QDialog):
                             raise ValueError
                         # открываем файл и пишем
                         self.base_json["name"] = fname
-                    elif self.mode == "edit" or "edit_for_programming":
+                    elif self.mode in ["edit", "edit_for_programming"]:
                         fname = 'temp'
                     with open(os.path.join(TICKET_PATH,
                                         fname+'.json'),
@@ -418,6 +457,15 @@ class SignalMod(QDialog):
         """
         self.ui.shutdown_value.show()
         self.ui.shutdown_value_label.show()
+        
+    def center_splitter(self) -> None:
+        """
+        Senter the QSplitter widget
+        """
+        sizes = self.splitter.sizes()
+        s1 = int(sum(sizes) / 2)
+        s2 = sum(sizes) - s1
+        self.splitter.setSizes([s1, s2])
 
     def closeEvent(self, event):
         """
@@ -439,3 +487,4 @@ class SignalMod(QDialog):
         # удаление ticket.png при закрытии окна
         if os.path.isfile(self.IMG_PATH):
             os.remove(self.IMG_PATH)
+        self.parent.close()
