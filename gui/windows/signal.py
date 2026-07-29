@@ -8,19 +8,18 @@ import os
 import json
 from functools import partial
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QGraphicsView, QGraphicsScene
+from PyQt5.QtWidgets import QDialog
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QPixmap
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
 
 from manager.service.plots import plot_with_save
 from manager.service import v2d, r2a, d2v, a2r
 from manager.service.global_settings import TICKET_PATH
 from gui.src import show_warning_messagebox, show_choose_window
 from gui.widgets.voltage_config import VoltageConfig
+from gui.widgets.MplGraphicsView import MplGraphicsView
 
 class SignalMod(QDialog):
     """
@@ -49,7 +48,7 @@ class SignalMod(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
-        self.graphicsView: QGraphicsView
+        self.graph: MplGraphicsView
         self.volt_config = VoltageConfig(self)
         self.horizontalLayout_2.addWidget(self.volt_config)
         self._init_plot()
@@ -110,9 +109,9 @@ class SignalMod(QDialog):
             self.ui.setWindowTitle(self.lang_pack.get("name"))
             self.ui.groupBox.setTitle(self.lang_pack.get("voltage"))
             self.ui.groupBox_2.setTitle(self.lang_pack.get("time"))
-            self.ui.groupBox_3.setTitle(self.lang_pack.get("send_signal"))
-            self.ui.groupBox_4.setTitle(self.lang_pack.get("stop_condition"))
-            self.ui.groupBox_5.setTitle(self.lang_pack.get("view"))
+            self.ui.groupBox_signal_order.setTitle(self.lang_pack.get("send_signal"))
+            self.ui.groupBox_terminate.setTitle(self.lang_pack.get("stop_condition"))
+            self.ui.groupBox_graph.setTitle(self.lang_pack.get("view"))
             self.ui.label_3.setText(self.lang_pack.get("start"))
             self.ui.label_4.setText(self.lang_pack.get("stop"))
             self.ui.label_5.setText(self.lang_pack.get("step"))
@@ -125,23 +124,20 @@ class SignalMod(QDialog):
             self.ui.label_2.setText(self.lang_pack.get("sending_order"))
             self.ui.label_13.setText(self.lang_pack.get("times"))
             self.ui.label_14.setText(self.lang_pack.get("repeat"))
-            self.ui.terminator_measure_combobox.setItemText(0, self.lang_pack.get("ohm"))
             self.ui.direction_combobox.setItemText(0, self.lang_pack.get("forth-back"))
             self.ui.direction_combobox.setItemText(1, self.lang_pack.get("back-forth"))
-            self.ui.shutdown_value_label.setText(self.lang_pack.get("value"))
-            self.ui.shutdown_min_label.setText(self.lang_pack.get("min"))
-            self.ui.label_12.setText(self.lang_pack.get("condition"))
+            # self.ui.shutdown_value_label.setText(self.lang_pack.get("value"))
+            # self.ui.shutdown_min_label.setText(self.lang_pack.get("min"))
             self.ui.label_15.setText(self.lang_pack.get("value"))
-            self.ui.shutdown_max_label.setText(self.lang_pack.get("max"))
-            self.ui.shutdown_enc_label.setText(self.lang_pack.get("accumulator"))
-            self.ui.terminator_measure_combobox_label.setText(self.lang_pack.get("measure"))
+            # self.ui.shutdown_max_label.setText(self.lang_pack.get("max"))
+            # self.ui.shutdown_enc_label.setText(self.lang_pack.get("accumulator"))
             self.ui.label_17.setText(self.lang_pack.get("current"))
             self.ui.button_graph.setText(self.lang_pack.get("graphic"))
             self.ui.label_16.setText(self.lang_pack.get("board_req"))
             self.ui.label.setText(self.lang_pack.get("exp_name"))
             self.ui.button_save.setText(self.lang_pack.get("save"))
             self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
-            # self.ui.label_png.setPixmap(QPixmap(os.path.join(os.getcwd(),"gui","uies",self.lang_pack.get("hold_path"))))
+            self._choose_terminator()
 
     def set_up_init_values(self) -> None:
         """
@@ -174,15 +170,9 @@ class SignalMod(QDialog):
         Initialize the matplotlib widget
         """
         # TODO: Reimplement via a class
-        self.plot_scene = QGraphicsScene(self)
-        self.graphicsView.setScene(self.plot_scene)
-        self.figure = Figure()
-        self.ax = self.figure.add_subplot(111)
-        self.ax.plot([1, 2, 3], [1, 4, 9])
-        self.canvas = FigureCanvas(self.figure)
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        self.plot_scene.addWidget(self.canvas)
-        self.plot_scene.addWidget(self.toolbar)
+        self.toolbar = NavigationToolbar(self.graph.canvas, self)
+        # self.toolbar.
+        self.groupBox_graph.layout().addWidget(self.toolbar)
 
     def _plot_ticket(self) -> None:
         """
@@ -414,49 +404,45 @@ class SignalMod(QDialog):
         Изменение отображения терминаора
         """
         term = self.ui.terminator_combobox.currentText()
-        if term == 'pass':
-            self._hide_list_terminate()
-            self._hide_int_terminate()
-        elif term in self.one_value_terminators:
-            self._show_int_terminate()
-            self._hide_list_terminate()
-        else:
-            self._hide_int_terminate()
-            self._show_list_terminate()
-
-    def _hide_list_terminate(self) -> None:
-        """
-        Скрыть виджеты
-        """
-        self.ui.shutdown_max.hide()
-        self.ui.shutdown_max_label.hide()
-        self.ui.shutdown_enc.hide()
-        self.ui.shutdown_enc_label.hide()
-        self.ui.shutdown_min.hide()
-        self.ui.shutdown_min_label.hide()
-
-    def _show_list_terminate(self) -> None:
-        """
-        Показать виджеты
-        """
-        self.ui.shutdown_max.show()
-        self.ui.shutdown_max_label.show()
-        self.ui.shutdown_min.show()
-        self.ui.shutdown_min_label.show()
-
-    def _hide_int_terminate(self) -> None:
-        """
-        Скрыть виджеты
-        """
-        self.ui.shutdown_value.hide()
-        self.ui.shutdown_value_label.hide()
-
-    def _show_int_terminate(self) -> None:
-        """
-        Показать виджеты
-        """
-        self.ui.shutdown_value.show()
-        self.ui.shutdown_value_label.show()
+        if term == 'pass':  # Hiding all widgets
+            self.ui.label_terminate_left.hide()
+            self.ui.label_terminate_right.hide()
+            self.ui.terminate_left.hide()
+            self.ui.terminate_right.hide()
+        elif term == '==':
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R=="))
+            self.ui.label_terminate_left.show()
+            self.ui.terminate_left.show()
+            self.ui.label_terminate_right.hide()
+            self.ui.terminate_right.hide()
+        elif term == '>':
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R>"))
+            self.ui.label_terminate_left.show()
+            self.ui.terminate_left.show()
+            self.ui.label_terminate_right.hide()
+            self.ui.terminate_right.hide()
+        elif term == '<':
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R<"))
+            self.ui.label_terminate_left.show()
+            self.ui.terminate_left.show()
+            self.ui.label_terminate_right.hide()
+            self.ui.terminate_right.hide()
+        elif term == '><':
+            self.ui.label_terminate_left.hide()
+            self.ui.terminate_left.show()
+            self.ui.label_terminate_right.setText(self.lang_pack.get("R><"))
+            self.ui.label_terminate_right.show()
+            self.ui.terminate_right.show()
+        elif term == '<>':
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R<"))
+            self.ui.label_terminate_left.show()
+            self.ui.terminate_left.show()
+            self.ui.label_terminate_right.setText(self.lang_pack.get("R>+"))
+            self.ui.label_terminate_right.show()
+            self.ui.terminate_right.show()
+            # TODO hint min/max in the ScientificLineEdit
+            # TODO connect the terminator widget
+            # TODO shutdown_enc?
         
     def center_splitter(self) -> None:
         """
@@ -488,3 +474,6 @@ class SignalMod(QDialog):
         if os.path.isfile(self.IMG_PATH):
             os.remove(self.IMG_PATH)
         self.parent.close()
+        
+        
+        

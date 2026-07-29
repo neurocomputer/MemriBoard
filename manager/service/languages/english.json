@@ -157,7 +157,12 @@
         "save_changes":"Save changes?",
         "file_name_wrong":"File name is wrong!",
         "ohm":"Ohm",
-        "hold_path":"hold.png"
+        "hold_path":"hold.png",
+        "R==": "Resistance  ==  ",
+        "R>":"Resistance  >  ",
+        "R<":"Resistance  <  ",
+        "R><":"  <  Resistance  <  ",
+        "R>+":";  Resistance  >  "
     },
     "cell_info":{
         "name":"Cell Info",
