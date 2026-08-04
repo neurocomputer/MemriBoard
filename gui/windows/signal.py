@@ -17,9 +17,11 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from manager.service.plots import plot_with_save
 from manager.service import v2d, r2a, d2v, a2r
 from manager.service.global_settings import TICKET_PATH
+from manager.terminate import terminators
 from gui.src import show_warning_messagebox, show_choose_window
-from gui.widgets.voltage_config import VoltageConfig
+from gui.widgets.SignalParametersConfig import SignalParameters
 from gui.widgets.MplGraphicsView import MplGraphicsView
+from gui.widgets.ScientificQLineEdit import ScientificQLineEdit
 
 class SignalMod(QDialog):
     """
@@ -48,20 +50,27 @@ class SignalMod(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        # Linting widget types
         self.graph: MplGraphicsView
-        self.volt_config = VoltageConfig(self)
-        self.horizontalLayout_2.addWidget(self.volt_config)
+        self.terminate_left: ScientificQLineEdit
+        self.terminate_right: ScientificQLineEdit
+        # Adding widgets
+        self.signal_param = SignalParameters(self)
+        self.horizontalLayout_2.addWidget(self.signal_param)
         self._init_plot()
+        # Filling terminator values
+        self.terminator_combobox.addItems(list(terminators.keys()))
+        self.terminator_combobox.activated.connect(self._choose_terminator)
+        self.terminate_left.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_left, text))
+        self.terminate_right.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_right, text))
+        # UI stuff
         self.change_language()
         self.setModal(True)
-        # self.adjustSize()
         # обработчики кнопок
         # self.ui.button_graph.clicked.connect(self._plot_ticket)
         self.ui.button_graph.clicked.connect(self.test)
         self.ui.button_save.clicked.connect(self._save_json)
         self.ui.button_cancel.clicked.connect(self.close)
-        # другие события
-        self.ui.terminator_combobox.activated.connect(self._choose_terminator)
         # начальные значения
         self.set_up_init_values()
         # режим
@@ -107,37 +116,34 @@ class SignalMod(QDialog):
         ok, self.lang_pack = self.parent.read_language_json("signal")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
-            self.ui.groupBox.setTitle(self.lang_pack.get("voltage"))
-            self.ui.groupBox_2.setTitle(self.lang_pack.get("time"))
-            self.ui.groupBox_signal_order.setTitle(self.lang_pack.get("send_signal"))
+            self.ui.groupBox_signal_settings.setTitle(self.lang_pack.get("signal_settings"))
+            self.ui.groupBox_sending_settings.setTitle(self.lang_pack.get("sending_settings"))
             self.ui.groupBox_terminate.setTitle(self.lang_pack.get("stop_condition"))
-            self.ui.groupBox_graph.setTitle(self.lang_pack.get("view"))
-            self.ui.label_3.setText(self.lang_pack.get("start"))
-            self.ui.label_4.setText(self.lang_pack.get("stop"))
-            self.ui.label_5.setText(self.lang_pack.get("step"))
-            self.ui.label_6.setText(self.lang_pack.get("amount"))
-            self.ui.label_7.setText(self.lang_pack.get("dec"))
-            self.ui.label_10.setText(self.lang_pack.get("forward"))
-            self.ui.label_11.setText(self.lang_pack.get("backward"))
-            self.ui.label_8.setText(self.lang_pack.get("ms"))
-            self.ui.label_9.setText(self.lang_pack.get("mcs"))
-            self.ui.label_2.setText(self.lang_pack.get("sending_order"))
-            self.ui.label_13.setText(self.lang_pack.get("times"))
-            self.ui.label_14.setText(self.lang_pack.get("repeat"))
+            self.ui.groupBox_graph.setTitle(self.lang_pack.get("graph"))
+            self.ui.label_signal_mode.setText(self.lang_pack.get("signal_mode"))
+            self.ui.label_sending_order.setText(self.lang_pack.get("sending_order"))
+            self.ui.label_repeat_times.setText(self.lang_pack.get("times"))
+            self.ui.label_repeat.setText(self.lang_pack.get("repeat"))
             self.ui.direction_combobox.setItemText(0, self.lang_pack.get("forth-back"))
             self.ui.direction_combobox.setItemText(1, self.lang_pack.get("back-forth"))
-            # self.ui.shutdown_value_label.setText(self.lang_pack.get("value"))
-            # self.ui.shutdown_min_label.setText(self.lang_pack.get("min"))
-            self.ui.label_15.setText(self.lang_pack.get("value"))
-            # self.ui.shutdown_max_label.setText(self.lang_pack.get("max"))
-            # self.ui.shutdown_enc_label.setText(self.lang_pack.get("accumulator"))
-            self.ui.label_17.setText(self.lang_pack.get("current"))
-            self.ui.button_graph.setText(self.lang_pack.get("graphic"))
-            self.ui.label_16.setText(self.lang_pack.get("board_req"))
-            self.ui.label.setText(self.lang_pack.get("exp_name"))
+            self.ui.button_graph.setText(self.lang_pack.get("plot"))
+            self.ui.label_board_req.setText(self.lang_pack.get("board_req"))
+            self.ui.label_exp_name.setText(self.lang_pack.get("exp_name"))
             self.ui.button_save.setText(self.lang_pack.get("save"))
             self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
+            self.ui.label_terminate_type.setText(self.lang_pack.get("condition_type"))
             self._choose_terminator()
+            self.terminate_left.set_unit(self.lang_pack.get('ohm'))
+            self.terminate_right.set_unit(self.lang_pack.get('ohm'))
+            # Scientific widgets
+            ok, scientific_lang_pack = self.parent.read_language_json("ScientificQLineEdit")
+            if ok:
+                self.terminate_left.change_prefix_dict(scientific_lang_pack)
+                self.terminate_right.change_prefix_dict(scientific_lang_pack)
+            # Parameters widget
+            ok, params_lang_pack = self.parent.read_language_json("signal_parameters")
+            if ok:
+                self.signal_param.change_language(params_lang_pack, scientific_lang_pack)
 
     def set_up_init_values(self) -> None:
         """
@@ -147,31 +153,19 @@ class SignalMod(QDialog):
         self.one_value_terminators = ['==', '>', '<']
         self.base_json = {}
         self.file_saved = False
-        # Set units for scientific lines
-        self.scientific_widgets = {  # {widget: unit}
-            self.ui.forward_start: 'V',
-            self.ui.forward_step: 'V',
-            self.ui.forward_stop: 'V',
-            self.ui.backward_start: 'V',
-            self.ui.backward_step: 'V',
-            self.ui.backward_stop: 'V',
-        }
-        def warn(widget, text):  # Warning for ScientificQLineEdit
-            if not widget.isModified(): # Avoiding Qt bug where warning is shown twice
-                return
-            widget.setModified(False)
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"')
-        for widget, unit in self.scientific_widgets.items():
-            widget.set_unit(unit)
-            widget.bad_value.connect(partial(warn, widget))
+            
+    def warn_scientific_widget(self, widget, text):
+        """Warn if scientific widget has a bad value"""
+        if not widget.isModified(): # Avoiding Qt bug where warning is shown twice
+            return
+        widget.setModified(False)
+        show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"')
             
     def _init_plot(self) -> None:
         """
         Initialize the matplotlib widget
         """
-        # TODO: Reimplement via a class
         self.toolbar = NavigationToolbar(self.graph.canvas, self)
-        # self.toolbar.
         self.groupBox_graph.layout().addWidget(self.toolbar)
 
     def _plot_ticket(self) -> None:
@@ -204,10 +198,6 @@ class SignalMod(QDialog):
         """
         status = False
         try:
-            # Check if data in scientific lines is correct
-            for widget in self.scientific_widgets:
-                if widget.get_value() is None:
-                    raise ValueError
 
             # dir inc
             self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
@@ -264,14 +254,20 @@ class SignalMod(QDialog):
             if term == 'pass':
                 self.base_json['terminate']['value'] = 0
             elif term in self.one_value_terminators:
+                if self.terminate_left.get_value() is None:
+                    raise ValueError
                 self.base_json['terminate']['value'] = r2a(self.parent.man.gain,
                                                            self.parent.man.res_load,
                                                            self.parent.man.vol_read,
                                                            self.parent.man.adc_bit,
                                                            self.parent.man.vol_ref_adc,
                                                            self.parent.man.res_switches,
-                                                           int(self.ui.shutdown_value.text()))
+                                                           int(self.terminate_left.get_value()))
             else:
+                if self.terminate_left.get_value() is None:
+                    raise ValueError
+                if self.terminate_right.get_value() is None:
+                    raise ValueError
                 # сортируем
                 term_values = [r2a(self.parent.man.gain,
                                    self.parent.man.res_load,
@@ -279,14 +275,14 @@ class SignalMod(QDialog):
                                    self.parent.man.adc_bit,
                                    self.parent.man.vol_ref_adc,
                                    self.parent.man.res_switches,
-                                   int(self.ui.shutdown_min.text())),
+                                   int(self.terminate_left.get_value())),
                                r2a(self.parent.man.gain,
                                    self.parent.man.res_load,
                                    self.parent.man.vol_read,
                                    self.parent.man.adc_bit,
                                    self.parent.man.vol_ref_adc,
                                    self.parent.man.res_switches,
-                                   int(self.ui.shutdown_max.text()))]
+                                   int(self.terminate_right.get_value()))]
                 term_values.sort()
                 self.base_json['terminate']['value'] = term_values
 
@@ -372,13 +368,13 @@ class SignalMod(QDialog):
         self.ui.terminator_combobox.setCurrentText(self.base_json['terminate']['type'])
         self._choose_terminator()
         if self.base_json['terminate']['type'] in self.one_value_terminators:
-            self.ui.shutdown_value.setText(str(int(a2r(self.parent.man.gain,
-                                                       self.parent.man.res_load,
-                                                       self.parent.man.vol_read,
-                                                       self.parent.man.adc_bit,
-                                                       self.parent.man.vol_ref_adc,
-                                                       self.parent.man.res_switches,
-                                                       self.base_json['terminate']['value']))))
+            self.terminate_left.set_value(int(a2r(self.parent.man.gain,
+                                                  self.parent.man.res_load,
+                                                  self.parent.man.vol_read,
+                                                  self.parent.man.adc_bit,
+                                                  self.parent.man.vol_ref_adc,
+                                                  self.parent.man.res_switches,
+                                                  self.base_json['terminate']['value'])))
         elif self.base_json['terminate']['type'] != 'pass':
             term_values = [int(a2r(self.parent.man.gain,
                                    self.parent.man.res_load,
@@ -394,55 +390,68 @@ class SignalMod(QDialog):
                                                                                       self.parent.man.res_switches,
                                                                                       self.base_json['terminate']['value'][1]))]
             term_values.sort()
-            self.ui.shutdown_min.setText(str(term_values[0]))
-            self.ui.shutdown_max.setText(str(term_values[1]))
+            self.terminate_left.set_value(term_values[0])
+            self.terminate_right.set_value(term_values[1])
 
         self.ui.repeat_count.setValue(self.base_json['params']['count'])
 
     def _choose_terminator(self) -> None:
         """
-        Изменение отображения терминаора
+        Изменение отображения терминатора
         """
         term = self.ui.terminator_combobox.currentText()
         if term == 'pass':  # Hiding all widgets
             self.ui.label_terminate_left.hide()
             self.ui.label_terminate_right.hide()
-            self.ui.terminate_left.hide()
-            self.ui.terminate_right.hide()
+            self.terminate_left.hide()
+            self.terminate_right.hide()
         elif term == '==':
             self.ui.label_terminate_left.setText(self.lang_pack.get("R=="))
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("value"))
             self.ui.label_terminate_left.show()
-            self.ui.terminate_left.show()
+            self.terminate_left.show()
             self.ui.label_terminate_right.hide()
-            self.ui.terminate_right.hide()
+            self.terminate_right.hide()
         elif term == '>':
             self.ui.label_terminate_left.setText(self.lang_pack.get("R>"))
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("value"))
             self.ui.label_terminate_left.show()
-            self.ui.terminate_left.show()
+            self.terminate_left.show()
             self.ui.label_terminate_right.hide()
-            self.ui.terminate_right.hide()
+            self.terminate_right.hide()
         elif term == '<':
             self.ui.label_terminate_left.setText(self.lang_pack.get("R<"))
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("value"))
             self.ui.label_terminate_left.show()
-            self.ui.terminate_left.show()
+            self.terminate_left.show()
             self.ui.label_terminate_right.hide()
-            self.ui.terminate_right.hide()
+            self.terminate_right.hide()
         elif term == '><':
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("min"))
+            self.terminate_right.setPlaceholderText(self.lang_pack.get("max"))
             self.ui.label_terminate_left.hide()
-            self.ui.terminate_left.show()
+            self.terminate_left.show()
             self.ui.label_terminate_right.setText(self.lang_pack.get("R><"))
             self.ui.label_terminate_right.show()
-            self.ui.terminate_right.show()
+            self.terminate_right.show()
         elif term == '<>':
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("min"))
+            self.terminate_right.setPlaceholderText(self.lang_pack.get("max"))
             self.ui.label_terminate_left.setText(self.lang_pack.get("R<"))
             self.ui.label_terminate_left.show()
-            self.ui.terminate_left.show()
+            self.terminate_left.show()
             self.ui.label_terminate_right.setText(self.lang_pack.get("R>+"))
             self.ui.label_terminate_right.show()
-            self.ui.terminate_right.show()
-            # TODO hint min/max in the ScientificLineEdit
-            # TODO connect the terminator widget
-            # TODO shutdown_enc?
+            self.terminate_right.show()
+        elif term == '<>a':
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("min"))
+            self.terminate_right.setPlaceholderText(self.lang_pack.get("max"))
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R<a"))
+            self.ui.label_terminate_left.show()
+            self.terminate_left.show()
+            self.ui.label_terminate_right.setText(self.lang_pack.get("R>a"))
+            self.ui.label_terminate_right.show()
+            self.terminate_right.show()
         
     def center_splitter(self) -> None:
         """
@@ -474,6 +483,3 @@ class SignalMod(QDialog):
         if os.path.isfile(self.IMG_PATH):
             os.remove(self.IMG_PATH)
         self.parent.close()
-        
-        
-        

@@ -129,9 +129,9 @@ class EqualOutAccum():
 # привязка ярлыков к терминаторам
 terminators = {'pass': Pass,
                '==': Equal,
-               '><': EqualIn,
-               '<>': EqualOut,
                '<': Less,
                '>': Bigger,
+               '><': EqualIn,
+               '<>': EqualOut,
                '<>a': EqualOutAccum
                }
