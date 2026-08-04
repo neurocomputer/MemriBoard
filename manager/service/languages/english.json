@@ -168,7 +168,10 @@
         "amount":"Amount",
         "double":"Double",
         "volt":"V",
-        "second":"s"
+        "second":"s",
+        "amplitude":"Amplitude",
+        "pulse":"Pulse",
+        "voltage_in_settings":"Read voltage is set in the settings"
     },
     "cell_info":{
         "name":"Cell Info",

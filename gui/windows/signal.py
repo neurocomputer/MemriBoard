@@ -6,9 +6,8 @@
 
 import os
 import json
-from functools import partial
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog
+from PyQt5.QtWidgets import QDialog, QComboBox, QSpinBox
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QPixmap
 
@@ -54,6 +53,9 @@ class SignalMod(QDialog):
         self.graph: MplGraphicsView
         self.terminate_left: ScientificQLineEdit
         self.terminate_right: ScientificQLineEdit
+        self.signal_mode: QComboBox
+        self.direction_combobox: QComboBox
+        self.repeat_count: QSpinBox
         # Adding widgets
         self.signal_param = SignalParameters(self)
         self.horizontalLayout_2.addWidget(self.signal_param)
@@ -63,6 +65,16 @@ class SignalMod(QDialog):
         self.terminator_combobox.activated.connect(self._choose_terminator)
         self.terminate_left.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_left, text))
         self.terminate_right.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_right, text))
+        # Filling signal modes
+        self.signal_modes = {  # TODO reimplement in VISA_instruments
+            'Voltage sweep': 'volt_sweep', 
+            'Endurance': 'endurance', 
+            'Retention': 'retention', 
+            'Potentiation-Depression': 'pot-dep'
+        }
+        self.signal_modes_inverted = {val: key for key, val in self.signal_modes.items()}  # Inverse dict for getting mode labels
+        self.signal_mode.addItems(list(self.signal_modes.keys()))
+        self.signal_mode.currentTextChanged.connect(self._change_signal_mode)
         # UI stuff
         self.change_language()
         self.setModal(True)
@@ -144,6 +156,7 @@ class SignalMod(QDialog):
             ok, params_lang_pack = self.parent.read_language_json("signal_parameters")
             if ok:
                 self.signal_param.change_language(params_lang_pack, scientific_lang_pack)
+                self._change_signal_mode()  # Update signal mode ui
 
     def set_up_init_values(self) -> None:
         """
@@ -167,7 +180,15 @@ class SignalMod(QDialog):
         """
         self.toolbar = NavigationToolbar(self.graph.canvas, self)
         self.groupBox_graph.layout().addWidget(self.toolbar)
-
+        
+    def _change_signal_mode(self) -> None:
+        """
+        Change ui based on the signal mode
+        """
+        # TODO reimplement in VISA_instruments, turn off terminator if necessary
+        signal_mode = self.signal_modes[self.signal_mode.currentText()]
+        self.signal_param.set_mode(signal_mode)
+        
     def _plot_ticket(self) -> None:
         """
         Просмотр json
@@ -198,55 +219,18 @@ class SignalMod(QDialog):
         """
         status = False
         try:
-
-            # dir inc
-            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
-            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
-            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
-            self.base_json['params']['t_dir_msec_inc'] = int(self.ui.forward_ms.text())
-            self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
-            self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
-            # чекбокс dir dec
-            if self.ui.forward_dec.isChecked():
-                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
-                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
-                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
-                self.base_json['params']['t_dir_msec_dec'] = int(self.ui.forward_ms.text())
-                self.base_json['params']['t_dir_usec_dec'] = int(self.ui.forward_mcs.text())
-                self.base_json['params']['dir_dec_countr'] = int(self.ui.forward_count.value())
-            else:
-                self.base_json['params']['v_dir_strt_dec'] = 0
-                self.base_json['params']['v_dir_stop_dec'] = 0
-                self.base_json['params']['v_dir_step_dec'] = 0
-                self.base_json['params']['t_dir_msec_dec'] = 0
-                self.base_json['params']['t_dir_usec_dec'] = 0
-                self.base_json['params']['dir_dec_countr'] = 0
-            # rev inc
-            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
-            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
-            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
-            self.base_json['params']['t_rev_msec_inc'] = int(self.ui.backward_ms.text())
-            self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
-            self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
-            # чекбокс rev dec
-            if self.ui.backward_dec.isChecked():
-                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
-                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
-                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
-                self.base_json['params']['t_rev_msec_dec'] = int(self.ui.backward_ms.text())
-                self.base_json['params']['t_rev_usec_dec'] = int(self.ui.backward_mcs.text())
-                self.base_json['params']['rev_dec_countr'] = int(self.ui.backward_count.value())
-            else:
-                self.base_json['params']['v_rev_strt_dec'] = 0
-                self.base_json['params']['v_rev_stop_dec'] = 0
-                self.base_json['params']['v_rev_step_dec'] = 0
-                self.base_json['params']['t_rev_msec_dec'] = 0
-                self.base_json['params']['t_rev_usec_dec'] = 0
-                self.base_json['params']['rev_dec_countr'] = 0
-
-            self.base_json['params']['reverse'] = int(self.ui.direction_combobox.currentIndex())
-            self.base_json['params']['count'] = int(self.ui.repeat_count.text())
+            # Signal mode
+            self.base_json['mode'] = self.signal_modes[self.signal_mode.currentText()]
+            
+            # Filling signal parameters
+            self.base_json = self.signal_param.fill_params(self.base_json)
+            
+            # Other parameters
+            self.base_json['params']['count'] = self.repeat_count.value()
+            self.base_json['params']['reverse'] = self.direction_combobox.currentIndex()
             self.base_json['params']['id'] = 0
+            self.base_json['params']['wl'] = 0
+            self.base_json['params']['bl'] = 0
 
             # терминаторы
             term = self.ui.terminator_combobox.currentText()
@@ -256,39 +240,21 @@ class SignalMod(QDialog):
             elif term in self.one_value_terminators:
                 if self.terminate_left.get_value() is None:
                     raise ValueError
-                self.base_json['terminate']['value'] = r2a(self.parent.man.gain,
-                                                           self.parent.man.res_load,
-                                                           self.parent.man.vol_read,
-                                                           self.parent.man.adc_bit,
-                                                           self.parent.man.vol_ref_adc,
-                                                           self.parent.man.res_switches,
-                                                           int(self.terminate_left.get_value()))
+                self.base_json['terminate']['value'] = self.terminate_left.get_value()
             else:
                 if self.terminate_left.get_value() is None:
                     raise ValueError
                 if self.terminate_right.get_value() is None:
                     raise ValueError
                 # сортируем
-                term_values = [r2a(self.parent.man.gain,
-                                   self.parent.man.res_load,
-                                   self.parent.man.vol_read,
-                                   self.parent.man.adc_bit,
-                                   self.parent.man.vol_ref_adc,
-                                   self.parent.man.res_switches,
-                                   int(self.terminate_left.get_value())),
-                               r2a(self.parent.man.gain,
-                                   self.parent.man.res_load,
-                                   self.parent.man.vol_read,
-                                   self.parent.man.adc_bit,
-                                   self.parent.man.vol_ref_adc,
-                                   self.parent.man.res_switches,
-                                   int(self.terminate_right.get_value()))]
+                term_values = [self.terminate_left.get_value(), self.terminate_right.get_value()]
                 term_values.sort()
                 self.base_json['terminate']['value'] = term_values
 
             status = True
         except ValueError:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect"))
+        print(json.dumps(self.base_json, indent=4))
         return status
 
     def _save_json(self) -> None:
