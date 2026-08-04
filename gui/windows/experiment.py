@@ -199,7 +199,8 @@ class ExpSettings(QDialog):
             ticket["params"]["wl"] = self.parent.current_wl
             ticket["params"]["bl"] = self.parent.current_bl
             # 4 считаем сколько тикетов и тасков в списке
-            count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+            # count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+            count = 0  # TODO  Reimplement count calculation (menu)
             self.parent.exp_list_params['total_tickets'] += 1
             self.parent.exp_list_params['total_tasks'] += count
             # 5 отображаем название тикета в списке
@@ -393,8 +394,8 @@ class ExpSettings(QDialog):
                 for i in range(len(tickets)):
                     self._add_exp_to_list(ticket=tickets.get(str(i)))
                 self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
-        except Exception:
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
+        except Exception as e:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable") + f'\n{type(e).__name__}: {e}')
 
     def duplicate_ticket(self) -> None:
         """

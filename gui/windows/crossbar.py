@@ -17,7 +17,7 @@ from numpy import inf
 from typing import Union
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu, QInputDialog, QFileDialog
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
@@ -47,7 +47,7 @@ from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
 from gui.windows.help import Help
-from gui.src import show_choose_window, show_warning_messagebox, change_src_language
+from gui.src import show_choose_window, show_warning_messagebox, change_src_language, convert_ticket_to_reduced_format
 
 class Window(QMainWindow):
     """
@@ -95,7 +95,6 @@ class Window(QMainWindow):
     opener: str = ''
     extra = []
     coordinate_error = False
-    lang_pack: dict
     filter_rmin = None
     filter_rmax = None
 
@@ -139,8 +138,8 @@ class Window(QMainWindow):
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # диалоговое окно подключения
-        # self.show_connect_dialog()
-        self.show_signal_dialog("blank", "create")  # TODO remove
+        self.show_connect_dialog()
+        # self.show_signal_dialog("blank", "create")  # TODO remove
         
     def set_shortcuts(self):
         """
@@ -153,6 +152,7 @@ class Window(QMainWindow):
         self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
         self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
         self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_menu.addAction('', self.convert_ticket_to_new_format)
         self.tool_button_menu.addAction('', self.show_help, QKeySequence("F1"))
         self.tool_button_actions_text = ['info', 
                                          'terminal', 
@@ -160,6 +160,7 @@ class Window(QMainWindow):
                                          'show_weights', 
                                          'write', 
                                          'read_all_btn',
+                                         'convert_ticket',
                                          'help']
         self.ui.tool_button.setMenu(self.tool_button_menu)
         self.ui.tool_button.setPopupMode(2)
@@ -284,7 +285,7 @@ class Window(QMainWindow):
         self.connect_dialog = ConnectDialog(parent=self)
         self.connect_dialog.show()
 
-    def show_history_dialog(self, mode: str = None) -> None:
+    def show_history_dialog(self, mode: Union[str, None] = None) -> None:
         """
         Показать окно истории
         """
@@ -423,7 +424,7 @@ class Window(QMainWindow):
 
     # обработчики кнопок
 
-    def custom_shaphop(self, data, title, save_flag=True, save_path=os.getcwd()):
+    def custom_shaphop(self, data, title, save_flag=True, save_path=None):
         """
         Картинка imshow
         """
@@ -439,6 +440,8 @@ class Window(QMainWindow):
         plt.title(title, linespacing=1.5)
         plt.tight_layout()
         if save_flag:
+            if save_path is None:
+                save_path = os.getcwd()
             plt.savefig(os.path.join(save_path,"result_map.png"))
             plt.close()
         else:
@@ -651,6 +654,63 @@ class Window(QMainWindow):
         with open(fname, encoding='utf-8') as file:
             ticket = json.load(file)
         return ticket
+    
+    def convert_ticket_to_new_format(self) -> None:
+        """Convert ticket to reduced format"""
+        signal_modes = {  # TODO reimplement in VISA_instruments
+            'Voltage sweep': 'volt_sweep', 
+            'Endurance': 'endurance', 
+            'Retention': 'retention', 
+            'Potentiation-Depression': 'pot-dep'
+        }
+        filename, _ = QFileDialog.getOpenFileName(self, 
+                                                  caption=self.lang_pack.get("choose_ticket_convert"),
+                                                  directory=TICKET_PATH,
+                                                  filter=('JSON files (*.json)'))
+        if filename == '':
+            return
+        try:
+            with open(filename, encoding='utf-8') as file:
+                ticket = json.load(file)
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_open") + filename + f'\n{type(e).__name__}: {e}')
+            return
+        try:
+            if 'params' in ticket:  # Assuming its a ticket
+                mode, ok = QInputDialog.getItem(
+                    self,
+                    self.lang_pack.get("choose_signal_mode"),
+                    self.lang_pack.get("signal_mode"),
+                    signal_modes.keys(),
+                    current=0,
+                    editable=False
+                )
+                if not ok:
+                    return
+                new_ticket = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=signal_modes[mode])
+            else:  # Assuming its an experiment
+                new_ticket = {}
+                for i, tick in ticket.items():
+                    mode, ok = QInputDialog.getItem(
+                        self,
+                        self.lang_pack.get("choose_signal_mode"),
+                        self.lang_pack.get("signal_mode_for_tick") + f'{i} ({tick["name"]})',
+                        signal_modes.keys(),
+                        current=0,
+                        editable=False
+                    )
+                    if not ok:
+                        return
+                    new_tick = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=mode)
+                    new_ticket[i] = new_tick
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + filename + f'\n{type(e).__name__}: {e}')
+            return
+        try:
+            with open(filename, 'w', encoding='utf-8') as file:
+                json.dump(new_ticket, file, indent=4, ensure_ascii=False)
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_save") + filename + f'\n{type(e).__name__}: {e}')
 
     def on_count_changed(self, value: int) -> None:
         """

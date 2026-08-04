@@ -1,1 +1,27 @@
-{"name": "reset", "mode": "std", "params": {"v_dir_strt_inc": 1392, "v_dir_stop_inc": 1392, "v_dir_step_inc": 1392, "t_dir_msec_inc": 0, "t_dir_usec_inc": 100, "dir_inc_countr": 1, "v_dir_strt_dec": 0, "v_dir_stop_dec": 0, "v_dir_step_dec": 0, "t_dir_msec_dec": 0, "t_dir_usec_dec": 0, "dir_dec_countr": 0, "v_rev_strt_inc": 0, "v_rev_stop_inc": 0, "v_rev_step_inc": 0, "t_rev_msec_inc": 0, "t_rev_usec_inc": 0, "rev_inc_countr": 0, "v_rev_strt_dec": 0, "v_rev_stop_dec": 0, "v_rev_step_dec": 0, "t_rev_msec_dec": 0, "t_rev_usec_dec": 0, "rev_dec_countr": 0, "count": 1, "reverse": 0, "id": 0, "wl": 0, "bl": 0}, "terminate": {"type": "pass", "value": 0}}
+{
+    "name": "reset",
+    "mode": "volt_sweep",
+    "params": {
+        "start_dir": 1.7,
+        "stop_dir": 1.7,
+        "step_dir": 1.7,
+        "start_rev": 0.0,
+        "stop_rev": 0.0,
+        "step_rev": 0.0,
+        "pulse_width_dir": 1e-4,
+        "pulse_width_rev": 0.0,
+        "amount_dir": 1,
+        "amount_rev": 0,
+        "double_dir": false,
+        "double_rev": false,
+        "count": 1,
+        "reverse": 0,
+        "id": 0,
+        "wl": 0,
+        "bl": 0
+    },
+    "terminate": {
+        "type": "pass",
+        "value": 0
+    }
+}

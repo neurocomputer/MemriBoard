@@ -5,9 +5,11 @@
 # pylint: disable=E0611
 
 import csv
-import pandas as pd  # TODO: add to requirements + xlsxwriter for save_xlsx
+from typing import Union
+import pandas as pd
 import json
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
+from manager.service import d2v, a2r
 
 
 lang_pack: dict = {}  # Language for src functions
@@ -157,3 +159,71 @@ def save_matrix_xlsx(filename: str, data: list) -> None:
             for j, col in enumerate(row):
                  worksheet.write(i + 1, j + 1, col, centered_format)
     writer.close()
+    
+
+def convert_ticket_to_reduced_format(manager, ticket: dict, mode_to_convert: str = 'volt_sweep') -> dict:
+    """Convert ticket from old (full) format to reduced format (for backwards compatibility)"""
+    if mode_to_convert not in ['volt_sweep', 'endurance', 'pot-dep', 'retention']:
+        raise RuntimeError(f'Converting ticket to reduced format: unknown mode {mode_to_convert}')
+    new_ticket = {
+        'name': ticket['name'],
+        'mode': mode_to_convert,
+        'params': {},
+        'terminate': {}
+    }
+    if mode_to_convert == 'volt_sweep':
+        # Sweep
+        new_ticket['params']['start_dir'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_dir_strt_inc'])
+        new_ticket['params']['stop_dir'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_dir_stop_inc'])
+        new_ticket['params']['step_dir'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_dir_step_inc'])
+        new_ticket['params']['start_rev'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_rev_strt_inc'])
+        new_ticket['params']['stop_rev'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_rev_stop_inc'])
+        new_ticket['params']['step_rev'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_rev_step_inc'])
+        # Time
+        new_ticket['params']['pulse_width_dir'] = ticket['params']['t_dir_msec_inc'] * 1e-3 + ticket['params']['t_dir_usec_inc'] * 1e-6
+        new_ticket['params']['pulse_width_rev'] = ticket['params']['t_rev_msec_inc'] * 1e-3 + ticket['params']['t_rev_usec_inc'] * 1e-6
+        # Sweep params
+        new_ticket['params']['amount_dir'] = ticket['params']['dir_inc_countr']
+        new_ticket['params']['amount_rev'] = ticket['params']['rev_inc_countr']
+        new_ticket['params']['double_dir'] = bool(ticket['params']['dir_dec_countr'])
+        new_ticket['params']['double_rev'] = bool(ticket['params']['rev_dec_countr'])
+    elif mode_to_convert in ['endurance', 'pot-dep']:
+        # Amplitude
+        new_ticket['params']['amplitude_dir'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_dir_stop_inc'])
+        new_ticket['params']['amplitude_rev'] = d2v(manager.dac_bit, manager.vol_ref_dac, ticket['params']['v_rev_stop_inc'])
+        # Time
+        new_ticket['params']['pulse_width_dir'] = ticket['params']['t_dir_msec_inc'] * 1e-3 + ticket['params']['t_dir_usec_inc'] * 1e-6
+        new_ticket['params']['pulse_width_rev'] = ticket['params']['t_rev_msec_inc'] * 1e-3 + ticket['params']['t_rev_usec_inc'] * 1e-6
+        # Amount params
+        new_ticket['params']['amount_dir'] = ticket['params']['dir_inc_countr']
+        new_ticket['params']['amount_rev'] = ticket['params']['rev_inc_countr']
+    elif mode_to_convert == 'retention':
+        pass  # No parameters
+    # Other values
+    for key in ['count', 'reverse', 'id', 'wl', 'bl']:
+        new_ticket['params'][key] = ticket['params'][key]
+    # Terminators
+    new_ticket['terminate']['type'] = ticket['terminate']['type']
+    if hasattr(ticket['terminate']['value'], '__iter__'):  # Two-value terminator
+        new_term = []
+        for term in ticket['terminate']['value']:
+            new_term.append(
+                int(a2r(manager.gain,
+                        manager.res_load,
+                        manager.vol_read,
+                        manager.adc_bit,
+                        manager.vol_ref_adc,
+                        manager.res_switches,
+                        term))
+            )
+    else:
+        new_term = int(a2r(manager.gain,
+                           manager.res_load,
+                           manager.vol_read,
+                           manager.adc_bit,
+                           manager.vol_ref_adc,
+                           manager.res_switches,
+                           ticket['terminate']['value']))
+    new_ticket['terminate']['value'] = new_term
+    return new_ticket        
+    

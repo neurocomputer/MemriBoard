@@ -67,7 +67,15 @@
         "show_weights":"Show Weights",
         "write":"Write Weights",
         "read_all_btn":"Read All",
-        "help":"Help"
+        "help":"Help",
+        "convert_ticket":"Convert ticket",
+        "choose_ticket_convert":"Choose a ticket/experiment file to convert it to the reduced format",
+        "could_not_open":"Could not open the file:\n",
+        "choose_signal_mode":"Choose a signal mode to convert the ticket to",
+        "signal_mode":"Signal mode:",
+        "signal_mode_for_tick":"Signal mode for ticket ",
+        "could_not_convert":"Could not convert the ticket:\n",
+        "could_not_save":"Could not save converted ticket:\n"
     },
     "rram":{
         "name":"RRAM",
@@ -142,7 +150,10 @@
         "symbol_incorrect":"There is an incorrect symbol!",
         "save_file":"Save file?",
         "save_changes":"Save changes?",
-        "file_name_wrong":"File name is wrong!",
+        "fill_in_filename":"Fill in the ticket name to save it",
+        "ticket_exists":"Ticket with this name already exists!",
+        "could_not_save":"Could not save the ticket:\n",
+        "could_not_convert":"Could not convert the ticket to reduced format:\n",
         "ohm":"Ω",
         "hold_path":"hold.png",
         "condition_type":"Condition type:",
@@ -469,7 +480,8 @@
         "xls":"Excel Spreadsheet",
         "json":"JSON file",
         "ext_not_supported":"This file extension is not supported.",
-        "file_busy":"The file is in use by another program."
+        "file_busy":"The file is in use by another program.",
+        "module_not_found":"Could not find a module Python module needed for saving:\n"
     },
     "filter":{
         "name":"Filter",

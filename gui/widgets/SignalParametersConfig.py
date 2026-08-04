@@ -245,7 +245,7 @@ class SignalParameters(QWidget):
             line.setVisible(flag)
             
             
-    def fill_params(self, ticket: dict) -> dict:
+    def fill_params_to_ticket(self, ticket: dict) -> dict:
         """Fill in params in the ticket dict"""
         # Checking if all scientific widgets are fine
         for widget in self.used_scientific_widgets:
@@ -284,3 +284,38 @@ class SignalParameters(QWidget):
         else:
             raise RuntimeError(f'Filling params: unknown mode {self.mode}')
         return ticket
+    
+    def load_ticket_to_ui(self, ticket: dict) -> None:
+        """Load ticket to the ui. The .set_mode() is expected to be called before this method"""
+        # Filling in based on the mode
+        if self.mode == 'volt_sweep':
+            # Sweep
+            self.start_dir.set_value(ticket['params']['start_dir'])
+            self.stop_dir.set_value(ticket['params']['stop_dir'])
+            self.step_dir.set_value(ticket['params']['step_dir'])
+            self.start_rev.set_value(ticket['params']['start_rev'])
+            self.stop_rev.set_value(ticket['params']['stop_rev'])
+            self.step_rev.set_value(ticket['params']['step_rev'])
+            # Time
+            self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
+            self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
+            # Sweep params
+            self.amount_dir.setValue(ticket['params']['amount_dir'])
+            self.amount_rev.setValue(ticket['params']['amount_rev'])
+            self.double_dir.setChecked(ticket['params']['double_dir'])
+            self.double_rev.setChecked(ticket['params']['double_rev'])
+        elif self.mode in ['endurance', 'pot-dep']:
+            # Pulse
+            self.start_dir.set_value(ticket['params']['amplitude_dir'])
+            self.start_rev.set_value(ticket['params']['amplitude_rev'])
+            # Time
+            self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
+            self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
+            # Amount params
+            self.amount_dir.setValue(ticket['params']['amount_dir'])
+            self.amount_rev.setValue(ticket['params']['amount_rev'])        
+        elif self.mode == 'retention':
+            pass  # No parameters for this mode
+        else:
+            raise RuntimeError(f'Filling params: unknown mode {self.mode}')
+        

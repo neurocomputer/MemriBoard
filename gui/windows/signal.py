@@ -14,10 +14,9 @@ from PyQt5.QtGui import QPixmap
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from manager.service.plots import plot_with_save
-from manager.service import v2d, r2a, d2v, a2r
 from manager.service.global_settings import TICKET_PATH
 from manager.terminate import terminators
-from gui.src import show_warning_messagebox, show_choose_window
+from gui.src import show_warning_messagebox, show_choose_window, convert_ticket_to_reduced_format
 from gui.widgets.SignalParametersConfig import SignalParameters
 from gui.widgets.MplGraphicsView import MplGraphicsView
 from gui.widgets.ScientificQLineEdit import ScientificQLineEdit
@@ -113,13 +112,7 @@ class SignalMod(QDialog):
         QTimer.singleShot(0, self.center_splitter)
         
     def test(self):  # TODO remove
-        sizes = self.splitter.sizes()
-        print(sizes)
-        s1 = int(sum(sizes) / 2)
-        s2 = sum(sizes) - s1
-        self.splitter.setSizes([s1, s2])
-        print(s1, s2)
-        print(self.splitter.sizes())
+        pass
 
     def change_language(self):
         """
@@ -223,7 +216,7 @@ class SignalMod(QDialog):
             self.base_json['mode'] = self.signal_modes[self.signal_mode.currentText()]
             
             # Filling signal parameters
-            self.base_json = self.signal_param.fill_params(self.base_json)
+            self.base_json = self.signal_param.fill_params_to_ticket(self.base_json)
             
             # Other parameters
             self.base_json['params']['count'] = self.repeat_count.value()
@@ -269,28 +262,26 @@ class SignalMod(QDialog):
             elif self.mode == "edit" or self.mode == "edit_for_programming":
                 answer = show_choose_window(self, self.lang_pack.get("save_changes"))
             if answer:
+                if self.mode == "create":
+                    fname = self.ui.json_name.text().strip()
+                    if fname == '':
+                        show_warning_messagebox(parent=self, message=self.lang_pack.get("fill_in_filename"))
+                        return
+                    if fname in self.parent.protected_modes or fname in self.parent.exp_settings_dialog.ticket_files:
+                        show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_exists"))
+                        return
+                    # открываем файл и пишем
+                    self.base_json["name"] = fname
+                elif self.mode in ["edit", "edit_for_programming"]:
+                    fname = 'temp'
                 try:
-                    if self.mode == "create":
-                        fname = self.ui.json_name.text()
-                        # имя из одних пробелов
-                        # todo: сменить логику на более подробную
-                        if fname.replace(" ", "") == '':
-                            raise ValueError
-                        if fname in self.parent.protected_modes:
-                            raise ValueError
-                        if fname in self.parent.exp_settings_dialog.ticket_files:
-                            raise ValueError
-                        # открываем файл и пишем
-                        self.base_json["name"] = fname
-                    elif self.mode in ["edit", "edit_for_programming"]:
-                        fname = 'temp'
                     with open(os.path.join(TICKET_PATH,
                                         fname+'.json'),
                                         'w', encoding='utf-8') as outfile:
                         json.dump(self.base_json, outfile)
                     self.file_saved = True
-                except ValueError:
-                    show_warning_messagebox(parent=self, message=self.lang_pack.get("file_name_wrong"))
+                except Exception as e:
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("could_not_save") + f'{type(e).__name__}: {e}')
             if self.file_saved:
                 self.close()
 
@@ -303,63 +294,36 @@ class SignalMod(QDialog):
         self.ui.json_name.setText(file_name)
         if self.mode == "edit":
             self.json_name.setEnabled(False)
+            
+        # Converting to new format for backward compatibility
+        if 'v_dir_strt_inc' in self.base_json['params']:
+            try:
+                self.base_json = convert_ticket_to_reduced_format(manager=self.parent.man, ticket=self.base_json)
+            except Exception as e:
+                show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + f'\n{type(e).__name__}: {e}')
+                self.close()
+                return
+            
+        # Signal mode
+        signal_mode = self.signal_modes_inverted[self.base_json['mode']]
+        self.signal_mode.setCurrentText(signal_mode)
+        self._change_signal_mode()
+        
+        # Params
+        self.signal_param.load_ticket_to_ui(self.base_json)
+        self.direction_combobox.setCurrentIndex(self.base_json['params']['reverse'])
+        self.repeat_count.setValue(self.base_json['params']['count'])
 
-        self.ui.forward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc']))
-        self.ui.forward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc']))
-        self.ui.forward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_step_inc']))
-        self.ui.forward_ms.setText(str(self.base_json['params']['t_dir_msec_inc']))
-        self.ui.forward_mcs.setText(str(self.base_json['params']['t_dir_usec_inc']))
-        self.ui.forward_count.setValue(self.base_json['params']['dir_inc_countr'])
-
-        if self.base_json['params']['dir_dec_countr'] != 0:
-            self.ui.forward_dec.setCheckState(2)
-        else:
-            self.ui.forward_dec.setCheckState(0)
-
-        self.ui.backward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_strt_inc']))
-        self.ui.backward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_stop_inc']))
-        self.ui.backward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_step_inc']))
-        self.ui.backward_ms.setText(str(self.base_json['params']['t_rev_msec_inc']))
-        self.ui.backward_mcs.setText(str(self.base_json['params']['t_rev_usec_inc']))
-        self.ui.backward_count.setValue(self.base_json['params']['rev_inc_countr'])
-
-        if self.base_json['params']['rev_dec_countr'] != 0:
-            self.ui.backward_dec.setCheckState(2)
-        else:
-            self.ui.backward_dec.setCheckState(0)
-
-        self.ui.direction_combobox.setCurrentIndex(self.base_json['params']['reverse'])
-
-        # терминаторы
+        # Terminators
         self.ui.terminator_combobox.setCurrentText(self.base_json['terminate']['type'])
         self._choose_terminator()
         if self.base_json['terminate']['type'] in self.one_value_terminators:
-            self.terminate_left.set_value(int(a2r(self.parent.man.gain,
-                                                  self.parent.man.res_load,
-                                                  self.parent.man.vol_read,
-                                                  self.parent.man.adc_bit,
-                                                  self.parent.man.vol_ref_adc,
-                                                  self.parent.man.res_switches,
-                                                  self.base_json['terminate']['value'])))
+            self.terminate_left.set_value(self.base_json['terminate']['value'])
         elif self.base_json['terminate']['type'] != 'pass':
-            term_values = [int(a2r(self.parent.man.gain,
-                                   self.parent.man.res_load,
-                                   self.parent.man.vol_read,
-                                   self.parent.man.adc_bit,
-                                   self.parent.man.vol_ref_adc,
-                                   self.parent.man.res_switches,
-                                   self.base_json['terminate']['value'][0])), int(a2r(self.parent.man.gain,
-                                                                                      self.parent.man.res_load,
-                                                                                      self.parent.man.vol_read,
-                                                                                      self.parent.man.adc_bit,
-                                                                                      self.parent.man.vol_ref_adc,
-                                                                                      self.parent.man.res_switches,
-                                                                                      self.base_json['terminate']['value'][1]))]
+            term_values = [self.base_json['terminate']['value'][0], self.base_json['terminate']['value'][1]]
             term_values.sort()
             self.terminate_left.set_value(term_values[0])
             self.terminate_right.set_value(term_values[1])
-
-        self.ui.repeat_count.setValue(self.base_json['params']['count'])
 
     def _choose_terminator(self) -> None:
         """
