@@ -10,8 +10,9 @@ from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
 from manager.service.drivers import get_driver_attr
+from manager.service import v2d, a2r
 
-class Connector():
+class Connector:
     """
     Взаимодействие с платой
     """
@@ -37,6 +38,7 @@ class Connector():
         cb_type: str, 
         board_type: str, 
         driver_attr: Union[dict, None] = None, 
+        task_format: str = 'SI',
         **kwargs
     ):
         """Connector class used for communicating with the measurement board.
@@ -50,6 +52,9 @@ class Connector():
                 drivers are listed in `MemriBoard/manager/service/drivers.py`.
             driver_attr (dict | None, optional): Dict with driver attributes. If None, takes default attributes from 
                 `MemriBoard/manager/service/drivers.py`. Defaults to None.
+            task_format (str, optional): Format of the tasks sent to connector: 
+                'dac': voltage (task['vol']) in DAC count, pulse width is set by 't_us' and 't_ms'.
+                'SI': voltage (task['vol']) in Volts, pulse width is set by 'pulse_width' key (in seconds).
         """
         self.silent = silent
         self.logger = logger
@@ -64,6 +69,9 @@ class Connector():
             self.config = kwargs['config']
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
+        if task_format.lower() not in ['dac', 'si']:
+            raise RuntimeError(f'Initiating Connector: unknown task_format: {task_format}')
+        self.task_format = task_format.lower()
 
     def _kick_board(self, attempts: int) -> bool:
         """
@@ -249,7 +257,6 @@ class Connector():
                     open_flag = True
                 except ModuleNotFoundError:
                     print("ModuleNotFound: pico_client")
-                    pass
         return open_flag
 
     def close_port(self) -> bool:
@@ -430,7 +437,6 @@ class Connector():
                             _ = self.interface.check_connection(self.attempts)
                         except ModuleNotFoundError:
                             pass
-                        pass
                     if status: 
                         break
             elif self.driver_attr['impact'] == 'rpi':
@@ -473,6 +479,9 @@ class Connector():
             # time.sleep(55/1000)
         # режим симулятор
         elif self.cb_type == 'simulator':
+            # TODO: симулятор, наверное, тоже не должен взаимодействовать с переводами в отсчеты и обратно
+            # Можно переделать симулятор так, чтобы он работал в СИ, и убрать строку с переводом (ниже).
+            task = self.task_volt_to_dac(task.copy())
             if task['mode_flag'] == 7: # режим команды 7
                 task['vol'] = abs(task['vol'])
                 adc = self.interface.mode_7(task['vol'],
@@ -482,10 +491,10 @@ class Connector():
                                         task['id'],
                                         task['wl'],
                                         task['bl']) # vDAC, tms, tus, rev, id, wl, bl
-                res = (int(adc[0]), int(adc[1]))
+                res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))
             elif task['mode_flag'] == 9: # режим команды 9
                 adc = self.interface.mode_9(task['vol'], 0, task['wl'], task['bl'])
-                res = (int(adc[0]), int(adc[1]))
+                res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))
             elif task['mode_flag'] == 10: # режим команды 10
                 #print(task['vol'])
                 adc = self.interface.mode_mvm(task['vol'],
@@ -495,11 +504,11 @@ class Connector():
                                                 0,
                                                 task['wl'],
                                                 task["id"])
-                res = (int(adc[0]), int(adc[1]))
+                res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))
         if not self.silent:
             self.logger.info('Send %s', str(task['mode_flag']))
         if not self.silent:
-            self.logger.info('Recieved data: %s', str(res))
+            self.logger.info('Received data: %s', str(res))
         return res
 
     def custom_impact(self, command: str, timeout: float, attempts: int):
@@ -575,3 +584,44 @@ class Connector():
             self.request_id += 1
         else:
             self.request_id = 0
+            
+    def v2d(self, vol: float) -> int:
+        """Convert voltage to DAC counts (integer)"""
+        return v2d(int(self.config['board']['dac_bit']), 
+                   float(self.config['board']['vol_ref_dac']), 
+                   abs(float(vol)))
+        
+    def a2r(self, adc: int) -> int:
+        """Convert resistance from ADC voltage to Ohms (integer)"""
+        return a2r(float(self.config['board']['gain']),
+                   float(self.config['board']['res_load']),
+                   float(self.config['board']['vol_read']),
+                   int(self.config['board']['adc_bit']),
+                   float(self.config['board']['vol_ref_adc']),
+                   float(self.config['board']['res_switches']),
+                   int(adc))
+            
+    def task_volt_to_dac(self, task: dict, retain_key_order: bool = False) -> dict:
+        """
+        Convert task from SI format (vol in Volts, pulse_width in seconds) to dac format (vol in dac bits, t_us, t_ms)
+        If retain_key_order argument is True, retains key order of the returned task (for use with `gather` function).
+        
+        """
+        task['vol'] = self.v2d(task['vol'])
+        if task['pulse_width'] < 1e-3:  # Write in us
+            task['t_us'] = int(task['pulse_width'] * 1e6)
+            task['t_ms'] = 0
+        else:  # Write in ms
+            task['t_ms'] = int(task['pulse_width'] * 1e3)
+            task['t_us'] = 0
+        del task['pulse_width']
+        if not retain_key_order:
+            return task  # Not ordered! t_ms and t_us are at the end of the dict
+        # Ordering task keys
+        key_order = ['mode_flag', 'vol', 't_ms', 't_us', 'sign', 'id', 'wl', 'bl']
+        ordered_task = {}
+        for key in key_order:
+            if key in task:
+                ordered_task[key] = task[key]
+        return ordered_task
+    

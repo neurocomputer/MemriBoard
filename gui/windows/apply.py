@@ -20,8 +20,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
-from manager.service import d2v, a2r, a2c, r2a, a2v
-from manager.service.saves import save_list_to_bytearray
+from manager.service.saves import save_list_to_bytearray_float
 from manager.algorithms import TicketGenerator, Algorithm
 from gui.src import show_choose_window, show_warning_messagebox
 
@@ -164,52 +163,22 @@ class Apply(QWidget):
                                                      self._term_right_for_plot_y,
                                                      pen=pg.mkPen(width=3, color = (255, 0, 0)))
         # задание функции для отрисовки осей
-        if self.ylabel_text == self.lang_pack.get("res_k"):
-            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
-                                                          self.parent.man.res_load,
-                                                          self.parent.man.vol_read,
-                                                          self.parent.man.adc_bit,
-                                                          self.parent.man.vol_ref_adc,
-                                                          self.parent.man.res_switches,
-                                                          y)/1000
-        elif self.ylabel_text == self.lang_pack.get("res"):
-            self.y_value_process = lambda y,vol,sign: a2r(self.parent.man.gain,
-                                                          self.parent.man.res_load,
-                                                          self.parent.man.vol_read,
-                                                          self.parent.man.adc_bit,
-                                                          self.parent.man.vol_ref_adc,
-                                                          self.parent.man.res_switches,
-                                                          y)
-        elif self.ylabel_text == self.lang_pack.get("adc_c"):
-            self.y_value_process = lambda y,vol,sign: y
-        elif self.ylabel_text == self.lang_pack.get("amp_mc"):
-            self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
-                                                          self.parent.man.vol_ref_dac,
-                                                          self.parent.man.gain,
-                                                          self.parent.man.res_load,
-                                                          self.parent.man.vol_read,
-                                                          self.parent.man.adc_bit,
-                                                          self.parent.man.vol_ref_adc,
-                                                          self.parent.man.res_switches,
-                                                          y,
-                                                          vol,
-                                                          sign)*1e6
-        elif self.ylabel_text == self.lang_pack.get("amp_m"):
-            self.y_value_process = lambda y,vol,sign: a2c(self.parent.man.dac_bit,
-                                                          self.parent.man.vol_ref_dac,
-                                                          self.parent.man.gain,
-                                                          self.parent.man.res_load,
-                                                          self.parent.man.vol_read,
-                                                          self.parent.man.adc_bit,
-                                                          self.parent.man.vol_ref_adc,
-                                                          self.parent.man.res_switches,
-                                                          y,
-                                                          vol,
-                                                          sign)*1e3
+        sign_term = {0: 1,  # Умножаем на это значение в зависимости от знака
+                     1: -1}
+        if self.ylabel_text == self.lang_pack.get("res_k"):  # Resistance, kOhm
+            self.y_value_process = lambda y, vol, sign, adc: y/1000
+        elif self.ylabel_text == self.lang_pack.get("res"):  # Resistance, Ohm
+            self.y_value_process = lambda y, vol, sign, adc: y
+        elif self.ylabel_text == self.lang_pack.get("adc_c"):  # ADC value
+            self.y_value_process = lambda y, vol, sign, adc: adc
+        elif self.ylabel_text == self.lang_pack.get("amp_mc"):  # Current, uA
+            self.y_value_process = lambda y, vol, sign, adc: sign_term[sign] * vol / y * 1e6
+        elif self.ylabel_text == self.lang_pack.get("amp_m"):  # Current, mA
+            self.y_value_process = lambda y, vol, sign, adc: sign_term[sign] * vol / y * 1e3
         if self.xlabel_text == self.lang_pack.get("voltage"):
-            self.x_value_process = lambda vol,sign,count: d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,vol,sign=sign)
+            self.x_value_process = lambda vol, sign, count: sign_term[sign] * vol
         elif self.xlabel_text == self.lang_pack.get("counting"):
-            self.x_value_process = lambda vol,sign,count: count
+            self.x_value_process = lambda vol, sign, count: count
         self.update_label_mem_id()
 
     def start_exp(self) -> None:
@@ -239,7 +208,7 @@ class Apply(QWidget):
         """
         Остановить эксперимент
         """
-        if self.application_status == "start" or "pause": # работает
+        if self.application_status in ["start", "pause"]: # работает
             self.start_thread.need_stop = True
             self.application_status = "stop"
         self.block_buttons([False, False, True, True])
@@ -389,16 +358,17 @@ class Apply(QWidget):
         # полученное значение отобразить
         value = value.split(",")
         count = int(value[0])
-        vol = int(value[2])
+        vol = float(value[2])
         sign = int(value[3])
-        term_left = int(value[4])
-        term_right = int(value[5])
-        value = int(value[1])
+        adc = int(value[4])
+        term_left = int(value[5])
+        term_right = int(value[6])
+        value = float(value[1])  # Resistance
         # отображение
         #if self.application_status == "start" and self._plot_flag:
         if self._plot_flag:
             # выбор отображения по осям
-            y_item = self.y_value_process(value, vol, sign)
+            y_item = self.y_value_process(value, vol, sign, adc)
             x_item = self.x_value_process(vol, sign, count)
             size = 3000 # todo: глубина отрисовки, вынести в константы
             data_len = len(self.data_for_plot_y)
@@ -412,7 +382,7 @@ class Apply(QWidget):
             # отображение терминаторов
             if term_left:
                 # левый
-                term_left = self.y_value_process(term_left, vol, sign)
+                term_left = self.y_value_process(term_left, vol, sign, adc)
                 if data_len > size:
                     self._term_left_for_plot_y = self._term_left_for_plot_y[1:] + [term_left]
                     self._term_left_for_plot_x = self._term_left_for_plot_x[1:] + [x_item]
@@ -422,7 +392,7 @@ class Apply(QWidget):
                 self.termline_left.setData(self._term_left_for_plot_x, self._term_left_for_plot_y)
             if term_right:
                 # правый
-                term_right = self.y_value_process(term_right, vol, sign)
+                term_right = self.y_value_process(term_right, vol, sign, adc)
                 if data_len > size:
                     self._term_right_for_plot_y = self._term_right_for_plot_y[1:] + [term_right]
                     self._term_right_for_plot_x = self._term_right_for_plot_x[1:] + [x_item]
@@ -476,22 +446,6 @@ class ApplyExp(QThread):
             # читаем перед экспериментом
             resistance_previous = self.parent.parent.read_cell(item[0], # wl
                                                                item[1]) # bl
-            # проверка проблем с АЦП
-            current_adc = r2a(self.parent.parent.man.gain,
-                              self.parent.parent.man.res_load,
-                              self.parent.parent.man.vol_read,
-                              self.parent.parent.man.adc_bit,
-                              self.parent.parent.man.vol_ref_adc,
-                              self.parent.parent.man.res_switches,
-                              resistance_previous)
-            adc_vol = a2v(self.parent.parent.man.gain,
-                          self.parent.parent.man.adc_bit,
-                          self.parent.parent.man.vol_ref_adc,
-                          current_adc)
-            if adc_vol > 3.5: # todo: вынести 3.5 в константы
-                self.need_stop = True
-                stop_reason = 3 # высокое напряжение на АЦП
-                break
             # создаем эксперимент в БД
             name = self.parent.parent.exp_name
             status, memristor_id = self.parent.parent.man.db.get_memristor_id(item[0], # wl
@@ -550,21 +504,15 @@ class ApplyExp(QThread):
                     # прогнозируем ток
                     if resistance_previous == 0:
                         resistance_previous = 0.00000001 # чтобы исключить деление на 0
-                    current_predict = d2v(self.parent.parent.man.dac_bit, self.parent.parent.man.vol_ref_dac, task[0]['vol']) / resistance_previous
+                    current_predict = task[0]['vol'] / resistance_previous
                     if (task[0]['sign'] == 0 and current_predict <= 0.04) or (task[0]['sign'] == 1 and current_predict <= self.parent.parent.man.soft_cc):
                         #print(task[1])
-                        result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                        result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id, adc)
                         # учет выполнения
                         if result:
-                            self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{term_left},{term_right},{task[0]['t_ms']},{task[0]['t_us']},{ticket['name']},{ticket['terminate']}")
-                            save_list_to_bytearray(result_file, task[0]['sign'], task[0]['vol'], result[0])
-                            resistance_previous = a2r(self.parent.parent.man.gain,
-                                                      self.parent.parent.man.res_load,
-                                                      self.parent.parent.man.vol_read,
-                                                      self.parent.parent.man.adc_bit,
-                                                      self.parent.parent.man.vol_ref_adc,
-                                                      self.parent.parent.man.res_switches,
-                                                      result[0])
+                            self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{result[2]},{term_left},{term_right},{task[0]['pulse_width']},{ticket['name']},{ticket['terminate']}")
+                            save_list_to_bytearray_float(result_file, task[0]['sign'], task[0]['vol'], result[0], result[2])  # sign, vol, resistance, adc
+                            resistance_previous = result[0]
                             # проверка прерывания тикета
                             interrupt = task[1](result)
                             if interrupt:
@@ -579,13 +527,7 @@ class ApplyExp(QThread):
                 result_file.close()
                 # сохраняем в БД статус завершения
                 if result:
-                    self.last_resistance = int(a2r(self.parent.parent.man.gain,
-                                              self.parent.parent.man.res_load,
-                                              self.parent.parent.man.vol_read,
-                                              self.parent.parent.man.adc_bit,
-                                              self.parent.parent.man.vol_ref_adc,
-                                              self.parent.parent.man.res_switches,
-                                              result[0]))
+                    self.last_resistance = result[0]
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, self.last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_info"))
@@ -606,7 +548,7 @@ class ApplyExp(QThread):
                 with open(result_file_path, 'rb') as result_file:
                     result_data = result_file.read()
                     # записываем в базу
-                    self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)
+                    self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)  # FIXME
                 os.remove(result_file_path)
                 # вызываем событие завершения тикета
                 self.ticket_finished.emit(f"{ticket_id},{result_file_path}")

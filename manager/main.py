@@ -159,7 +159,7 @@ class Manager(Application):
             self.connected_flag = self.conn.open_port()
         return self.connected_flag
 
-    def _admin(self) -> None:
+    def _admin(self) -> None:  # TODO remove all unused methods and unite this class with App
         """
         Администратор очередей
         """

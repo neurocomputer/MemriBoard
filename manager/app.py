@@ -219,8 +219,7 @@ class Application:
                 name_spl = name.rsplit('.', 2)  # ['app', '2', 'log'] or ['app', 'log']
                 if len(name_spl) == 3:
                     try:
-                        if int(name_spl[1]) > last_name:
-                            last_name = int(name_spl[1])
+                        last_name = max(last_name, int(name_spl[1]))
                     except Exception:
                         pass
         return os.path.join(os.path.dirname(log_path), f'{keyword}.{last_name+1}.log')

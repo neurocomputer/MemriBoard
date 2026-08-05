@@ -199,8 +199,7 @@ class ExpSettings(QDialog):
             ticket["params"]["wl"] = self.parent.current_wl
             ticket["params"]["bl"] = self.parent.current_bl
             # 4 считаем сколько тикетов и тасков в списке
-            # count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
-            count = 0  # TODO  Reimplement count calculation (menu)
+            count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
             self.parent.exp_list_params['total_tickets'] += 1
             self.parent.exp_list_params['total_tasks'] += count
             # 5 отображаем название тикета в списке

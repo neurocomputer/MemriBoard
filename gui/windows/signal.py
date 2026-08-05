@@ -415,4 +415,3 @@ class SignalMod(QDialog):
         else: # событие вызвала кнопка отмена
             self.set_up_init_values()
             event.accept()
-        self.parent.close()

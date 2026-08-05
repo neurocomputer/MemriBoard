@@ -138,9 +138,7 @@ class Window(QMainWindow):
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # диалоговое окно подключения
-        # self.show_connect_dialog()
-        base_json = self.read_ticket_from_disk('iv-curve.json')
-        self.show_signal_dialog(base_json, "edit")  # TODO remove
+        self.show_connect_dialog()
         
     def set_shortcuts(self):
         """
@@ -471,7 +469,7 @@ class Window(QMainWindow):
             bl, wl, res = range(3)
             # раскрашиваем
             for item in resistances:
-                self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(item[res])))
+                self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(int(item[res]))))
                 self.all_resistances[item[bl]][item[wl]] = item[res]
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])

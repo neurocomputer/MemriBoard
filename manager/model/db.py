@@ -4,13 +4,14 @@
 
 import os
 import pickle
+import struct
 from datetime import datetime
 import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound, MultipleResultsFound
 from typing import Optional, List
-from manager.service.saves import results_from_bytes
+from manager.service.saves import results_from_float_bytes, results_from_bytes
 # from manager.service.global_settings import DB_PATH
 
 # pylint: disable=C0103,W0718
@@ -943,7 +944,10 @@ class DBOperate():
                     mem_tasks = {}
                     for row in rows:
                         if row.result:
-                            tasks_count = int(len(results_from_bytes(result=row.result)) / 3)
+                            try:  # New format with float bytearray
+                                tasks_count = len(results_from_float_bytes(result=row.result, additional_items_size=1))
+                            except struct.error:  # Fallback to old format
+                                tasks_count = int(len(results_from_bytes(result=row.result)) / 3)
                             mem_tasks[row.id] = mem_tasks.get(row.id, 0) + tasks_count
 
                 # запись подсчитанных тасков
@@ -979,7 +983,10 @@ class DBOperate():
                 tasks = 0
                 for result in results:
                     if result:
-                        tasks_count = int(len(results_from_bytes(result=result)) / 3)
+                        try:  # New format with float bytearray
+                            tasks_count = len(results_from_float_bytes(result=result, additional_items_size=1))
+                        except struct.error:  # Fallback to old format
+                            tasks_count = int(len(results_from_bytes(result=result)) / 3)
                         tasks += tasks_count
                 return status, tasks
         except Exception as e:
@@ -1006,7 +1013,10 @@ class DBOperate():
                 tasks = 0
                 for result in results:
                     if result:
-                        tasks_count = int(len(results_from_bytes(result=result)) / 3)
+                        try:  # New format with float bytearray
+                            tasks_count = len(results_from_float_bytes(result=result, additional_items_size=1))
+                        except struct.error:  # Fallback to old format
+                            tasks_count = int(len(results_from_bytes(result=result)) / 3)
                         tasks += tasks_count
                 
                 session.execute(
