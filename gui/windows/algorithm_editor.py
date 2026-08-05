@@ -268,12 +268,5 @@ class AlgorithmEditor(QDialog):
                 event.accept()
         self.parent.refresh_alg_list()
         
-        
-# TODO: custom QPlainEditText for tabulation
-        
 # TODO: dark theme?
-# palette = self.code_editor.palette()
-# palette.setColor(QPalette.ColorRole.Base, QColor('#282c34'))
-# palette.setColor(QPalette.ColorRole.Text, QColor('#ffffff'))
-# self.code_editor.setPalette(palette)
         

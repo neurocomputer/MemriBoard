@@ -2,7 +2,8 @@
 import ast
 import traceback
 import inspect
-from typing import Generator, Union
+from typing import Union
+from collections.abc import Generator
 
 from manager.algorithms import Algorithm
 from manager.main import Manager

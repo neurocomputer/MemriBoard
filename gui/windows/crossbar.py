@@ -138,8 +138,9 @@ class Window(QMainWindow):
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # диалоговое окно подключения
-        self.show_connect_dialog()
-        # self.show_signal_dialog("blank", "create")  # TODO remove
+        # self.show_connect_dialog()
+        base_json = self.read_ticket_from_disk('iv-curve.json')
+        self.show_signal_dialog(base_json, "edit")  # TODO remove
         
     def set_shortcuts(self):
         """
@@ -657,12 +658,6 @@ class Window(QMainWindow):
     
     def convert_ticket_to_new_format(self) -> None:
         """Convert ticket to reduced format"""
-        signal_modes = {  # TODO reimplement in VISA_instruments
-            'Voltage sweep': 'volt_sweep', 
-            'Endurance': 'endurance', 
-            'Retention': 'retention', 
-            'Potentiation-Depression': 'pot-dep'
-        }
         filename, _ = QFileDialog.getOpenFileName(self, 
                                                   caption=self.lang_pack.get("choose_ticket_convert"),
                                                   directory=TICKET_PATH,
@@ -681,13 +676,13 @@ class Window(QMainWindow):
                     self,
                     self.lang_pack.get("choose_signal_mode"),
                     self.lang_pack.get("signal_mode"),
-                    signal_modes.keys(),
+                    self.man.menu.alias_to_mode().keys(),
                     current=0,
                     editable=False
                 )
                 if not ok:
                     return
-                new_ticket = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=signal_modes[mode])
+                new_ticket = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=self.man.menu.alias_to_mode()[mode])
             else:  # Assuming its an experiment
                 new_ticket = {}
                 for i, tick in ticket.items():
@@ -695,13 +690,13 @@ class Window(QMainWindow):
                         self,
                         self.lang_pack.get("choose_signal_mode"),
                         self.lang_pack.get("signal_mode_for_tick") + f'{i} ({tick["name"]})',
-                        signal_modes.keys(),
+                        self.man.menu.alias_to_mode().keys(),
                         current=0,
                         editable=False
                     )
                     if not ok:
                         return
-                    new_tick = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=mode)
+                    new_tick = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=self.man.menu.alias_to_mode()[mode])
                     new_ticket[i] = new_tick
         except Exception as e:
             show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + filename + f'\n{type(e).__name__}: {e}')

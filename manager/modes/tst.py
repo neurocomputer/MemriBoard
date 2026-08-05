@@ -2,7 +2,7 @@
 Тестовый генератор-декомпозитор
 """
 
-from typing import Generator
+from collections.abc import Generator
 from manager.blanks import blanks, fill_blank
 from manager.terminate import terminators
 

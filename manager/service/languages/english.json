@@ -155,7 +155,6 @@
         "could_not_save":"Could not save the ticket:\n",
         "could_not_convert":"Could not convert the ticket to reduced format:\n",
         "ohm":"Ω",
-        "hold_path":"hold.png",
         "condition_type":"Condition type:",
         "R==": "Resistance  ==  ",
         "R>":"Resistance  >  ",
@@ -163,7 +162,11 @@
         "R><":"  <  Resistance  <  ",
         "R>+":";  Resistance  >  ",
         "R<a":"Resistance(mean)  <  ",
-        "R>a":";  Resistance(mean)  >  "
+        "R>a":";  Resistance(mean)  >  ",
+        "plot_voltage":"Voltage (V)",
+        "plot_pulse_count":"Pulse count",
+        "plot_time":"Time (μs)",
+        "plot_limit_reached":" (The pulse number on the chart is limited to "
     },
     "signal_parameters": {
         "sweep_params":"Sweep parameters",

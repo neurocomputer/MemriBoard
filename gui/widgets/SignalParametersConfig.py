@@ -11,7 +11,7 @@ from gui.widgets.ScientificQLineEdit import ScientificQLineEdit
 
 class SignalParameters(QWidget):
     """Widget which configures the voltage/time on the signal window"""
-    def __init__(self, parent, signal_mode: str = 'sweep'):
+    def __init__(self, parent, signal_mode: str = 'volt_sweep'):
         super().__init__(parent)
         self.parent = parent
         # Init UI

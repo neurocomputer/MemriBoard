@@ -1,17 +1,12 @@
 """
 Вспомогательные функции для рисования
-plot_input_signal - отображение графика входного сигнала
-plot_input_signal_stem - отображения графика в виде столбцов
+plot_for_signal_graph - рисование графика на окне Сигнал
 """
-
-from typing import Union
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.axes._axes import Axes
-from manager.service import d2v
+from matplotlib.axes import Axes
 from manager.algorithms import execute_algorithm
 
 # pylint: disable=C0103,W0212
+
 
 def calculate_counts_for_ticket(parent, ticket: dict):
     """
@@ -32,192 +27,49 @@ def calculate_counts_for_ticket(parent, ticket: dict):
         count += 1
     return count
 
-def plot_input_signal(parent,
-                      ticket: dict,
-                      plt_flag: bool = False,
-                      shadow: bool = False,
-                      figure: Figure = None) -> Union[int, Axes]:
-    """
-    Функция отображения графика входного сигнала
-    Примеры использования:
-    from manager.service.plots import plot_input_signal
-    import matplotlib.pyplot as plt
-    * рисунок генерируется внутри функции
-    count = plot_input_signal(ticket, plt_flag=True)
-    * рисунок передается в функцию извне
-    figure = plt.figure()
-    ax, count = plot_input_signal(ticket,
-                                plt_flag=True,
-                                shadow=True,
-                                figure=figure)
-    plt.show()
 
-    Arguments:
-        ticket -- тикет задачи
-        plt_flag -- флаг создания графика (только создает) (default=True)
-        shadow -- флаг отображения графика (отображать график) (default=False)
-        figure -- график matplotlib (default=None)
-
-    Returns:
-        ax -- оси с графиком
-        count -- счетчик задач
-    """
-
+def plot_for_signal_graph(manager, ticket: dict, plot_type: str, ax: Axes, plot_limits: dict) -> tuple[int, bool]:
+    """Plot the graph on the Signal window and return task count"""
+    ax.clear()
     # получаем генератор задач
-    task = parent.menu[ticket['mode']], (ticket['params'],
-                                        ticket['terminate'],
-                                        parent.blank_type)
-
-    READ_VOLTAGE = parent.vol_read
-    READ_TIME = int(parent.ap_config['board']['read_time'])
-    BLANK_TIME = int(parent.ap_config['board']['blank_time'])
-    result = [] # отсчеты сигнала
-    count = 0
-    # генерируем отсчеты сигнала и заполняем
-    for tsk in task[0](*task[1]):
-        count += 1
-        vol = d2v(parent.dac_bit, parent.vol_ref_dac, tsk[0]['vol'])
-        t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
-        sign = tsk[0]['sign']
-        if sign:
-            vol = -vol
-        for _ in range(BLANK_TIME):
-            result.append(0)
-        for _ in range(t):
-            result.append(vol)
-        for _ in range(BLANK_TIME):
-            result.append(0)
-        for _ in range(READ_TIME):
-            result.append(READ_VOLTAGE)
-    for _ in range(BLANK_TIME):
-        result.append(0)
-    # строим график
-    if plt_flag:
-        if figure is None:
-            figure = plt.figure()
-        else:
-            figure.clear()
-        ax = figure.add_subplot(111)
-        ax.plot(result)
-        ax.set_ylabel('Voltage, V')
-        ax.set_xlabel('Time, μs')
-        ax.grid(True, linestyle='--')
-        if not shadow:
-            plt.show()
-        else:
-            return ax, count
-    return count
-
-def plot_input_signal_stem(parent,
-                           ticket: dict,
-                           plt_flag: bool = False,
-                           shadow: bool = False,
-                           figure: Figure = None) -> Union[int, Axes]:
-    """
-    Функция отображения графика входного сигнала в виде столбцов stem
-
-    Arguments:
-        ticket -- тикет задачи
-        plt_flag -- флаг создания графика (только создает) (default=True)
-        shadow -- флаг отображения графика (отображать график) (default=False)
-        figure -- график matplotlib (default=None)
-
-    Returns:
-        ax -- оси с графиком
-        count -- счетчик задач
-    """
-    # получаем генератор задач
-    task = parent.menu[ticket['mode']], (ticket['params'],
-                                        ticket['terminate'],
-                                        parent.blank_type)
-
-    READ_VOLTAGE = parent.vol_read
-    result = [] # отсчеты сигнала
-    count = 0
-    # генерируем отсчеты сигнала и заполняем
-    for tsk in task[0](*task[1]):
-        count += 1
-        vol = d2v(parent.dac_bit, parent.vol_ref_dac, tsk[0]['vol'])
-        # t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
-        sign = tsk[0]['sign']
-        if sign:
-            vol = -vol
-        result.append(vol)
-        result.append(READ_VOLTAGE)
-    # строим график
-    if plt_flag:
-        if figure is None:
-            figure = plt.figure()
-        else:
-            figure.clear()
-        ax = figure.add_subplot(111)
-        if result:
-            ax.stem(result)
-        else:
-            ax.plot(result)
-        ax.set_ylabel('Voltage, V')
-        ax.set_xlabel('Pulse count')
-        ax.grid(True, linestyle='--')
-        if not shadow:
-            plt.show()
-        else:
-            return ax, count
-    return count
-
-def plot_with_save(parent,
-                   ticket: dict,
-                   mode: str,
-                   save_path: str = "") -> int:
-    plt.clf()
-    # получаем генератор задач
-    task = parent.menu[ticket['mode']], (ticket['params'],
-                                        ticket['terminate'],
-                                        parent.blank_type)
-
-    READ_VOLTAGE = parent.vol_read
-    READ_TIME = int(parent.ap_config['board']['read_time'])
-    BLANK_TIME = int(parent.ap_config['board']['blank_time'])
+    task_gen = manager.menu[ticket['mode']](ticket['params'], ticket['terminate'], manager.blank_type)
+    READ_VOLTAGE = manager.vol_read
+    READ_TIME = int(manager.ap_config['board']['read_time'])
+    BLANK_TIME = int(manager.ap_config['board']['blank_time'])
     result_stem = [] # отсчеты сигнала
     result_plot = []
+    plot_limit_hit = False 
     count = 0
     # генерируем отсчеты сигнала и заполняем
-    for tsk in task[0](*task[1]):
+    for task in task_gen:
         count += 1
-        vol = d2v(parent.dac_bit, parent.vol_ref_dac, tsk[0]['vol'])
-        t = tsk[0]['t_ms'] * 1000 + tsk[0]['t_us']
-        sign = tsk[0]['sign']
-        if sign:
-            vol = -vol
-        if mode == 'stem':
-            if t > 0:
-                result_stem.append(vol)
-            result_stem.append(READ_VOLTAGE)
-        else:
-            for _ in range(BLANK_TIME):
-                result_plot.append(0)
-            for _ in range(t):
-                result_plot.append(vol)
-            for _ in range(BLANK_TIME):
-                result_plot.append(0)
-            for _ in range(READ_TIME):
-                result_plot.append(READ_VOLTAGE)
-    if mode == 'plot':
+        if count > plot_limits[plot_type]:
+            plot_limit_hit = True
+        if not plot_limit_hit:  # Stop appending to the plot list if the limit is hit
+            vol = task[0]['vol']
+            t = int(task[0]['pulse_width'] * 1e6)  # us
+            sign = task[0]['sign']
+            if sign:
+                vol = -vol
+            if plot_type == 'stem':
+                if t > 0:
+                    result_stem.append(vol)
+                result_stem.append(READ_VOLTAGE)
+            else:
+                for _ in range(BLANK_TIME):
+                    result_plot.append(0)
+                for _ in range(t):
+                    result_plot.append(vol)
+                for _ in range(BLANK_TIME):
+                    result_plot.append(0)
+                for _ in range(READ_TIME):
+                    result_plot.append(READ_VOLTAGE)
+    if plot_type == 'plot':
         for _ in range(BLANK_TIME):
             result_plot.append(0)
-    if mode == 'stem':
-        if result_stem:
-            plt.stem(result_stem)
-            plt.xlabel('Pulse count')
-        else:
-            plt.plot(result_stem)
-            plt.xlabel('Time, μs')
+    if plot_type == 'stem':
+        ax.stem(result_stem)
     else:
-        plt.plot(result_plot)
-        plt.xlabel('Time, μs')
-    plt.ylabel('Voltage, V')
-    plt.grid(True, linestyle='--')
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(fname=save_path, dpi=100)
-        plt.close()
-    return count
+        ax.plot(result_plot)
+    ax.grid(ls='--', color='grey')
+    return count, plot_limit_hit

@@ -7,15 +7,16 @@
 import os
 import json
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog, QComboBox, QSpinBox
-from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QDialog, QComboBox, QSpinBox, QShortcut
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QKeySequence
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-from manager.service.plots import plot_with_save
+from manager.service.plots import plot_for_signal_graph
 from manager.service.global_settings import TICKET_PATH
 from manager.terminate import terminators
+from manager.menu import Menu
 from gui.src import show_warning_messagebox, show_choose_window, convert_ticket_to_reduced_format
 from gui.widgets.SignalParametersConfig import SignalParameters
 from gui.widgets.MplGraphicsView import MplGraphicsView
@@ -34,7 +35,6 @@ class SignalMod(QDialog):
     """
 
     GUI_PATH: str = os.path.join(os.getcwd(),"gui","uies","signal.ui")
-    IMG_PATH: str = "ticket.png" # временный рисунок для тикета
     total_task_count: int # счетчик тасков в тикете
     one_value_terminators: list # терминаторы с одним значением
     base_json: dict # базовый тикет
@@ -55,6 +55,7 @@ class SignalMod(QDialog):
         self.signal_mode: QComboBox
         self.direction_combobox: QComboBox
         self.repeat_count: QSpinBox
+        self.menu: Menu = self.parent.man.menu
         # Adding widgets
         self.signal_param = SignalParameters(self)
         self.horizontalLayout_2.addWidget(self.signal_param)
@@ -65,23 +66,18 @@ class SignalMod(QDialog):
         self.terminate_left.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_left, text))
         self.terminate_right.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_right, text))
         # Filling signal modes
-        self.signal_modes = {  # TODO reimplement in VISA_instruments
-            'Voltage sweep': 'volt_sweep', 
-            'Endurance': 'endurance', 
-            'Retention': 'retention', 
-            'Potentiation-Depression': 'pot-dep'
-        }
-        self.signal_modes_inverted = {val: key for key, val in self.signal_modes.items()}  # Inverse dict for getting mode labels
-        self.signal_mode.addItems(list(self.signal_modes.keys()))
+        self.signal_mode.addItems(list(self.menu.alias_to_mode().keys()))
         self.signal_mode.currentTextChanged.connect(self._change_signal_mode)
         # UI stuff
         self.change_language()
         self.setModal(True)
         # обработчики кнопок
-        # self.ui.button_graph.clicked.connect(self._plot_ticket)
-        self.ui.button_graph.clicked.connect(self.test)
+        self.ui.button_graph.clicked.connect(self._plot_ticket)
         self.ui.button_save.clicked.connect(self._save_json)
         self.ui.button_cancel.clicked.connect(self.close)
+        # Shortcut for plot
+        shortcut = QShortcut(QKeySequence(Qt.Key_Return), self)
+        shortcut.activated.connect(self._plot_ticket)
         # начальные значения
         self.set_up_init_values()
         # режим
@@ -110,9 +106,6 @@ class SignalMod(QDialog):
         self.groupBox_2.setVisible(False)
         # Centering QSplitter after the window is rendered
         QTimer.singleShot(0, self.center_splitter)
-        
-    def test(self):  # TODO remove
-        pass
 
     def change_language(self):
         """
@@ -178,30 +171,44 @@ class SignalMod(QDialog):
         """
         Change ui based on the signal mode
         """
-        # TODO reimplement in VISA_instruments, turn off terminator if necessary
-        signal_mode = self.signal_modes[self.signal_mode.currentText()]
+        signal_mode = self.menu.alias_to_mode()[self.signal_mode.currentText()]
         self.signal_param.set_mode(signal_mode)
         
     def _plot_ticket(self) -> None:
         """
         Просмотр json
         """
+        self.ui.button_graph.setFocus()
+        plot_type = self.ui.json_plot_type.currentText()
+        plot_limits = {  # Maximum number of pulses (tasks) on the plot
+            'stem': 10000,
+            'plot': 1000
+        }
         if self._make_json(): # если json сделан
             json_for_plot = self.base_json.copy()
-            self.total_task_count = plot_with_save(self.parent.man,
-                                                   json_for_plot,
-                                                   self.ui.json_plot_type.currentText(),
-                                                   save_path=self.IMG_PATH)
-            self._show_signal_png()
+            # Plotting
+            self.total_task_count, limit_hit = plot_for_signal_graph(
+                manager=self.parent.man,
+                ticket=json_for_plot,
+                plot_type=plot_type,
+                ax=self.graph.ax,
+                plot_limits=plot_limits
+            )
+            # Labels
+            self.graph.ax.set_ylabel(self.lang_pack.get("plot_voltage"))
+            if plot_type == 'stem':
+                self.graph.ax.set_xlabel(self.lang_pack.get("plot_pulse_count"))
+            else:
+                self.graph.ax.set_xlabel(self.lang_pack.get("plot_time"))
+            self.graph.canvas.draw_idle()
+            # Label with plot limit
+            if limit_hit:
+                self.ui.groupBox_graph.setTitle(self.lang_pack.get("graph") + \
+                                                self.lang_pack.get("plot_limit_reached") + str(plot_limits[plot_type]) + ')')
+            else:
+                self.ui.groupBox_graph.setTitle(self.lang_pack.get("graph"))
             # указываем сколько будет задач
             self.ui.label_count_tasks.setText(str(self.total_task_count))
-
-    def _show_signal_png(self) -> None:
-        """
-        Отобразить png
-        """
-        # pixmap = QPixmap(self.IMG_PATH)
-        # self.ui.label_png.setPixmap(pixmap)
 
     def _make_json(self) -> bool:
         """
@@ -213,7 +220,7 @@ class SignalMod(QDialog):
         status = False
         try:
             # Signal mode
-            self.base_json['mode'] = self.signal_modes[self.signal_mode.currentText()]
+            self.base_json['mode'] = self.menu.alias_to_mode()[self.signal_mode.currentText()]
             
             # Filling signal parameters
             self.base_json = self.signal_param.fill_params_to_ticket(self.base_json)
@@ -247,7 +254,6 @@ class SignalMod(QDialog):
             status = True
         except ValueError:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect"))
-        print(json.dumps(self.base_json, indent=4))
         return status
 
     def _save_json(self) -> None:
@@ -305,7 +311,7 @@ class SignalMod(QDialog):
                 return
             
         # Signal mode
-        signal_mode = self.signal_modes_inverted[self.base_json['mode']]
+        signal_mode = self.menu.mode_to_alias()[self.base_json['mode']]
         self.signal_mode.setCurrentText(signal_mode)
         self._change_signal_mode()
         
@@ -385,7 +391,7 @@ class SignalMod(QDialog):
         
     def center_splitter(self) -> None:
         """
-        Senter the QSplitter widget
+        Center the QSplitter widget
         """
         sizes = self.splitter.sizes()
         s1 = int(sum(sizes) / 2)
@@ -409,7 +415,4 @@ class SignalMod(QDialog):
         else: # событие вызвала кнопка отмена
             self.set_up_init_values()
             event.accept()
-        # удаление ticket.png при закрытии окна
-        if os.path.isfile(self.IMG_PATH):
-            os.remove(self.IMG_PATH)
         self.parent.close()
