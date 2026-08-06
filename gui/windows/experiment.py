@@ -9,13 +9,15 @@ check_exp
 import os
 import pickle
 import json
+from typing import Union
 from copy import deepcopy
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 
-from manager.service.global_settings import TICKET_PATH
+from gui.windows.algorithm_editor import AlgorithmEditor
+from manager.service.global_settings import TICKET_PATH, ALGORITHM_PATH
 from manager.service.plots import calculate_counts_for_ticket
 from gui.src import show_warning_messagebox, show_choose_window, open_file_dialog
 
@@ -50,10 +52,17 @@ class ExpSettings(QDialog):
         self.refresh_list()
         self.ui.exp_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.exp_list.doubleClicked.connect(self._add_exp_to_list)
+        # Список алгоритмов
+        self.alg_list_model = QStandardItemModel()
+        self.ui.alg_list.setModel(self.alg_list_model)
+        self.refresh_alg_list()
+        self.ui.alg_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.ui.alg_list.doubleClicked.connect(self._add_alg_to_list)
         # список экспериментов
         self.list_experiments = QStandardItemModel()
         self.ui.plan_list.setModel(self.list_experiments)
         self._refresh_exp_list()
+        self.label_total_update()
         self.ui.plan_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.ui.plan_list.doubleClicked.connect(self._edit_ticket)
         try:
@@ -63,25 +72,24 @@ class ExpSettings(QDialog):
         # обработка кнопок
         self.ui.button_new_signal.clicked.connect(lambda: self.parent.show_signal_dialog("blank",
                                                                                          "create"))
-        self.ui.button_delete.clicked.connect(self._delete_json)
+        self.ui.button_new_algorithm.clicked.connect(lambda: self.show_algorithm_dialog(ticket=None))
+        self.ui.button_delete.clicked.connect(lambda: self._delete_json(ticket_group='tickets'))
+        self.ui.button_delete_algorithm.clicked.connect(lambda: self._delete_json(ticket_group='algorithms'))
         self.ui.button_add_exp.clicked.connect(self._add_exp_to_list)
+        self.ui.button_add_algorithm.clicked.connect(self._add_alg_to_list)
         self.ui.button_up_plan.clicked.connect(lambda: self._exp_list_up_exp(-1))
         self.ui.button_down_plan.clicked.connect(lambda: self._exp_list_up_exp(1))
         self.ui.button_delete_plan.clicked.connect(self._exp_list_delete)
         self.ui.button_edit_ticket.clicked.connect(self._edit_ticket)
-        self.ui.button_view_requets.clicked.connect(self._view_requests)
+        self.ui.button_view_requests.clicked.connect(self._view_requests)
         self.ui.button_cancel_exp.clicked.connect(self.close)
-        self.ui.button_apply_exp.clicked.connect(self.apply_exp)
-        self.ui.button_check_exp.clicked.connect(self.check_exp)
         self.ui.button_load_exp.clicked.connect(lambda: self.parent.show_history_dialog(mode="all"))
-        self.ui.button_apply_all.clicked.connect(self.apply_exp_all)
         self.ui.button_duplicate.clicked.connect(self.duplicate_ticket)
         self.ui.button_import.clicked.connect(self.import_experiment_json)
-        # блок кнопок
         if parent.opener == 'testing':
-            self.ui.button_apply_exp.setEnabled(False)
+            self.ui.button_apply_exp.clicked.connect(self.apply_exp_all)
         else:
-            self.ui.button_apply_all.setEnabled(False)
+            self.ui.button_apply_exp.clicked.connect(self.apply_exp)
 
     def change_language(self):
         """
@@ -90,23 +98,20 @@ class ExpSettings(QDialog):
         ok, self.lang_pack = self.parent.read_language_json("experiment")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
-            self.ui.groupBox.setTitle(self.lang_pack.get("signal"))
+            self.ui.groupBox.setTitle(self.lang_pack.get("signals"))
             self.ui.groupBox_2.setTitle(self.lang_pack.get("exp_plan"))
+            self.ui.groupBox_3.setTitle(self.lang_pack.get("algorithms"))
             self.ui.button_new_signal.setText(self.lang_pack.get("new"))
-            self.ui.button_delete.setText(self.lang_pack.get("delete"))
             self.ui.button_add_exp.setText(self.lang_pack.get("add_to_plan"))
+            self.ui.button_new_algorithm.setText(self.lang_pack.get("new"))
+            self.ui.button_add_algorithm.setText(self.lang_pack.get("add_to_plan"))
             self.ui.label.setText(self.lang_pack.get("exp_name"))
             self.ui.button_load_exp.setText(self.lang_pack.get("upload"))
             self.ui.button_import.setText(self.lang_pack.get("import"))
             self.ui.button_edit_ticket.setText(self.lang_pack.get("edit"))
             self.ui.button_duplicate.setText(self.lang_pack.get("duplicate"))
-            self.ui.button_up_plan.setText(self.lang_pack.get("up"))
-            self.ui.button_down_plan.setText(self.lang_pack.get("down"))
-            self.ui.button_delete_plan.setText(self.lang_pack.get("remove"))
-            self.ui.button_view_requets.setText(self.lang_pack.get("view_req"))
-            self.ui.button_check_exp.setText(self.lang_pack.get("check"))
+            self.ui.button_view_requests.setText(self.lang_pack.get("view_req"))
             self.ui.button_apply_exp.setText(self.lang_pack.get("apply_cell"))
-            self.ui.button_apply_all.setText(self.lang_pack.get("apply_all"))
             self.ui.button_cancel_exp.setText(self.lang_pack.get("cancel"))
 
     def set_up_init_values(self):
@@ -133,19 +138,43 @@ class ExpSettings(QDialog):
         for file in file_list:
             self.list_model.appendRow(QStandardItem(file.replace('.json','')))
             self.ticket_files.append(file.replace('.json',''))
+            
+    def refresh_alg_list(self) -> None:
+        """
+        Обновить список алгоритмов
+        """
+        self.alg_list_model.removeRows(0, self.alg_list_model.rowCount())
+        if not os.path.exists(ALGORITHM_PATH):
+            os.makedirs(ALGORITHM_PATH)
+        for filename in sorted(os.listdir(ALGORITHM_PATH)):
+            if filename.lower().endswith('.json'):
+                self.alg_list_model.appendRow(QStandardItem(filename.replace('.json','')))
+        
 
-    def _delete_json(self) -> None:
+    def _delete_json(self, ticket_group: str = 'tickets') -> None:
         """
         Удаляем json файл с диска
         """
         # получаем имя файла
-        file_name = self.ui.exp_list.currentIndex().data()
-        if file_name and file_name not in self.parent.protected_modes: # защита .json
+        if ticket_group == 'tickets':
+            file_name = self.ui.exp_list.currentIndex().data()
+            protected = file_name in self.parent.protected_modes  # Защита .json
+            path = TICKET_PATH
+        elif ticket_group == 'algorithms':
+            file_name = self.ui.alg_list.currentIndex().data()
+            protected = False
+            path = ALGORITHM_PATH
+        if file_name:
+            if protected:
+                show_warning_messagebox(self, self.lang_pack.get('json_protected'))
+                return
             answer = show_choose_window(self, self.lang_pack.get("delete_file"))
             if answer:
-                os.remove(os.path.join(TICKET_PATH,
-                          file_name+'.json'))
-                self.refresh_list() # обновляем список
+                os.remove(os.path.join(path, file_name+'.json'))
+                if ticket_group == 'tickets':
+                    self.refresh_list() # обновляем список
+                elif ticket_group == 'algorithms':
+                    self.refresh_alg_list()
 
     def label_total_update(self) -> None:
         """
@@ -170,11 +199,11 @@ class ExpSettings(QDialog):
             ticket["params"]["wl"] = self.parent.current_wl
             ticket["params"]["bl"] = self.parent.current_bl
             # 4 считаем сколько тикетов и тасков в списке
-            task_list, count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+            count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
             self.parent.exp_list_params['total_tickets'] += 1
             self.parent.exp_list_params['total_tasks'] += count
             # 5 отображаем название тикета в списке
-            self.parent.exp_list.append((ticket["name"], ticket.copy(), task_list.copy(), count))
+            self.parent.exp_list.append((ticket["name"], ticket.copy(), count))
             self._refresh_exp_list()
             # 6 обновляем значение лейблов
             self.label_total_update()
@@ -183,6 +212,26 @@ class ExpSettings(QDialog):
             if not self.importing_experiment:
                 self.importing_experiment = False
                 show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
+                
+    def _add_alg_to_list(self, **kwargs) -> None:
+        """
+        Добавить алгоритм в план
+        """
+        if 'ticket' in kwargs:
+            ticket = kwargs['ticket'].copy()
+        else:
+            filename = self.ui.alg_list.currentIndex().data()
+            with open(os.path.join(ALGORITHM_PATH, filename + '.json'), 'r', encoding='utf-8') as file:
+                ticket = json.load(file)
+        ticket["params"]["wl"] = self.parent.current_wl
+        ticket["params"]["bl"] = self.parent.current_bl
+        count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+        self.parent.exp_list_params['total_tickets'] += 1
+        self.parent.exp_list_params['total_tasks'] += count
+        self.parent.exp_list.append((ticket["name"], ticket.copy(), count))
+        self._refresh_exp_list()
+        self.label_total_update()
+        
 
     def _refresh_exp_list(self) -> None:
         """
@@ -200,7 +249,7 @@ class ExpSettings(QDialog):
             ticket_for_del = self.parent.exp_list.pop(self.ui.plan_list.currentIndex().row())
             # 4 считаем сколько тикетов и тасков в списке
             self.parent.exp_list_params['total_tickets'] -= 1
-            self.parent.exp_list_params['total_tasks'] -= ticket_for_del[3]
+            self.parent.exp_list_params['total_tasks'] -= ticket_for_del[2]
             # 5 обновляем значение лейблов
             self.label_total_update()
             # обновляем список
@@ -228,25 +277,30 @@ class ExpSettings(QDialog):
         ticket_position = self.ui.plan_list.currentIndex().row()
         ticket = self.parent.exp_list[ticket_position][1].copy()
         # открываем для редактирования
-        self.parent.show_signal_dialog(ticket, "edit")
+        
+        if ticket['mode'] == 'algorithm':
+            self.show_algorithm_dialog(ticket)
+        else:
+            self.parent.show_signal_dialog(ticket, "edit")
 
-    def apply_edit_to_exp_list(self) -> None:
+    def apply_edit_to_exp_list(self, new_ticket: Union[dict, None] = None) -> None:
         """
         Применить правки тикета
         """
-        new_ticket = self.parent.read_ticket_from_disk("temp.json")
-        os.remove(os.path.join(TICKET_PATH,"temp.json"))
+        if new_ticket is None:  # Ticket is passed from Signal window via temp.json file
+            new_ticket = self.parent.read_ticket_from_disk("temp.json")
+            os.remove(os.path.join(TICKET_PATH,"temp.json"))
         #указываем ячейку
         new_ticket["params"]["wl"] = self.parent.current_wl
         new_ticket["params"]["bl"] = self.parent.current_bl
-        task_list, count = calculate_counts_for_ticket(self.parent.man, new_ticket.copy())
+        count = calculate_counts_for_ticket(self.parent.man, new_ticket.copy())
         ticket_position = self.ui.plan_list.currentIndex().row()
-        self.parent.exp_list_params['total_tasks'] -= self.parent.exp_list[ticket_position][3]
+        self.parent.exp_list_params['total_tasks'] -= self.parent.exp_list[ticket_position][2]
         self.parent.exp_list_params['total_tasks'] += count
         self.parent.exp_list[ticket_position] = (new_ticket["name"],
                                                  new_ticket.copy(),
-                                                 task_list.copy(),
                                                  count)
+        self._refresh_exp_list()
         self.label_total_update()
 
     def apply_exp(self) -> None:
@@ -305,7 +359,7 @@ class ExpSettings(QDialog):
                                                                 self.parent.current_last_resistance)
         event.accept()
 
-    def check_exp(self) -> None:
+    def check_exp(self) -> None:  # TODO можно доделать и вернуть кнопку
         """
         Проверить эксперимент
         """
@@ -328,7 +382,7 @@ class ExpSettings(QDialog):
             filepath = ''
             if mode == 'dblclick':
                 self.importing_experiment = True
-                filepath = os.path.join(os.getcwd(), "tickets", self.ui.exp_list.currentIndex().data()) + ".json"
+                filepath = os.path.join(TICKET_PATH, self.ui.exp_list.currentIndex().data()) + ".json"
             if not filepath:
                 filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
             if filepath:
@@ -349,11 +403,18 @@ class ExpSettings(QDialog):
         # определяем номер тикета
         ticket_position = self.ui.plan_list.currentIndex().row()
         ticket = deepcopy(self.parent.exp_list[ticket_position][1])
-        task_list, count = calculate_counts_for_ticket(self.parent.man, deepcopy(ticket))
+        count = calculate_counts_for_ticket(self.parent.man, deepcopy(ticket))
         # копируем выбранный тикет
-        self.parent.exp_list.append((ticket["name"], deepcopy(ticket), deepcopy(task_list), count))
+        self.parent.exp_list.append((ticket["name"], deepcopy(ticket), count))
         # обновляем параметры
         self.parent.exp_list_params['total_tickets'] += 1
         self.parent.exp_list_params['total_tasks'] += count
         self._refresh_exp_list()
         self.label_total_update()
+        
+    def show_algorithm_dialog(self, ticket: Union[dict, None] = None) -> None:
+        """
+        Показать окно редактирования алгоритма
+        """
+        self.algorithm_dialog = AlgorithmEditor(parent=self, ticket=ticket)
+        self.algorithm_dialog.show()

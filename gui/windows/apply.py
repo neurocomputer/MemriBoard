@@ -22,6 +22,7 @@ from PyQt5.QtCore import QThread, pyqtSignal, QMutex
 
 from manager.service import d2v, a2r, a2c, r2a, a2v
 from manager.service.saves import save_list_to_bytearray
+from manager.algorithms import TicketGenerator, Algorithm
 from gui.src import show_choose_window, show_warning_messagebox
 
 class Apply(QWidget):
@@ -453,6 +454,10 @@ class ApplyExp(QThread):
         self.need_stop = False # нужна остановка
         self.image_saved = False # рисунок создан и сохранен на диск
         _, self.lang_pack = self.parent.parent.read_language_json("apply")
+        self.algorithm = Algorithm(  # For algorithms
+            parent=self, 
+            measure_ticket_name=self.parent.parent.man.ap_config['gui']['measure_ticket']
+        )  
 
     def setup_image_saved(self, status):
         """
@@ -506,24 +511,29 @@ class ApplyExp(QThread):
             status = self.parent.parent.man.db.update_experiment(experiment_id, 'meta_info', pickle.dumps(meta_info))
             if not status:
                 self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
+            _, self.last_resistance = self.parent.parent.man.db.get_last_resistance(memristor_id)
+            self.algorithm.set_last_resistance(self.last_resistance)
             # инициируем цикл по тикетам
             counter = 0
-            for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, task_list, count
-                ticket = ticket_info[1]
+            ticket_gen = TicketGenerator(
+                self,
+                ticket_list=self.parent.parent.exp_list,
+                algorithm=self.algorithm,
+                db=self.parent.parent.man.db,
+                experiment_id=experiment_id,
+                ap_logger=self.parent.parent.man.ap_logger
+            )
+            for ticket in ticket_gen:
                 # терминатор
                 term_left, term_right = self.parent.parent.man.get_term_values(ticket['terminate'])
                 # вбиваем координаты
                 ticket['params']['wl'] = item[0]
                 ticket['params']['bl'] = item[1]
-                # сохраняем в БД
-                status, ticket_id = self.parent.parent.man.db.add_ticket(ticket, experiment_id)
-                if not status:
-                    self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_tic"))
+                # получаем id с генератора. Генератор теперь сам создает запись в бд
+                ticket_id = ticket_gen.get_ticket_id()
                 # временный файл для результата
                 result_file_path = time.strftime("%Y%m%d-%H%M%S")
                 result_file = open(result_file_path, 'wb')
-                #for task in task_list:
-                #start_time_loop = time.time()
                 # инициируем цикл по таскам
                 result = 0
                 for task in self.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.man.blank_type):
@@ -569,19 +579,21 @@ class ApplyExp(QThread):
                 result_file.close()
                 # сохраняем в БД статус завершения
                 if result:
-                    last_resistance = int(a2r(self.parent.parent.man.gain,
+                    self.last_resistance = int(a2r(self.parent.parent.man.gain,
                                               self.parent.parent.man.res_load,
                                               self.parent.parent.man.vol_read,
                                               self.parent.parent.man.adc_bit,
                                               self.parent.parent.man.vol_ref_adc,
                                               self.parent.parent.man.res_switches,
                                               result[0]))
-                    status = self.parent.parent.man.db.update_last_resistance(memristor_id, last_resistance)
+                    status = self.parent.parent.man.db.update_last_resistance(memristor_id, self.last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_info"))
-                    status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', last_resistance)
+                    status = self.parent.parent.man.db.update_experiment(experiment_id, 'last_resistance', self.last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_res"))
+                    # Changing values in the algorithm
+                    self.algorithm.set_last_resistance(self.last_resistance)
                 if self.need_stop:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:

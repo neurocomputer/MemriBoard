@@ -5,19 +5,22 @@
 # pylint: disable=no-name-in-module
 
 import time
+from typing import Union
 from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
+from manager.service.drivers import get_driver_attr
 
 class Connector():
     """
     Взаимодействие с платой
     """
 
-    silent: int
+    silent: bool
     logger: Logger
     cb_type: str
     board_type: str
+    driver_attr: Union[dict, None]
     request_id: int = 0
     meta_info = {'task_time': 0.0}
 
@@ -27,11 +30,35 @@ class Connector():
     # для симулятора
     config: ConfigParser
 
-    def __init__(self, silent, logger, cb_type, board_type, **kwargs):
+    def __init__(
+        self, 
+        silent: bool, 
+        logger: Logger, 
+        cb_type: str, 
+        board_type: str, 
+        driver_attr: Union[dict, None] = None, 
+        **kwargs
+    ):
+        """Connector class used for communicating with the measurement board.
+
+        Args:
+            silent (bool): If True, some logging at info level is omitted.
+            logger (logging.Logger): Logger for the connector.
+            cb_type (str): `simulator` for simulating the memristive crossbar array, 
+                `real` for connecting to real measurement boards.
+            board_type (str): Board type (driver name) for real measurement boards. Available
+                drivers are listed in `MemriBoard/manager/service/drivers.py`.
+            driver_attr (dict | None, optional): Dict with driver attributes. If None, takes default attributes from 
+                `MemriBoard/manager/service/drivers.py`. Defaults to None.
+        """
         self.silent = silent
         self.logger = logger
         self.cb_type = cb_type
         self.board_type = board_type
+        if driver_attr is None:
+            self.driver_attr = get_driver_attr(board_type)
+        else:
+            self.driver_attr = driver_attr
         # для симулятора
         if 'config' in kwargs:
             self.config = kwargs['config']
@@ -237,7 +264,7 @@ class Connector():
             close_flag = True
         elif self.cb_type == 'real':
             # для плат на базе Arduino
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar', 'elbear_nano', 'rp5_rram_elbear_nano',  'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            if self.driver_attr['disconnect'] == 'com_close':
                 self.interface.com_close()
                 if self.interface.com_is_open():
                     self.logger.info('Fail to close')
@@ -245,7 +272,7 @@ class Connector():
                     self.logger.info('Closed')
                     close_flag = True
             # для плат на базе Raspberry Pi 5
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python']:
+            elif self.driver_attr['disconnect'] is None:
                 # todo: может нужно что-то еще
                 close_flag = True
         return close_flag
@@ -315,7 +342,7 @@ class Connector():
         rec_data = []
         send_flag = False
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+            if self.driver_attr['get_tech_info'] == '100':
                 send_flag = self.push('100\n')
                 self.interface.com_whait_ready(float(self.config['connector']['timeout']))
                 if self.interface.com_can_read_line():
@@ -324,12 +351,15 @@ class Connector():
                         rec_data = str(rx, 'utf-8').strip().split(',')
                     except ValueError:
                         pass
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
+            elif self.driver_attr['get_tech_info'] == 'rpi':
                 send_flag = True
                 rec_data = ['raspberry pi 5']
-            elif self.board_type in ['elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            elif self.driver_attr['get_tech_info'] == 'elbear':
                 send_flag = True
                 rec_data = ['elbear_nano']
+            elif self.driver_attr['get_tech_info'] == 'pico':
+                send_flag = True
+                rec_data = ['pico_client']
                 # todo: добавить служебную инфу в драйвер
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -349,7 +379,7 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+            if self.driver_attr['impact'] == 'arduino':
                 self.inc_req_id() # увеличиваем счечик id
                 task["id"] = self.request_id # записываем id в тикет
                 task['vol'] = abs(task['vol'])
@@ -366,7 +396,7 @@ class Connector():
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
-            elif self.board_type in ['elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            elif self.driver_attr['impact'] == 'elbear':
                 status = False
                 for _ in range(100):
                     try:
@@ -403,7 +433,7 @@ class Connector():
                         pass
                     if status: 
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano']:
+            elif self.driver_attr['impact'] == 'rpi':
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
                     adc = self.interface.mode_7(task['vol'],
@@ -428,7 +458,7 @@ class Connector():
                                                     task["id"])
                     res = (int(adc[0]), int(adc[1]))
             # можно добавить работу с другими платами
-            elif self.board_type in ['pico_client']:
+            elif self.driver_attr['impact'] == 'pico':
                 if task['mode_flag'] == 7:
                     # self.interface.init(self.addr, mode=1) # MODE_7 = 1, MODE_MVM = 2, MODE_CORE = 3
                     task['vol'] = abs(task['vol'])
@@ -484,7 +514,7 @@ class Connector():
         """
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
-            if self.board_type in ['memardboard_single', 'memardboard_crossbar']:
+            if self.driver_attr['custom_impact'] == 'arduino':
                 _ = self.push(command)
                 while attempts:
                     time.sleep(timeout)
@@ -497,7 +527,7 @@ class Connector():
                     attempts -= 1
                     if attempts == 0:
                         break
-            elif self.board_type in ['rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'rp5_rram_python', 'rp5_rram_elbear_nano', 'elbear_multimode_WR', 'elbear_multimode_MVM']:
+            elif self.driver_attr['custom_impact'] is None:
                 # todo: пока не реализован
                 time.sleep(timeout)
                 res = (0, 0)
@@ -507,6 +537,35 @@ class Connector():
             res = (0, 0)
         # можно добавить работу с другими платами
         return res
+    
+    def connect_cell_to_external(self, mode: str, wl: int, bl: int):
+        """
+        Connect cell to the external terminals on the board
+        """
+        if self.cb_type == 'real':
+            if self.driver_attr['connect_to_ext'] == 'arduino':
+                if mode == 'connect':
+                    self.push(f'3,{wl},{bl},333\n')
+                    connected = False
+                    for _ in range(10):
+                        res = self.pull()
+                        if res[0] == 333:
+                            connected = True
+                            break
+                        time.sleep(0.01)
+                    if not connected:
+                        raise ConnectionError('Could not connect the cell!')
+                else:
+                    disconnected = False
+                    self.push('4,444')
+                    for _ in range(10):
+                        res = self.pull()
+                        if res[0] == 444:
+                            disconnected = True
+                            break
+                        time.sleep(0.01)
+                    if not disconnected:
+                        raise ConnectionError('Could not disconnect the cell!')
 
     def inc_req_id(self):
         """
