@@ -477,6 +477,7 @@
     "snapshot":{
         "window_title":"Snapshot",
         "export":"Export data",
+        "log_scale":"Logarithmic scale",
         "weight":"Weight",
         "res_kOhm":"Resistance (kΩ)",
         "txt":"Text file",
