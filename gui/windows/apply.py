@@ -487,7 +487,7 @@ class ApplyExp(QThread):
                 ticket_id = ticket_gen.get_ticket_id()
                 # временный файл для результата
                 result_file_path = time.strftime("%Y%m%d-%H%M%S")
-                result_file = open(result_file_path, 'wb')
+                result_file = open(result_file_path, 'wb')  # noqa: SIM115
                 # инициируем цикл по таскам
                 result = 0
                 for task in self.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.man.blank_type):

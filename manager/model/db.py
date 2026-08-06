@@ -10,7 +10,7 @@ import sqlalchemy as sqla
 from sqlalchemy import ForeignKey, LargeBinary, String, Integer, select, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker, relationship
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound, MultipleResultsFound
-from typing import Optional, List
+from typing import Optional
 from manager.service.saves import results_from_float_bytes, results_from_bytes
 # from manager.service.global_settings import DB_PATH
 
@@ -31,7 +31,7 @@ class Crossbars(Base):
     wl: Mapped[int] = mapped_column(Integer, nullable=False)
     cb_type: Mapped[str] = mapped_column(String, nullable=False)
 
-    memristors: Mapped[List['Memristors']] = relationship(
+    memristors: Mapped[list['Memristors']] = relationship(
         back_populates='crossbar', 
         cascade='all, delete-orphan'
     )
@@ -58,7 +58,7 @@ class Memristors(Base):
     )
 
     crossbar: Mapped['Crossbars'] = relationship(back_populates='memristors')
-    experiments: Mapped[List['Experiments']] = relationship(
+    experiments: Mapped[list['Experiments']] = relationship(
         back_populates='memristor',
         cascade='all, delete-orphan'
     )
@@ -87,7 +87,7 @@ class Experiments(Base):
     )
 
     memristor: Mapped['Memristors'] = relationship(back_populates='experiments')
-    tickets: Mapped[List['Tickets']] = relationship(
+    tickets: Mapped[list['Tickets']] = relationship(
         back_populates='experiment',
         cascade='all, delete-orphan'
     )
@@ -120,7 +120,7 @@ class Tickets(Base):
     def __repr__(self):
         return f"<Ticket(id={self.id}, name='{self.ticket_name}', status={self.status})>"
 
-class DBOperate():
+class DBOperate:
 
     engine = None
     def __init__(self, parent):

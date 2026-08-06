@@ -24,7 +24,7 @@ from collections import deque
 
 # pylint: disable=too-few-public-methods
 
-class Pass():
+class Pass:
     """
     Прерывание не требуется
     """
@@ -35,7 +35,7 @@ class Pass():
     def __call__(self, result: list) -> bool:
         return False
 
-class Equal():
+class Equal:
     """
     Проверка равности
     """
@@ -49,7 +49,7 @@ class Equal():
             flag = True
         return flag
 
-class EqualIn():
+class EqualIn:
     """
     Проверка равности в диапазоне
     """
@@ -64,7 +64,7 @@ class EqualIn():
             flag = True
         return flag
 
-class EqualOut():
+class EqualOut:
     """
     Проверка равности за диапазоном
     """
@@ -79,7 +79,7 @@ class EqualOut():
             flag = True
         return flag
 
-class Less():
+class Less:
     """
     Проверка меньше
     """
@@ -93,7 +93,7 @@ class Less():
             flag = True
         return flag
 
-class Bigger():
+class Bigger:
     """
     Проверка больше
     """
@@ -107,7 +107,7 @@ class Bigger():
             flag = True
         return flag
 
-class EqualOutAccum():
+class EqualOutAccum:
     """
     Проверка равности за диапазоном с накоплением
     """

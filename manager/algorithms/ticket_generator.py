@@ -73,5 +73,4 @@ class TicketGenerator:
         """
         #tickets = self.algorithm.get_executed_tickets()
         # TODO add to database
-        pass
     

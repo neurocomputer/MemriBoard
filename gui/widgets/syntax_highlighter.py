@@ -94,13 +94,13 @@ class PythonHighlighter (QtGui.QSyntaxHighlighter):
         rules = []
 
         # Keyword, operator, and brace rules
-        rules += [(r'\b%s\b' % w, 0, STYLES['keyword'])
+        rules += [(r'\b%s\b' % w, 0, STYLES['keyword'])  # noqa: UP031
             for w in PythonHighlighter.keywords]
-        rules += [(r'%s' % o, 0, STYLES['operator'])
+        rules += [(r'%s' % o, 0, STYLES['operator'])  # noqa: UP031
             for o in PythonHighlighter.operators]
-        rules += [(r'%s' % b, 0, STYLES['brace'])
+        rules += [(r'%s' % b, 0, STYLES['brace'])  # noqa: UP031
             for b in PythonHighlighter.braces]
-        rules += [(r'%s' % a, 0, STYLES['algorithm_functions'])
+        rules += [(r'%s' % a, 0, STYLES['algorithm_functions'])  # noqa: UP031
             for a in PythonHighlighter.algorithm_functions]
 
         # All other rules
@@ -209,7 +209,4 @@ class PythonHighlighter (QtGui.QSyntaxHighlighter):
             start = delimiter.indexIn(text, start + length)
 
         # Return True if still inside a multi-line string, False otherwise
-        if self.currentBlockState() == in_state:
-            return True
-        else:
-            return False
+        return self.currentBlockState() == in_state

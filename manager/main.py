@@ -7,6 +7,7 @@
 import os
 import time
 from threading import Thread, Lock
+from typing import Union
 from queue import Queue
 from queue import Full
 from queue import Empty
@@ -334,7 +335,7 @@ class Manager(Application):
             queue_for_clear.not_full.notify()
             queue_for_clear.all_tasks_done.notifyAll()
 
-    def _save_results(self, transit_queue: Queue = None, transit=False) -> None:
+    def _save_results(self, transit_queue: Union[Queue, None] = None, transit=False) -> None:
         """
         Поток сохранения результата
         Результат - начало (н), данные (д), конец (к)
@@ -375,7 +376,7 @@ class Manager(Application):
                     _ = self.db.update_ticket_result_path(exp_id, fname)
                 # 3 открыть файл и записать
                 elif isinstance(result, tuple) and self.save_flag and not file_opened:
-                    file = open(file_path, 'wb')
+                    file = open(file_path, 'wb')  # noqa: SIM115
                     file_opened = True
                     files_created += 1
                     self.ap_logger.info('file %s created!', fname)
@@ -433,7 +434,7 @@ class Manager(Application):
         self._worker_thread = Thread(target=self._worker, daemon=True)
         self._worker_thread.start() # обработчик
 
-    def start_saver(self, transit_queue: Queue = None, transit=False) -> None:
+    def start_saver(self, transit_queue: Union[Queue, None] = None, transit=False) -> None:
         """
         Сохранять результат
         """

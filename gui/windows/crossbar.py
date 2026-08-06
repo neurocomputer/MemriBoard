@@ -25,7 +25,6 @@ matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
 
 from manager import Manager
-from manager.service import a2r
 from manager.service.global_settings import TICKET_PATH
 
 from gui.windows.cell_info import CellInfo

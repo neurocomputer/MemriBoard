@@ -8,7 +8,6 @@ import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 
-from manager.service import r2a, a2v
 from gui.src import show_warning_messagebox
 
 class CellInfo(QDialog):

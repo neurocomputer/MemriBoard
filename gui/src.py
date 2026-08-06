@@ -21,13 +21,13 @@ def change_src_language(new_lang_pack) -> None:
     global lang_pack
     lang_pack = new_lang_pack
 
-def show_warning_messagebox(parent = None, message: str = None) -> None:
+def show_warning_messagebox(parent = None, message: Union[str, None] = None) -> None:
     """
     Оповещение
     """
     QMessageBox.warning(parent, lang_pack.get('warn'), message, QMessageBox.Ok)
 
-def show_choose_window(parent = None, message: str = None) -> bool:
+def show_choose_window(parent = None, message: Union[str, None] = None) -> bool:
     """
     Окно выбора
     """
@@ -107,12 +107,11 @@ def write_csv_data(fpath, header, coordinates):
     
 # Methods for saving matrix in different formats
 
-def save_matrix_text_format(filename: str, data: list, sep: int = '\t') -> None:
+def save_matrix_text_format(filename: str, data: list, sep: str = '\t') -> None:
     """Save matrix in a text document where sep is the column separator"""
     with open(filename, 'w') as file:
         file.write(f'   {sep}' + sep.join([f'WL{i}' for  i in range(len(data[0]))]) + '\n')
-        for j, row in enumerate(data):
-            file.write(f'BL{j}{sep}' + sep.join(map(str, row)) + '\n')
+        file.writelines(f'BL{j}{sep}' + sep.join(map(str, row)) + '\n' for j, row in enumerate(data))
   
 
 def save_matrix_txt(filename: str, data: list) -> None:

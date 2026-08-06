@@ -132,7 +132,7 @@ class QCodeEditor(QPlainTextEdit):
             should be inherited from QSyntaxHighlighter
         
         '''                  
-        super(QCodeEditor, self).__init__()
+        super().__init__()
         
         self.setFont(QFont("Ubuntu Mono", 11))
         self.setLineWrapMode(QPlainTextEdit.NoWrap)

@@ -20,7 +20,7 @@ import numpy as np
 import numpy.typing as npt
 import ast
 
-from manager.service import a2r, d2v, v2d
+from manager.service import v2d
 from gui.src import open_file_dialog, show_warning_messagebox, show_choose_window, choose_cells
 from gui.windows.apply import ApplyExp
 

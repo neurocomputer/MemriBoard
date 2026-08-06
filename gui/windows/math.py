@@ -14,7 +14,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QWidget
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib.pyplot as plt
-from manager.service import w2r, r2w, v2d, a2v
+from manager.service import w2r, r2w, a2v
 from manager.service.converters import quantization
 from gui.src import show_warning_messagebox, open_file_dialog
 from gui.windows.snapshot import Snapshot
@@ -408,17 +408,15 @@ class Math(QWidget):
         """
         Нахождение максимума, минимума из списка
         """
-        min = list[0][0]
-        max = list[0][0]
+        min_val = list[0][0]
+        max_val = list[0][0]
         k = 0
         for i in range(len(list)):
             for j in range(len(list[0])):
                 k = list[i][j]
-                if k < min:
-                    min = k
-                if k > max:
-                    max = k
-        return(max, min)
+                min_val = min(min_val, k)
+                max_val = max(max_val, k)
+        return(max_val, min_val)
 
     def update_summary_weights(self):
         """

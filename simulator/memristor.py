@@ -14,7 +14,7 @@ https://doi.org/10.3390/math11051268
 import math as m
 import numpy as np
 
-class MemristorModel():
+class MemristorModel:
     '''
     Модель мемристивного устройства
     '''

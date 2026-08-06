@@ -191,7 +191,7 @@ class Algorithm:
                 raise RuntimeError(f"Wrong type for 'experiment' variable: '{type(experiment)}'. Expected type is 'dict'")
             for i, ticket in experiment.items():
                 if not isinstance(ticket, dict):
-                    raise RuntimeError(f"Wrong type for ticket number {i}: '{type(ticket)}'. Expected type is 'dict'")        
+                    raise RuntimeError(f"Wrong type for ticket number {i}: '{type(ticket)}'. Expected type is 'dict'")  # noqa: TRY004
                 self._validate_ticket(ticket)
             return 'dict_experiment', experiment
         self.executed_tickets.append(deepcopy(experiment))

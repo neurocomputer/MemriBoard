@@ -18,7 +18,7 @@ def fill_blank(blank: dict, data: dict) -> dict:
     """
     task = blank.copy()
     for key in task:
-        if key in data.keys():
+        if key in data:
             task[key] = data[key]
     return task
 
