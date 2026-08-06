@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 from gui.src import show_warning_messagebox, show_choose_window
 from gui.windows.apply import ApplyExp
 from gui.windows.snapshot import Snapshot
-from manager.service import a2r
 from manager.service.plots import calculate_counts_for_ticket
 
 def save_binary_string_to_file(binary_str: str, filename: str) -> None:
@@ -445,14 +444,7 @@ class Rram(QWidget):
         Получили значение
         """
         value = value.split(",")
-        adc_value = int(value[1])
-        self.data_for_plot_y.append(a2r(self.parent.man.gain,
-                                        self.parent.man.res_load,
-                                        self.parent.man.vol_read,
-                                        self.parent.man.adc_bit,
-                                        self.parent.man.vol_ref_adc,
-                                        self.parent.man.res_switches,
-                                        adc_value))
+        self.data_for_plot_y.append(float(value[1]))
 
     def on_progress_finished(self, value: str):
         """

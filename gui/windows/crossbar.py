@@ -451,7 +451,8 @@ class Window(QMainWindow):
         Обновить информацию
         """
         _, mem_id = self.man.db.get_memristor_id(self.current_wl, self.current_bl, self.man.crossbar_id)
-        _, self.current_last_resistance = self.man.db.get_last_resistance(mem_id)
+        _, res = self.man.db.get_last_resistance(mem_id)
+        self.current_last_resistance = int(res)
 
     def fill_table(self) -> None:
         """
@@ -587,15 +588,9 @@ class Window(QMainWindow):
         for task in self.man.menu[ticket['mode']](ticket['params'],
                                                   ticket['terminate'],
                                                   self.man.blank_type):
-            result = self.man.conn.impact(task[0]) # result = (resistance, id)
+            result = self.man.conn.impact(task[0]) # result = (resistance, id, adc)
         try:
-            last_resistance = int(a2r(self.man.gain,
-                                      self.man.res_load,
-                                      self.man.vol_read,
-                                      self.man.adc_bit,
-                                      self.man.vol_ref_adc,
-                                      self.man.res_switches,
-                                      result[0]))
+            last_resistance = result[0]
         except IndexError:
             last_resistance = 0
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
@@ -694,7 +689,7 @@ class Window(QMainWindow):
                     )
                     if not ok:
                         return
-                    new_tick = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=self.man.menu.alias_to_mode()[mode])
+                    new_tick = convert_ticket_to_reduced_format(self.man, tick, mode_to_convert=self.man.menu.alias_to_mode()[mode])
                     new_ticket[i] = new_tick
         except Exception as e:
             show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + filename + f'\n{type(e).__name__}: {e}')
@@ -781,15 +776,9 @@ class SendTicketAll(QThread):
                 for task in self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
                                                  self.ticket['terminate'],
                                                  self.parent.man.blank_type):
-                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id, adc)
                 try:
-                    last_resistance = int(a2r(self.parent.man.gain,
-                                            self.parent.man.res_load,
-                                            self.parent.man.vol_read,
-                                            self.parent.man.adc_bit,
-                                            self.parent.man.vol_ref_adc,
-                                            self.parent.man.res_switches,
-                                            result[0]))
+                    last_resistance = result[0]
                 except IndexError:
                     last_resistance = 0
                 _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)

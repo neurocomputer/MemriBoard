@@ -20,7 +20,7 @@ import numpy as np
 import numpy.typing as npt
 import ast
 
-from manager.service import a2r, d2v
+from manager.service import a2r, d2v, v2d
 from gui.src import open_file_dialog, show_warning_messagebox, show_choose_window, choose_cells
 from gui.windows.apply import ApplyExp
 
@@ -47,7 +47,7 @@ def read_csv(file_path, delimiter):
                         data[keys[i]].append(item)
         return copy.deepcopy(data)
 
-def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
+def custom_shaphop(data, title, save_flag=True, save_path=None):
     """
     Отображение живых мемристоров
     """
@@ -59,6 +59,8 @@ def custom_shaphop(data, title, save_flag=True, save_path=os.getcwd()):
     plt.title(title, linespacing=1.5)
     plt.tight_layout()
     if save_flag:
+        if save_path is None:
+            save_path = os.getcwd()
         plt.savefig(os.path.join(save_path,"result_map.png"))
         plt.close()
     else:
@@ -286,7 +288,6 @@ class Testing(QWidget):
         """
         На изменение счетчика
         """
-        pass
 
     def on_progress_finished(self, value: str) -> None: # +
         """
@@ -311,7 +312,7 @@ class Testing(QWidget):
         fpath = os.path.join(self.result_path, fname)
         with open(fpath, 'w+', newline='', encoding='utf-8') as file:
             file_wr = csv.writer(file, delimiter=";")
-            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "terminate_type", "terminate_1", "terminate_2"])
+            file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "pulse_width", "exp_name", "ticket_name", "terminate_type", "terminate_1", "terminate_2"])
             for item_index, item in enumerate(raw_data):
                 file_wr.writerow([item[0],  # 'sign'
                                   item[1],  # 'dac'
@@ -331,12 +332,11 @@ class Testing(QWidget):
                                   wl,
                                   bl,
                                   raw_data_extended[item_index][0],
-                                  raw_data_extended[item_index][1],
                                   self.parent.exp_name,
+                                  raw_data_extended[item_index][1],
                                   raw_data_extended[item_index][2],
                                   raw_data_extended[item_index][3],
                                   raw_data_extended[item_index][4],
-                                  raw_data_extended[item_index][5],
                                   ])
         self.csv_names.append(fname+'\n')
         # рисунок для базы в matplotlib
@@ -364,8 +364,12 @@ class Testing(QWidget):
         Получили значение
         """
         value = value.split(",")
-        adc_value = int(value[1])
-        dac_value = int(value[2])
+        res = float(value[1])
+        vol = float(value[2])
+        dac_value = v2d(self.parent.man.dac_bit,  # dac
+                        self.parent.man.vol_ref_dac,
+                        vol)
+        adc_value = int(value[4])
         sign = int(value[3])
         if len(value) > 11:
             self.terminator = ast.literal_eval(value[9]+", " +value[10] + ", " +value[11])
@@ -378,25 +382,14 @@ class Testing(QWidget):
             term_1 = self.terminator.get("value")[0]
             term_2 = self.terminator.get("value")[1]
         self.raw_data.append((sign, dac_value, adc_value, datetime.datetime.now().timestamp()))
-        self.raw_data_extended.append((int(value[6]), int(value[7]), value[8], self.terminator.get("type"), term_1, term_2)) # t_ms, t_us, ticket_name, terminate
-        self.data_for_plot_x.append(d2v(self.parent.man.dac_bit,
-                                        self.parent.man.vol_ref_dac,
-                                        dac_value,
-                                        sign=sign))
-        self.data_for_plot_y.append(a2r(self.parent.man.gain,
-                                        self.parent.man.res_load,
-                                        self.parent.man.vol_read,
-                                        self.parent.man.adc_bit,
-                                        self.parent.man.vol_ref_adc,
-                                        self.parent.man.res_switches,
-                                        adc_value))
+        self.raw_data_extended.append((float(value[7]), value[8], self.terminator.get("type"), term_1, term_2)) # pulse_width, ticket_name, terminate
+        self.data_for_plot_x.append(vol * -1 if sign else vol)
+        self.data_for_plot_y.append(res)
 
     def on_ticket_finished(self, value: str) -> None: # +
         """
         Закончился тикет
         """
-        pass
-
     def button_reset_exp_clicked(self) -> None: # +
         """
         Прервать выполнение эксперимента

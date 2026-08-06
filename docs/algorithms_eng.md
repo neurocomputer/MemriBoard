@@ -192,47 +192,28 @@ ___
 
 An example of the algorithm with `for` cycle and ticket parameter changing.
 
-The algorithm implements double sweep: primary sweep is done in the `iv_curve` ticket, secondary sweep is done via `for` cycle. Pulse width sweep is from 100 to 1000 us, 10 points.
-
-Алгоритм реализует двойную развертку: первичная развертка по напряжению идет
-в тикете `iv_curve`, вторичная развертка по ширине импульса реализуется циклом `for`. Развертка по ширине импульса &mdash; от 100 до 1000 мкс, 10 точек.
+The algorithm implements double sweep: primary sweep is done in the `iv_curve` ticket, secondary sweep is done via `for` cycle. Secondary voltage sweep is from 1 to 2.5 volts, 5 points.
 
 ```python
 import numpy as np  # Importing numpy
 
-# Creating a helper function that changes pulse width in the ticket
-def change_pulse_width(ticket, width_us):  # width is in microsecond
-    if int(width_us) < 1000:  # Changing microseconds parameter
-        ticket['params']['t_dir_usec_inc'] = int(width_us)
-        ticket['params']['t_dir_usec_dec'] = int(width_us)
-        ticket['params']['t_rev_usec_inc'] = int(width_us)
-        ticket['params']['t_rev_usec_dec'] = int(width_us)
-        ticket['params']['t_dir_msec_inc'] = 0
-        ticket['params']['t_dir_msec_dec'] = 0
-        ticket['params']['t_rev_msec_inc'] = 0
-        ticket['params']['t_rev_msec_dec'] = 0
-    else:  # Changing milliseconds parameter
-        ticket['params']['t_dir_usec_inc'] = 0
-        ticket['params']['t_dir_usec_dec'] = 0
-        ticket['params']['t_rev_usec_inc'] = 0
-        ticket['params']['t_rev_usec_dec'] = 0
-        ticket['params']['t_dir_msec_inc'] = int(width_us / 1000)
-        ticket['params']['t_dir_msec_dec'] = int(width_us / 1000)
-        ticket['params']['t_rev_msec_inc'] = int(width_us / 1000)
-        ticket['params']['t_rev_msec_dec'] = int(width_us / 1000)
+# Helper function that changes voltage in the ticket
+def change_ticket_voltage(ticket, voltage):
+    ticket['params']['stop_dir'] = voltage
+    ticket['params']['stop_rev'] = voltage
     return ticket
 
 
 # Main algorithm function
 def algorithm():
-    # Creating pulse width array
-    width_array = np.linspace(100, 1000, 10, dtype=int)
+    # Creating secondary voltage array
+    v_array = np.linspace(1, 2.5, 5, dtype=float)
     # Getting ticket as a dict for editing it
     base_ticket = get_ticket_dict('iv-curve')
     # Creating for cycle
-    for width in width_array:
+    for voltage in v_array:
         # Editing ticket
-        ticket = change_pulse_width(base_ticket, width)
+        ticket = change_ticket_voltage(base_ticket, voltage)
         # Executing ticket
         send_ticket_dict(ticket)
 ```

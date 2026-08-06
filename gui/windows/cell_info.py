@@ -75,24 +75,10 @@ class CellInfo(QDialog):
         Прочитать одну
         """
         self.ui.button_read_one_cells.setEnabled(False)
-        self.parent.current_last_resistance = self.parent.read_cell(self.parent.current_wl,
-                                                                    self.parent.current_bl)
+        self.parent.current_last_resistance = int(self.parent.read_cell(self.parent.current_wl,
+                                                                        self.parent.current_bl))
         self.fill_info()
         self.ui.button_read_one_cells.setEnabled(True)
-        # проверка проблем с АЦП
-        current_adc = r2a(self.parent.man.gain,
-                            self.parent.man.res_load,
-                            self.parent.man.vol_read,
-                            self.parent.man.adc_bit,
-                            self.parent.man.vol_ref_adc,
-                            self.parent.man.res_switches,
-                            self.parent.current_last_resistance)
-        adc_vol = a2v(self.parent.man.gain,
-                        self.parent.man.adc_bit,
-                        self.parent.man.vol_ref_adc,
-                        current_adc)
-        if adc_vol > 3.5: # todo: вынести 3.5 в константы
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("high_adc"))
 
     def fill_info(self) -> None:
         """

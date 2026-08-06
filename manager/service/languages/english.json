@@ -456,7 +456,8 @@
         "resistance":"Resistance, Ohm",
         "status":"Status",
         "not_working":"Not working",
-        "not_written":"Not written"
+        "not_written":"Not written",
+        "wrong_ticket":"Wrong programming ticket!\nThe programming ticket mode for this window is expected to be Voltage sweep\nYou can change it in MemriBoard/settings.ini/gui/program_ticket"
     },
     "requests":{
         "name":"Requests",

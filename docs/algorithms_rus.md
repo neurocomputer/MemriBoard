@@ -191,44 +191,28 @@ ___
 Пример реализации алгоритма с циклом `for` и изменением параметров тикетов.
 
 Алгоритм реализует двойную развертку: первичная развертка по напряжению идет
-в тикете `iv_curve`, вторичная развертка по ширине импульса реализуется циклом `for`. Развертка по ширине импульса &mdash; от 100 до 1000 мкс, 10 точек.
+в тикете `iv_curve`, вторичная развертка реализуется циклом `for`. Вторичная развертка по граничному напряжению &mdash; от 1 до 2.5 вольт, 5 точек.
 
 ```python
 import numpy as np  # Импортируем numpy
 
-# Создаем вспомогательную функцию изменения ширины импульса в тикете
-def change_pulse_width(ticket, width_us):  # ширина импульса в мкс
-    if int(width_us) < 1000:  # Пишем в микросекундах
-        ticket['params']['t_dir_usec_inc'] = int(width_us)
-        ticket['params']['t_dir_usec_dec'] = int(width_us)
-        ticket['params']['t_rev_usec_inc'] = int(width_us)
-        ticket['params']['t_rev_usec_dec'] = int(width_us)
-        ticket['params']['t_dir_msec_inc'] = 0
-        ticket['params']['t_dir_msec_dec'] = 0
-        ticket['params']['t_rev_msec_inc'] = 0
-        ticket['params']['t_rev_msec_dec'] = 0
-    else:  # пишем в миллисекундах
-        ticket['params']['t_dir_usec_inc'] = 0
-        ticket['params']['t_dir_usec_dec'] = 0
-        ticket['params']['t_rev_usec_inc'] = 0
-        ticket['params']['t_rev_usec_dec'] = 0
-        ticket['params']['t_dir_msec_inc'] = int(width_us / 1000)
-        ticket['params']['t_dir_msec_dec'] = int(width_us / 1000)
-        ticket['params']['t_rev_msec_inc'] = int(width_us / 1000)
-        ticket['params']['t_rev_msec_dec'] = int(width_us / 1000)
+# Создаем вспомогательную функцию изменения напряжения в тикете
+def change_ticket_voltage(ticket, voltage):
+    ticket['params']['stop_dir'] = voltage
+    ticket['params']['stop_rev'] = voltage
     return ticket
 
 
 # Функция алгоритма
 def algorithm():
-    # Создаем массив ширины импульса
-    width_array = np.linspace(100, 1000, 10, dtype=int)
+    # Создаем массив напряжений для вторичной развертки
+    v_array = np.linspace(1, 2.5, 5, dtype=float)
     # Получаем тикет как dict для редактирования
     base_ticket = get_ticket_dict('iv-curve')
     # Делаем цикл for
-    for width in width_array:
+    for voltage in v_array:
         # Редактируем тикет
-        ticket = change_pulse_width(base_ticket, width)
+        ticket = change_ticket_voltage(base_ticket, voltage)
         # Выполняем тикет
         send_ticket_dict(ticket)
 ```

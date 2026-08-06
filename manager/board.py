@@ -15,6 +15,12 @@ from manager.service import v2d, a2r
 class Connector:
     """
     Взаимодействие с платой
+    
+    WARNING: Коннектор переделан под новый формат тасков и выходных данных (напряжения передаются в вольтах,
+    сопротивления возвращаются в Омах). Чтобы не переделывать таски в написанных программах и нейросетях, можно работать 
+    в старом формате: при инициализации нужно прописать аргумент `task_format='adc'`.
+    На выходе из `impact` теперь такой формат: (Сопротивление (Ом), id, adc). Чтобы работать по-старому, можно брать третий
+    элемент кортэжа (`adc`) -- это то, что `impact` возвращал раньше.
     """
 
     silent: bool
@@ -387,7 +393,8 @@ class Connector:
         # работа с реальным кроссбаром
         if self.cb_type == 'real':
             if self.driver_attr['impact'] == 'arduino':
-                self.inc_req_id() # увеличиваем счечик id
+                self.inc_req_id() # увеличиваем счетчик id
+                task = self.task_volt_to_dac(task.copy(), retain_key_order=True)  # TODO remove if driver changed
                 task["id"] = self.request_id # записываем id в тикет
                 task['vol'] = abs(task['vol'])
                 _ = self.push(gather(task))
@@ -399,12 +406,14 @@ class Connector:
                     if res[1] != self.request_id:
                         print(f'Не совпадение id: req:{res[1]}, ans:{self.request_id} (adc:{res[0]})')
                         raise ValueError
+                    res = (self.a2r(res[0]), res[1], int(res[0]))  # Resistance(Ohm), id, adc
                     # else: print(f'{task["id"]}, {self.request_id}, {res[1]}, adc:{res[0]}')
                 except (ValueError, IndexError):
                     self.logger.critical('ValueError, IndexError in board.py:pull!')
                     # res = tuple([0, self.request_id]) #todo: если не получили ответа нужно ли его занулять?
             elif self.driver_attr['impact'] == 'elbear':
                 status = False
+                task = self.task_volt_to_dac(task.copy())  # TODO remove on driver change
                 for _ in range(100):
                     try:
                         if task['mode_flag'] == 7: # режим команды 7
@@ -416,11 +425,11 @@ class Connector:
                                                     task['id'],
                                                     task['wl'],
                                                     task['bl']) # vDAC, tms, tus, rev, id, wl, bl
-                            res = (int(adc[0]), int(adc[1]))
+                            res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))  # Resistance(Ohm), id, adc
                             status = True
                         elif task['mode_flag'] == 9: # режим команды 9
                             adc = self.interface.mode_9(task['vol'], 0, task['wl'], task['bl'])
-                            res = (int(adc[0]), int(adc[1]))
+                            res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))  # Resistance(Ohm), id, adc
                             status = True
                     except TimeoutError as ex:
                         print(ex)
@@ -440,6 +449,7 @@ class Connector:
                     if status: 
                         break
             elif self.driver_attr['impact'] == 'rpi':
+                task = self.task_volt_to_dac(task.copy())  # TODO remove on driver change
                 if task['mode_flag'] == 7: # режим команды 7
                     task['vol'] = abs(task['vol'])
                     adc = self.interface.mode_7(task['vol'],
@@ -449,10 +459,10 @@ class Connector:
                                             task['id'],
                                             task['wl'],
                                             task['bl']) # vDAC, tms, tus, rev, id, wl, bl
-                    res = (int(adc[0]), int(adc[1]))
+                    res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))  # Resistance(Ohm), id, adc
                 elif task['mode_flag'] == 9: # режим команды 9
                     adc = self.interface.mode_9(task['vol'], 0, task['wl'], task['bl'])
-                    res = (int(adc[0]), int(adc[1]))
+                    res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))  # Resistance(Ohm), id, adc
                 elif task['mode_flag'] == 10: # режим команды 10
                     #print(task['vol'])
                     adc = self.interface.mode_mvm(task['vol'],
@@ -462,9 +472,10 @@ class Connector:
                                                     0,
                                                     task['wl'],
                                                     task["id"])
-                    res = (int(adc[0]), int(adc[1]))
+                    res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))  # Resistance(Ohm), id, adc
             # можно добавить работу с другими платами
             elif self.driver_attr['impact'] == 'pico':
+                task = self.task_volt_to_dac(task.copy())  # TODO remove on driver change
                 if task['mode_flag'] == 7:
                     # self.interface.init(self.addr, mode=1) # MODE_7 = 1, MODE_MVM = 2, MODE_CORE = 3
                     task['vol'] = abs(task['vol'])
@@ -475,7 +486,7 @@ class Connector:
                                                 rev=task['sign'], 
                                                 wl=task['wl'], 
                                                 bl=task['bl'])
-                    res = (adc, 0)
+                    res = (self.a2r(adc), 0, adc)  # Resistance(Ohm), id, adc
             # time.sleep(55/1000)
         # режим симулятор
         elif self.cb_type == 'simulator':
@@ -530,6 +541,7 @@ class Connector:
                     try:
                         res = self.pull()
                         if len(res) == 2:
+                            res = (self.a2r(res[0]), res[1], int(res[0]))  # Resistance(Ohm), id, adc
                             break
                     except ValueError:
                         self.logger.critical('ValueError in board.py:pull!')
@@ -539,11 +551,11 @@ class Connector:
             elif self.driver_attr['custom_impact'] is None:
                 # todo: пока не реализован
                 time.sleep(timeout)
-                res = (0, 0)
+                res = (0, 0, 0)
         # режим симулятор
         elif self.cb_type == 'simulator':
             time.sleep(timeout)
-            res = (0, 0)
+            res = (0, 0, 0)
         # можно добавить работу с другими платами
         return res
     
@@ -607,14 +619,21 @@ class Connector:
         If retain_key_order argument is True, retains key order of the returned task (for use with `gather` function).
         
         """
-        task['vol'] = self.v2d(task['vol'])
-        if task['pulse_width'] < 1e-3:  # Write in us
-            task['t_us'] = int(task['pulse_width'] * 1e6)
-            task['t_ms'] = 0
-        else:  # Write in ms
-            task['t_ms'] = int(task['pulse_width'] * 1e3)
-            task['t_us'] = 0
-        del task['pulse_width']
+        if self.task_format == 'dac':  # The format is already right
+            return task
+        if hasattr(task['vol'], '__iter__'):  # If there is an array of voltages (mode_mvm)
+            for i in range(len(task['vol'])):
+                task['vol'][i] = self.v2d(task['vol'][i])
+        else:
+            task['vol'] = self.v2d(task['vol'])
+        if 'pulse_width' in task:
+            if task['pulse_width'] < 1e-3:  # Write in us
+                task['t_us'] = int(task['pulse_width'] * 1e6)
+                task['t_ms'] = 0
+            else:  # Write in ms
+                task['t_ms'] = int(task['pulse_width'] * 1e3)
+                task['t_us'] = 0
+            del task['pulse_width']
         if not retain_key_order:
             return task  # Not ordered! t_ms and t_us are at the end of the dict
         # Ordering task keys

@@ -361,8 +361,8 @@ class Apply(QWidget):
         vol = float(value[2])
         sign = int(value[3])
         adc = int(value[4])
-        term_left = int(value[5])
-        term_right = int(value[6])
+        term_left = float(value[5])
+        term_right = float(value[6])
         value = float(value[1])  # Resistance
         # отображение
         #if self.application_status == "start" and self._plot_flag:
@@ -548,7 +548,7 @@ class ApplyExp(QThread):
                 with open(result_file_path, 'rb') as result_file:
                     result_data = result_file.read()
                     # записываем в базу
-                    self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)  # FIXME
+                    self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)
                 os.remove(result_file_path)
                 # вызываем событие завершения тикета
                 self.ticket_finished.emit(f"{ticket_id},{result_file_path}")

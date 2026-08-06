@@ -460,7 +460,8 @@
         "resistance":"Сопротивление, Ом",
         "status":"Статус",
         "not_working":"Не рабочая",
-        "not_written":"Не записано"
+        "not_written":"Не записано",
+        "wrong_ticket":"Неверный тикет для программирования!\nТикет для программирования для этого окна должен иметь режим Voltage sweep.\nИзмените его в MemriBoard/settings.ini/gui/program_ticket"
     },
     "requests":{
         "name":"Запросы",
