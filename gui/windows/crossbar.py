@@ -450,8 +450,9 @@ class Window(QMainWindow):
         Обновить информацию
         """
         _, mem_id = self.man.db.get_memristor_id(self.current_wl, self.current_bl, self.man.crossbar_id)
-        _, res = self.man.db.get_last_resistance(mem_id)
-        self.current_last_resistance = int(res)
+        status, res = self.man.db.get_last_resistance(mem_id)
+        if status:
+            self.current_last_resistance = int(res)
 
     def fill_table(self) -> None:
         """
