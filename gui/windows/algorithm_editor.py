@@ -241,8 +241,15 @@ class AlgorithmEditor(QDialog):
             return
         if self.mode == 'edit':
             self.parent.apply_edit_to_exp_list(alg_ticket)
+        if alg_ticket['name'] in self.parent.parent.protected_algorithms:
+            show_warning_messagebox(self, self.lang_pack.get("alg_protected"))
+            return
+        save_path = os.path.join(ALGORITHM_PATH, alg_ticket['name'] + '.json')
+        if os.path.exists(save_path):
+            if not show_choose_window(self, self.lang_pack.get("an_algorithm") + "'" + alg_ticket['name'] + "'" + self.lang_pack.get('already_exists')):
+                return
         try:  # Saving to file
-            with open(os.path.join(ALGORITHM_PATH, alg_ticket['name'] + '.json'), mode='w', encoding='utf-8') as file:
+            with open(save_path, mode='w', encoding='utf-8') as file:
                 json.dump(alg_ticket, file, ensure_ascii=False, indent=4)
             self.safe_to_close = True
             self.close()

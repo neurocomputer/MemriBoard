@@ -76,6 +76,7 @@ class SignalMod(QDialog):
         # обработчики кнопок
         self.ui.button_graph.clicked.connect(self._plot_ticket)
         self.ui.button_save.clicked.connect(self._save_json)
+        self.ui.button_save_to_file.clicked.connect(self._save_to_file)
         self.ui.button_cancel.clicked.connect(self.close)
         # Shortcut for plot
         shortcut = QShortcut(QKeySequence(Qt.Key_Return), self)
@@ -97,12 +98,14 @@ class SignalMod(QDialog):
             self.base_ticket_name = base_ticket_name["name"]
             self.base_json = base_ticket_name
             self.ui.button_save.setEnabled(False)
+            self.ui.button_save_to_file.setEnabled(False)
             self.ui.json_name.setEnabled(False)
         elif self.mode == 'edit_for_programming':
             self.base_ticket_name = base_ticket_name["name"]
             self.base_json = base_ticket_name
             self.ui.terminator_combobox.setEnabled(False)
             self.ui.json_name.setEnabled(False)
+            self.ui.button_save_to_file.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
         self.groupBox.setVisible(False)
         self.groupBox_2.setVisible(False)
@@ -130,6 +133,7 @@ class SignalMod(QDialog):
             self.ui.label_board_req.setText(self.lang_pack.get("board_req"))
             self.ui.label_exp_name.setText(self.lang_pack.get("exp_name"))
             self.ui.button_save.setText(self.lang_pack.get("save"))
+            self.ui.button_save_to_file.setText(self.lang_pack.get("save_to_folder"))
             self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
             self.ui.label_terminate_type.setText(self.lang_pack.get("condition_type"))
             self._choose_terminator()
@@ -221,6 +225,10 @@ class SignalMod(QDialog):
         """
         status = False
         try:
+            self.base_json['name'] = self.ui.json_name.text().strip()
+            if self.base_json['name'] == '':
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("fill_in_filename"))
+                return False
             # Signal mode
             self.base_json['mode'] = self.menu.alias_to_mode()[self.signal_mode.currentText()]
             
@@ -263,33 +271,40 @@ class SignalMod(QDialog):
         Сохранение json
         """
         # создать json
-        answer = None
         if self._make_json():
-            if self.mode == "create":
-                answer = show_choose_window(self, self.lang_pack.get("save_file"))
-            elif self.mode == "edit" or self.mode == "edit_for_programming":
-                answer = show_choose_window(self, self.lang_pack.get("save_changes"))
-            if answer:
-                if self.mode == "create":
-                    fname = self.ui.json_name.text().strip()
-                    if fname == '':
-                        show_warning_messagebox(parent=self, message=self.lang_pack.get("fill_in_filename"))
-                        return
-                    if fname in self.parent.protected_modes or fname in self.parent.exp_settings_dialog.ticket_files:
-                        show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_exists"))
-                        return
-                    # открываем файл и пишем
-                    self.base_json["name"] = fname
-                elif self.mode in ["edit", "edit_for_programming"]:
-                    fname = 'temp'
-                try:
-                    with open(os.path.join(TICKET_PATH,
-                                        fname+'.json'),
-                                        'w', encoding='utf-8') as outfile:
-                        json.dump(self.base_json, outfile)
-                    self.file_saved = True
-                except Exception as e:
-                    show_warning_messagebox(parent=self, message=self.lang_pack.get("could_not_save") + f'{type(e).__name__}: {e}')
+            if self.mode == 'create':
+                self._save_to_file()
+            elif self.mode == "edit":
+                self.parent.exp_settings_dialog.apply_edit_to_exp_list(self.base_json)
+            elif self.mode == "edit_for_programming":
+                self.parent.new_ann_dialog.apply_edit_to_prog_ticket(self.base_json)
+            self.file_saved = True
+            self.close()
+                
+    def _save_to_file(self) -> None:
+        """
+        Сохранение тикета в папку
+        """
+        # создать json
+        if self._make_json():
+            if self.mode == "edit":
+                self.parent.exp_settings_dialog.apply_edit_to_exp_list(self.base_json)
+            elif self.mode == "edit_for_programming":
+                self.parent.new_ann_dialog.apply_edit_to_prog_ticket(self.base_json)
+            if self.base_json['name'] in self.parent.protected_modes:
+                show_warning_messagebox(self, self.lang_pack.get("ticket_protected"))
+                return
+            save_path = os.path.join(TICKET_PATH, self.base_json['name']+'.json')
+            if os.path.exists(save_path):
+                if not show_choose_window(self, self.lang_pack.get("ticket_name") + "'" + self.base_json['name'] + "'" + self.lang_pack.get('already_exists')):
+                    return
+            # открываем файл и пишем
+            try:
+                with open(save_path, 'w', encoding='utf-8') as outfile:
+                    json.dump(self.base_json, outfile, ensure_ascii=False, indent=4)
+                self.file_saved = True
+            except Exception as e:
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("could_not_save") + f'{type(e).__name__}: {e}')
             if self.file_saved:
                 self.close()
 
@@ -300,8 +315,6 @@ class SignalMod(QDialog):
 
         file_name = self.base_ticket_name
         self.ui.json_name.setText(file_name)
-        if self.mode == "edit":
-            self.json_name.setEnabled(False)
             
         # Converting to new format for backward compatibility
         if 'v_dir_strt_inc' in self.base_json['params']:
@@ -404,16 +417,8 @@ class SignalMod(QDialog):
         """
         Закрытие окна
         """
-        if self.file_saved: # событие вызвала кнопка сохранить
-            if self.mode == "create":
-                # обновляем список
-                self.parent.exp_settings_dialog.refresh_list()
-            elif self.mode == "edit":
-                self.parent.exp_settings_dialog.apply_edit_to_exp_list()
-            elif self.mode == "edit_for_programming":
-                self.parent.new_ann_dialog.apply_edit_to_prog_ticket()
-            self.set_up_init_values()
-            event.accept()
-        else: # событие вызвала кнопка отмена
-            self.set_up_init_values()
-            event.accept()
+        if self.file_saved and self.mode in ['create', 'edit']: # событие вызвала кнопка сохранить
+            # обновляем список
+            self.parent.exp_settings_dialog.refresh_list()
+        self.set_up_init_values()
+        event.accept()

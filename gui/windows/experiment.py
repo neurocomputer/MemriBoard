@@ -162,7 +162,7 @@ class ExpSettings(QDialog):
             path = TICKET_PATH
         elif ticket_group == 'algorithms':
             file_name = self.ui.alg_list.currentIndex().data()
-            protected = False
+            protected = file_name in self.parent.protected_algorithms
             path = ALGORITHM_PATH
         if file_name:
             if protected:
@@ -287,9 +287,6 @@ class ExpSettings(QDialog):
         """
         Применить правки тикета
         """
-        if new_ticket is None:  # Ticket is passed from Signal window via temp.json file
-            new_ticket = self.parent.read_ticket_from_disk("temp.json")
-            os.remove(os.path.join(TICKET_PATH,"temp.json"))
         #указываем ячейку
         new_ticket["params"]["wl"] = self.parent.current_wl
         new_ticket["params"]["bl"] = self.parent.current_bl

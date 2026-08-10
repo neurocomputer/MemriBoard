@@ -113,6 +113,8 @@ class Window(QMainWindow):
                              'reset',
                              'retention',
                              'set']
+    protected_algorithms: list = ['example_for_cycle',
+                                  'example_if']
 
     def __init__(self) -> None:
         super().__init__() # инит QMainWindow
