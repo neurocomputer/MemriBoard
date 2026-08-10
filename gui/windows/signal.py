@@ -79,6 +79,8 @@ class SignalMod(QDialog):
         # Shortcut for plot
         shortcut = QShortcut(QKeySequence(Qt.Key_Return), self)
         shortcut.activated.connect(self._plot_ticket)
+        shortcut = QShortcut(QKeySequence(Qt.Key_Enter), self)
+        shortcut.activated.connect(self._plot_ticket)
         # начальные значения
         self.set_up_init_values()
         # режим
