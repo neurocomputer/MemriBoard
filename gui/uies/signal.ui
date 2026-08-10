@@ -442,6 +442,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="button_save_to_file">
+            <property name="text">
+             <string>Сохранить в папку Тикеты</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="button_cancel">
             <property name="text">
              <string>Отмена</string>

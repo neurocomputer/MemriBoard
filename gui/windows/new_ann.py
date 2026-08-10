@@ -15,7 +15,6 @@ from PyQt5.QtGui import QColor
 
 from manager.service import r2w, w2r
 from manager.service.plots import calculate_counts_for_ticket
-from manager.service.global_settings import TICKET_PATH
 from gui.src import show_warning_messagebox, choose_cells, open_file_dialog, write_csv_data
 from gui.windows.apply import ApplyExp
 
@@ -189,12 +188,11 @@ class NewAnn(QDialog):
         """
         self.parent.show_signal_dialog(self.ticket, "edit_for_programming")
 
-    def apply_edit_to_prog_ticket(self):
+    def apply_edit_to_prog_ticket(self, ticket: dict):
         """
-        Обмен тикетом через диск
+        Обмен тикетом с окном Сигнал
         """
-        self.ticket = self.parent.read_ticket_from_disk("temp.json")
-        os.remove(os.path.join(TICKET_PATH,"temp.json"))
+        self.ticket = ticket
         self.RESET_VOL_MIN = self.ticket['params']['start_dir']
         self.RESET_VOL_MAX = self.ticket['params']['stop_dir']
         self.RESET_STEP = self.ticket['params']['step_dir']
