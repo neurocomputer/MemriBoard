@@ -6,56 +6,45 @@
 тока в процессе измерения,
 3. Таск окончания тикета (ticket_end) для сброса оборудования. 
 Тип таска указывается в поле mode_flag.
-
-Типовик запроса:
-params =  {
-    "v_dir_strt_inc": 0,
-    "v_dir_stop_inc": 819,
-    "v_dir_step_inc": 410,
-    "t_dir_msec_inc": 0,
-    "t_dir_usec_inc": 100,
-    "dir_inc_countr": 1,
-    
-    "v_dir_strt_dec": 819,
-    "v_dir_stop_dec": 0,
-    "v_dir_step_dec": 410,
-    "t_dir_msec_dec": 0,
-    "t_dir_usec_dec": 100,
-    "dir_dec_countr": 1,
-    
-    "v_rev_strt_inc": 0,
-    "v_rev_stop_inc": 819,
-    "v_rev_step_inc": 410,
-    "t_rev_msec_inc": 0,
-    "t_rev_usec_inc": 100,
-    "rev_inc_countr": 1,
-    
-    "v_rev_strt_dec": 819,
-    "v_rev_stop_dec": 0,
-    "v_rev_step_dec": 410,
-    "t_rev_msec_dec": 0,
-    "t_rev_usec_dec": 100,
-    "rev_dec_countr": 1,
-    
-    "count": 1,
-    "reverse": 0,
-    
-    "id": 0,
-    "wl": 0,
-    "bl": 0,
-    
-    "dir_soft_cc": 0.0003,
-    "rev_soft_cc": 0.1
-}
 """
 
 import numpy as np
-from typing import Generator
+from collections.abc import Generator
 from manager.terminate import terminators
+from logging import Logger
 
 
 _modes = {'dir': 0,  # Режимы прямо и обратно
           'rev': 1}
+
+
+class SMUGen:
+    def __init__(self, logger: Logger) -> None:
+        self.logger = logger
+    
+    
+    def smu_std(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
+    
+
+    def smu_iv_dc(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
+
+
+    def smu_pulsed_retention(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
+    
+
+    def smu_endurance(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
+    
+
+    def smu_pot_dep(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
+
+
+    def crossbar_scan(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
 
 
 def get_smu_iv_dc(

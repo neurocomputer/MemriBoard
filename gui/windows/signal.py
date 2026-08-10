@@ -109,8 +109,6 @@ class SignalMod(QDialog):
             self.ui.json_name.setEnabled(False)
             self.ui.button_save_to_file.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
-        self.groupBox.setVisible(False)
-        self.groupBox_2.setVisible(False)
         # Centering QSplitter after the window is rendered
         QTimer.singleShot(0, self.center_splitter)
 
@@ -314,6 +312,12 @@ class SignalMod(QDialog):
         """
         Загрузка json файла
         """
+        try:
+            self.menu.mode_to_alias()[self.base_json['mode']]
+        except KeyError:
+            show_warning_messagebox(self, self.lang_pack.get("other_driver"))
+            self.close()
+            return
 
         file_name = self.base_ticket_name
         self.ui.json_name.setText(file_name)

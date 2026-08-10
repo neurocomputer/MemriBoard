@@ -446,7 +446,7 @@ class ApplyExp(QThread):
         """
         for item in self.parent.coordinates:
             # todo: подобный функционал должен быть в manager
-            if self.parent.parent.man.ap_config['board']['cc_type'] == 'soft':
+            if self.parent.parent.man.driver_attr['compliance_type'] == 'soft':
                 # читаем перед экспериментом
                 resistance_previous = self.parent.parent.read_cell(item[0], # wl
                                                                 item[1]) # bl
@@ -525,12 +525,12 @@ class ApplyExp(QThread):
                     if task[0]['mode_flag'] in [7, 9, 'sense']: # todo: переделать, добавить в таску поле с флагом записи в БД
                         allowed = True # проверяем разрешение посылки
                         # включен программный ограничитель
-                        if self.parent.parent.man.ap_config['board']['cc_type'] == 'soft':
+                        if self.parent.parent.man.driver_attr['compliance_type'] == 'soft':
                             # прогнозируем ток
                             if resistance_previous == 0:
                                 resistance_previous = 0.00000001 # чтобы исключить деление на 0
                             current_predict = task[0]['vol'] / resistance_previous
-                            if not ((task[0]['sign'] == 0 and current_predict <= ticket['params']['dir_cc']) or (task[0]['sign'] == 1 and current_predict <= ticket['params']['rev_cc'])):
+                            if not ((task[0]['sign'] == 0 and current_predict <= ticket['params']['compliance_dir']) or (task[0]['sign'] == 1 and current_predict <= ticket['params']['compliance_rev'])):
                                 allowed = False # посылка запроса запрещена
                         if allowed:
                             result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id, adc, timestamp)

@@ -50,7 +50,7 @@ def get_std(signal_mode: str, params: dict, terminate: dict, blank_type: str) ->
         pulse_width_rev = params['pulse_width_rev']
         amount_dir = params['amount_dir']
         amount_rev = params['amount_rev']
-    elif signal_mode in ['endurance', 'pot-dep']:
+    elif signal_mode == 'endurance':
         dir_inc = [params['amplitude_dir']]
         dir_dec = []
         rev_inc = [params['amplitude_rev']]
@@ -164,5 +164,5 @@ def get_std(signal_mode: str, params: dict, terminate: dict, blank_type: str) ->
                         task.append(fill_blank(blanks[blank_type], data))
                         task.append(terminator)
                         yield task
-    except Exception as ex: # для корректного завершения работы плат
+    except Exception: # для корректного завершения работы плат
         yield

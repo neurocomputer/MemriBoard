@@ -341,7 +341,7 @@ class Connector:
                 # todo: может нужно что-то еще
                 close_flag = True
             # Для VISA-инструментов
-            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
+            elif self.driver_attr['disconnect'] == 'disconnect':
                 flag, response = self.interface.disconnect()
                 if flag:
                     self.logger.info('VISA-instruments disconnected')
@@ -435,7 +435,7 @@ class Connector:
                 send_flag = True
                 rec_data = ['pico_client']
                 # todo: добавить служебную инфу в драйвер
-            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:
+            elif self.driver_attr['get_tech_info'] == 'tech_data':
                 send_flag = True
                 rec_data = self.interface.get_tech_data()
         # режим симулятор
@@ -537,7 +537,7 @@ class Connector:
                                                     task['wl'],
                                                     task["id"])
                     res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))  # Resistance(Ohm), id, adc
-            elif self.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:  # Работа с VISA-инструментами
+            elif self.driver_attr['impact'] == 'visa':  # Работа с VISA-инструментами
                 self.interface.logger.info(f'Task: {task}')
                 if not isinstance(task['mode_flag'], str) and task['mode_flag'] not in [7]:
                     self.logger.critical('Wrong task for VISA-driver!')
@@ -684,7 +684,7 @@ class Connector:
                         pulse_width = task['pulse_width'], 
                         trigger_interval = trigger_interval,
                         n_cycles = task['n_cycles'],
-                        dir_cc = task['dir_cc'],
+                        dir_cc = task['dir_cc'],  # TODO change?
                         rev_cc = task['rev_cc']
                     )
                     if flag:

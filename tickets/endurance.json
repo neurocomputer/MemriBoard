@@ -4,6 +4,8 @@
     "params": {
         "amplitude_dir": 1.4,
         "amplitude_rev": 1.7,
+        "compliance_dir": 0.04,
+        "compliance_rev": 0.002,
         "pulse_width_dir": 1e-4,
         "pulse_width_rev": 1e-4,
         "amount_dir": 1,

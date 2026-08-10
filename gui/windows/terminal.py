@@ -37,6 +37,8 @@ class Terminal(QDialog):
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
             self.ui.button_send.setText(self.lang_pack.get("send"))
+            if self.parent.man.driver_attr['custom_impact'] is None:
+                self.ui.textEdit_answer.setPlainText(self.lang_pack.get("terminal_unavailable"))
 
     def send_command(self):
         """
@@ -48,13 +50,13 @@ class Terminal(QDialog):
             if status:
                 self.ui.textEdit_answer.setPlainText(str(info))
         else:
-            if self.parent.man.board_type in ['ITC_1T1R_32x8_switched', 'ITC_1T1R_32x8_probe_station', 'ITC_probe_station']:  # VISA instruments
+            if self.parent.man.driver_attr['custom_impact'] == 'visa':  # VISA instruments
                 res = self.parent.man.conn.custom_impact(command, 0, 0)
                 if res.startswith('ERROR'):
                     show_warning_messagebox(parent=self, message=self.lang_pack.get('error_occurred') + '\n' + res)
                 else:
                     self.ui.textEdit_answer.setPlainText(res)
-            else:
+            elif self.parent.man.driver_attr['custom_impact'] == 'arduino':
                 command = command.replace("-", "")
                 res = self.parent.man.conn.custom_impact(command + '\n', 0.01, 10)
                 if ',' in command:
@@ -68,3 +70,5 @@ class Terminal(QDialog):
                         show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
                 else:
                     show_warning_messagebox(parent=self, message=self.lang_pack.get("req_inc"))
+            else:
+                show_warning_messagebox(parent=self, message=self.lang_pack.get("terminal_unavailable"))

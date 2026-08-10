@@ -26,7 +26,6 @@ import matplotlib.pyplot as plt
 
 from manager import Manager
 from manager.service.global_settings import TICKET_PATH
-from manager.menu import get_crossbar_scan
 
 from gui.windows.cell_info import CellInfo
 from gui.windows.experiment import ExpSettings
@@ -140,7 +139,11 @@ class Window(QMainWindow):
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # диалоговое окно подключения
-        self.show_connect_dialog()
+        # self.show_connect_dialog()
+        self.man.init_board('ITC_1T1R_32x8_switched')
+        # self.man.init_board('memardboard_crossbar')
+        ticket = self.read_ticket_from_disk('iv-curve.json')
+        self.show_signal_dialog(ticket, 'edit')
         
     def set_shortcuts(self):
         """
@@ -621,6 +624,9 @@ class Window(QMainWindow):
         """
         Прочитать все
         """
+        if self.man.driver_attr['resistance_scan'] is None:
+            show_warning_messagebox(self, self.lang_pack.get("read_all_unavailable"))
+            return
         answer = show_choose_window(self, self.lang_pack.get("read_all"))
         if answer:
             self.button_all_set_enabled(False)
@@ -771,8 +777,7 @@ class SendTicketAll(QThread):
         Запуск потока посылки тикета
         """
         counter = 0
-        if self.parent.man.board_type not in ['ITC_1T1R_32x8_switched',]:  # Режим, когда на каждую ячейку свой тикет (как обычно)
-            # TODO: Добавить эти два типа сканирования в список драйверов
+        if self.parent.man.driver_attr['resistance_scan'] == 'multi-ticket':  # Режим, когда на каждую ячейку свой тикет (как обычно)
             # TODO: Можно объединить подходы, если прописать режим сканирования кроссбара для обычных драйверов в menu 
             for i in range(self.parent.man.col_num):
                 if self.need_stop:
@@ -803,10 +808,10 @@ class SendTicketAll(QThread):
                     _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                     counter += 1
                     self.count_changed.emit(counter)
-        else:  # Режим с одним тикетом на весь скан, итерируемся только по таскам
+        elif self.parent.man.driver_attr['resistance_scan'] == 'single-ticket':  # Режим с одним тикетом на весь скан, итерируемся только по таскам
             self.ticket['params']['col_num'] = self.parent.man.col_num
             self.ticket['params']['row_num'] = self.parent.man.row_num
-            task_generator = get_crossbar_scan(self.parent.man.board_type, logger=self.parent.man.ap_logger)(
+            task_generator = self.parent.man.menu.crossbar_scan_gen(
                 self.ticket['params'],
                 self.ticket['terminate'],
                 self.parent.man.blank_type

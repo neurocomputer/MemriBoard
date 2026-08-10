@@ -75,13 +75,13 @@ read_time=1200
 blank_time=5
 ; время простоя между запросами (мкс)
 blank_time_between=55000
-; параметры ограничения тока
-cc_type=soft
 
 ; настройки интерфейса
 [gui]
 ; последний подключенныый кроссбар
 last_crossbar_serial=
+; последняя использованная группа тикетов, совпадает с 'modes' в manager.driver_attr
+last_ticket_modes=standard
 ; тикет для чтения
 measure_ticket=measure.json
 ; тикет для записи весов

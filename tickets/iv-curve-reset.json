@@ -8,6 +8,8 @@
         "start_rev": 0.0,
         "stop_rev": 0.0,
         "step_rev": 0.0,
+        "compliance_dir": 0.04,
+        "compliance_rev": 0.002,
         "pulse_width_dir": 1e-4,
         "pulse_width_rev": 0.0,
         "amount_dir": 1,

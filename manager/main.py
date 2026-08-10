@@ -6,6 +6,7 @@
 
 import os
 import time
+import json
 from threading import Thread, Lock
 from typing import Union
 from queue import Queue
@@ -18,6 +19,7 @@ from manager.service import a2r
 from manager.service.drivers import get_driver_attr
 from manager.model.db import DBOperate
 from manager.menu import Menu
+from manager.service.global_settings import TICKET_TEMPLATE_PATH, TICKET_PATH
 
 class Manager(Application):
     """
@@ -133,7 +135,17 @@ class Manager(Application):
         """
         self.board_type = board_type
         self.driver_attr = get_driver_attr(self.board_type)
-        self.menu = Menu()  # TODO pass board_type to menu
+        self.menu = Menu(parent=self)
+        # Preparing tickets for use with driver
+        if self.ap_config['gui']['last_ticket_modes'] != self.driver_attr['modes']:
+            with open(TICKET_TEMPLATE_PATH, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+            tickets = data[self.driver_attr['modes']]
+            for ticket in tickets:
+                with open(os.path.join(TICKET_PATH, ticket['name'] + '.json'), 'w', encoding='utf-8') as file:
+                    json.dump(ticket, file, ensure_ascii=False, indent=4)
+            self.ap_config['gui']['last_ticket_modes'] = self.driver_attr['modes']
+            self.save_settings()
 
     def connect(self, **kwargs) -> bool:
         """

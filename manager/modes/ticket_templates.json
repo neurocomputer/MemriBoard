@@ -1,0 +1,423 @@
+{
+    "standard": [
+        {
+            "name": "plast-pot-dep",
+            "mode": "pot-dep",
+            "params": {
+                "amplitude_dir": 1.4,
+                "amplitude_rev": 1.7,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 10,
+                "amount_rev": 10,
+                "count": 1,
+                "reverse": 1,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "programming",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 1.7,
+                "step_dir": 0.05,
+                "start_rev": 0.0,
+                "stop_rev": 1.7,
+                "step_rev": 0.05,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": false,
+                "double_rev": false,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "parking",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 0.0,
+                "step_dir": 0.0,
+                "start_rev": 0.0,
+                "stop_rev": 1.499,
+                "step_rev": 0.01,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 0,
+                "amount_rev": 1,
+                "double_dir": false,
+                "double_rev": false,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": ">",
+                "value": 80000
+            }
+        },
+        {
+            "name": "iv-curve-reset",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 1.7,
+                "step_dir": 0.05,
+                "start_rev": 0.0,
+                "stop_rev": 0.0,
+                "step_rev": 0.0,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": true,
+                "double_rev": false,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "prog-with-set",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 1.7,
+                "step_dir": 0.05,
+                "start_rev": 0.0,
+                "stop_rev": 1.7,
+                "step_rev": 1.7,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": false,
+                "double_rev": false,
+                "count": 1,
+                "reverse": 1,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "set",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 0.0,
+                "step_dir": 0.0,
+                "start_rev": 1.7,
+                "stop_rev": 1.7,
+                "step_rev": 1.7,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 0,
+                "amount_rev": 1,
+                "double_dir": false,
+                "double_rev": false,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "plast-dep-pot",
+            "mode": "pot-dep",
+            "params": {
+                "amplitude_dir": 1.4,
+                "amplitude_rev": 1.7,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 10,
+                "amount_rev": 10,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "blank",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 0.0,
+                "step_dir": 0.0,
+                "start_rev": 0.0,
+                "stop_rev": 0.0,
+                "step_rev": 0.0,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0,
+                "pulse_width_rev": 0.0,
+                "amount_dir": 0,
+                "amount_rev": 0,
+                "double_dir": false,
+                "double_rev": false,
+                "count": 0,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "measure",
+            "mode": "retention",
+            "params": {
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "iv-curve-reversed",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 1.7,
+                "step_dir": 0.05,
+                "start_rev": 0.0,
+                "stop_rev": 1.7,
+                "step_rev": 0.05,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": true,
+                "double_rev": true,
+                "count": 1,
+                "reverse": 1,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "reset",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 1.7,
+                "stop_dir": 1.7,
+                "step_dir": 1.7,
+                "start_rev": 0.0,
+                "stop_rev": 0.0,
+                "step_rev": 0.0,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0,
+                "amount_dir": 1,
+                "amount_rev": 0,
+                "double_dir": false,
+                "double_rev": false,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "iv-curve",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 1.7,
+                "step_dir": 0.05,
+                "start_rev": 0.0,
+                "stop_rev": 1.7,
+                "step_rev": 0.05,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": true,
+                "double_rev": true,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "endurance",
+            "mode": "endurance",
+            "params": {
+                "amplitude_dir": 1.4,
+                "amplitude_rev": 1.7,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "programming-reversed",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 1.7,
+                "step_dir": 0.05,
+                "start_rev": 0.0,
+                "stop_rev": 1.7,
+                "step_rev": 0.05,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": false,
+                "double_rev": false,
+                "count": 1,
+                "reverse": 1,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "iv-curve-set",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 0.0,
+                "step_dir": 0.0,
+                "start_rev": 0.0,
+                "stop_rev": 1.7,
+                "step_rev": 0.05,
+                "compliance_dir": 0.04,
+                "compliance_rev": 0.002,
+                "pulse_width_dir": 0.0,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": false,
+                "double_rev": true,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        {
+            "name": "retention",
+            "mode": "retention",
+            "params": {
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        }
+    ],
+    "visa": []
+}
