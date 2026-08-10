@@ -275,6 +275,27 @@
             </item>
            </layout>
           </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_6">
+            <item>
+             <widget class="QLabel" name="label_core_name">
+              <property name="text">
+               <string>Выберите CORE:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="combo_core_name"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_scan_core">
+              <property name="text">
+               <string>Сканировать</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
          </layout>
         </item>
         <item>

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1008</width>
-    <height>512</height>
+    <height>555</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,11 +17,14 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1,0">
        <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
           <string>Сигналы</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
@@ -30,7 +33,7 @@
              <widget class="QListView" name="exp_list"/>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1,0">
               <item>
                <widget class="QPushButton" name="button_new_signal">
                 <property name="text">
@@ -39,16 +42,26 @@
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_delete">
+               <widget class="QPushButton" name="button_add_exp">
                 <property name="text">
-                 <string>Удалить</string>
+                 <string>Добавить в план</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_add_exp">
+               <widget class="QPushButton" name="button_delete">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string>Добавить в план</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
                 </property>
                </widget>
               </item>
@@ -63,6 +76,9 @@
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
           <string>План эксперимента</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_5">
           <item>
@@ -85,53 +101,101 @@
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <item>
-               <widget class="QPushButton" name="button_load_exp">
+             <layout class="QGridLayout" name="gridLayout">
+              <item row="0" column="2">
+               <widget class="QPushButton" name="button_up_plan">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>35</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="text">
-                 <string>Загрузить</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>../icons/arrow-up-line.svg</normaloff>../icons/arrow-up-line.svg</iconset>
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QPushButton" name="button_import">
+              <item row="0" column="3">
+               <widget class="QPushButton" name="button_down_plan">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>35</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
                 <property name="text">
-                 <string>Импорт</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>../icons/arrow-down-line.svg</normaloff>../icons/arrow-down-line.svg</iconset>
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QPushButton" name="button_edit_ticket">
-                <property name="text">
-                 <string>Править</string>
-                </property>
-               </widget>
-              </item>
-              <item>
+              <item row="0" column="1">
                <widget class="QPushButton" name="button_duplicate">
                 <property name="text">
                  <string>Дублировать</string>
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QPushButton" name="button_up_plan">
+              <item row="0" column="0">
+               <widget class="QPushButton" name="button_edit_ticket">
                 <property name="text">
-                 <string>Вверх</string>
+                 <string>Править</string>
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QPushButton" name="button_down_plan">
+              <item row="1" column="0">
+               <widget class="QPushButton" name="button_load_exp">
                 <property name="text">
-                 <string>Вниз</string>
+                 <string>Загрузить</string>
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="1" column="1">
+               <widget class="QPushButton" name="button_import">
+                <property name="text">
+                 <string>Импорт</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2" colspan="2">
                <widget class="QPushButton" name="button_delete_plan">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
-                 <string>Удалить</string>
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset>
+                  <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
                 </property>
                </widget>
               </item>
@@ -142,53 +206,110 @@
          </layout>
         </widget>
        </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>Алгоритмы</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_7">
+          <item>
+           <widget class="QListView" name="alg_list"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="1,1,0">
+            <item>
+             <widget class="QPushButton" name="button_new_algorithm">
+              <property name="text">
+               <string>Новый</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_add_algorithm">
+              <property name="text">
+               <string>Добавить в план</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="button_delete_algorithm">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset>
+                <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
-      <widget class="QLabel" name="label_count_tasks">
-       <property name="text">
-        <string>Всего тикетов: 0   Всего запросов к плате: 0   Примерное время выполнения: 0 мин.</string>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string/>
        </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_10">
+        <item>
+         <widget class="QPushButton" name="button_view_requests">
+          <property name="text">
+           <string>Просмотреть запросы</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_count_tasks">
+          <property name="text">
+           <string>Тикетов: 0   Запросов к плате: 0   Ожидаемое время выполнения: 0 мин.</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_apply_exp">
+          <property name="text">
+           <string>Применить эксперимент</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_cancel_exp">
+          <property name="text">
+           <string>Отмена</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item>
-        <widget class="QPushButton" name="button_view_requets">
-         <property name="text">
-          <string>Просмотреть запросы</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="button_check_exp">
-         <property name="text">
-          <string>Проверить</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="button_apply_exp">
-         <property name="text">
-          <string>Применить к ячейке</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="button_apply_all">
-         <property name="text">
-          <string>Применить ко всем</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="button_cancel_exp">
-         <property name="text">
-          <string>Отмена</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <layout class="QHBoxLayout" name="horizontalLayout_9"/>
      </item>
     </layout>
    </item>

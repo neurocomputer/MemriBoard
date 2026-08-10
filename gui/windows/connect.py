@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
 from gui.src import show_choose_window, show_warning_messagebox
+from manager.service.drivers import get_driver_list, get_driver_attr
 
 class ConnectDialog(QDialog):
     """
@@ -22,6 +23,7 @@ class ConnectDialog(QDialog):
     cb_serial: str
     com_port: str = ''
     lang_pack: dict
+    core_scanned = False
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -37,10 +39,12 @@ class ConnectDialog(QDialog):
         self.ui.button_quit.clicked.connect(self.close)
         self.ui.button_settings.clicked.connect(self._settings)
         self.ui.button_new_crossbar.clicked.connect(lambda: self.show_new_cb_layout(True))
+        self.ui.button_scan_core.clicked.connect(self.core_scan)
         # обработка комбо
         self.ui.combo_com_name.currentIndexChanged.connect(self.on_com_name_changed)
         self.ui.edit_com_name.textChanged.connect(self.on_com_name_changed)
         self.ui.combo_board_type.currentIndexChanged.connect(self.on_combo_board_type_changed)
+        self.ui.combo_core_name.currentIndexChanged.connect(self.on_core_name_changed)
         # обновление отображения
         self.hide_VISA_layout()
         self.show_new_cb_layout(False)
@@ -136,7 +140,13 @@ class ConnectDialog(QDialog):
             self.com_port = edit_com_name
         else: # адрес в списке
             self.com_port = combo_com_name
-        
+
+    def on_core_name_changed(self) -> None:
+        """
+        Выбрали core
+        """
+        self.addr = self.ui.combo_core_name.currentData()
+
     def show_new_cb_layout(self, state) -> None:
         """
         Показать настройки нового кроссбара
@@ -162,6 +172,14 @@ class ConnectDialog(QDialog):
         self.ui.label_com_entry.setVisible(state)
         self.ui.edit_com_name.setVisible(state)
 
+    def show_core_settings_layout(self, state):
+        """
+        Показать параметры CORE если в COM выбран pico драйвер
+        """
+        self.ui.label_core_name.setVisible(state)
+        self.ui.combo_core_name.setVisible(state)
+        self.ui.button_scan_core.setVisible(state)
+
     def _settings(self) -> None:
         """
         Настройки
@@ -177,9 +195,7 @@ class ConnectDialog(QDialog):
         ports = QSerialPortInfo().availablePorts()
         com_port = None
         for port in ports:
-            if platform == "linux" or platform == "linux2":
-                com_port = "/dev/" + port.portName()
-            elif platform == "darwin":
+            if platform == "linux" or platform == "linux2" or platform == "darwin":
                 com_port = "/dev/" + port.portName()
             elif platform == "win32":
                 com_port = port.portName()
@@ -208,22 +224,7 @@ class ConnectDialog(QDialog):
         """
         Обновить список плат
         """
-        self.visa_drivers = ['ITC_1T1R_32x8_switched',
-                             'ITC_1T1R_32x8_probe_station',
-                             'ITC_probe_station']
-        board_list = ['offline',
-                      'memardboard_single',
-                      'memardboard_crossbar',
-                      'rp5_python',
-                      'rp5_c',
-                      'rp5_fpga_python',
-                      'rp5_fpga_c',
-                      'elbear_nano',
-                      'elbear_multimode_WR',
-                      'elbear_multimode_MVM',
-                      'rp5_rram_elbear_nano',
-                      'rp5_rram_python',
-                      'rp5_rram_c'] + self.visa_drivers
+        board_list = ['offline', *get_driver_list()]
         try:
             last_board = self.parent.man.ap_config["board"]["board_type"]
             if last_board:
@@ -249,19 +250,27 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
-        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
+        if combo_board_type == 'offline':
+            self.update_window_size()
+            return
+        if get_driver_attr(combo_board_type)['connect_args'] == 'com_port':
             self.hide_VISA_layout()
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText(self.lang_pack.get("status_1"))
-        elif combo_board_type in self.visa_drivers:
+            if get_driver_attr(combo_board_type)['core_scan']:
+                self.show_core_settings_layout(True)
+            else:
+                self.show_core_settings_layout(False)
+        elif get_driver_attr(combo_board_type)['connect_args'] == 'visa_adr':
             self.show_VISA_layout(combo_board_type)
             self.show_com_settings_layout(False)
             self.ui.label_status.setText(self.lang_pack.get("status_visa"))
         else:
             self.hide_VISA_layout()
             self.show_com_settings_layout(False)
+            self.show_core_settings_layout(False)
             self.ui.label_status.setText(self.lang_pack.get("status"))
         self.update_window_size()
 
@@ -302,8 +311,7 @@ class ConnectDialog(QDialog):
         status, _ = self.parent.man.use_chip(self.cb_serial)
         if status: # если в базе есть данные по чипу
             combo_board_type = self.ui.combo_board_type.currentText()
-            self.parent.man.board_type = combo_board_type
-            self.parent.man.init_menu()  # Initializing menu
+            self.parent.man.init_board(combo_board_type)  # Initializing board in manager
             if self.parent.man.cb_type != 'simulator':
                 # попытка подключения
                 if combo_board_type == 'offline':
@@ -313,7 +321,13 @@ class ConnectDialog(QDialog):
                     self.parent.ui.button_math.setEnabled(False)
                     self.accept_connect()
                 else:
-                    if combo_board_type in [ 'memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM']:
+                    if get_driver_attr(combo_board_type)['connect_args'] == 'com_port':
+                        if get_driver_attr(combo_board_type)['core_scan']:
+                            if self.core_scanned:
+                                connected_flag = self.parent.man.connect(com_port=self.com_port, addr=self.addr, pico=self.pico)
+                            else:
+                                self.ui.label_status.setText("Core не выбран")    
+                                return
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
                     elif combo_board_type in self.visa_drivers:
                         connected_flag = self.parent.man.connect(visa_addresses=[self.visa_combo[i].currentText().strip() for i in range(5)])
@@ -357,7 +371,27 @@ class ConnectDialog(QDialog):
         self.parent.number_cells = self.parent.man.col_num*self.parent.man.row_num
         self.parent.all_resistances = [[0 for _ in range(self.parent.man.col_num)] for _ in range(self.parent.man.row_num)]
         self.close()
-        
+
+    def core_scan(self):
+        """
+        Сканирование CORE
+        """
+        try:
+            from MemriCORE.Pico_PC.pico_client import PicoClient  # type: ignore
+            pico = PicoClient.over_serial(self.com_port, 115200)
+            addrs = pico.scan()
+            for addr in addrs:
+                self.ui.combo_core_name.addItem(
+                    f'0x{addr:02X}',
+                    addr
+                )
+            self.pico = pico
+            self.core_scanned = True
+        except ImportError:
+            print("Нет драйвера PicoClient")
+        except Exception as e:
+            print(f"Ошибка при инициализации CORE: {e}")
+            
     def show_VISA_layout(self, driver: str) -> None:
         """Show VISA ui depending on the driver"""
         try:

@@ -1,0 +1,39 @@
+{
+    "name": "example_for_cycle",
+    "mode": "algorithm",
+    "params": {
+        "wl": 0,
+        "bl": 0
+    },
+    "code": "\"\"\"\nAn example of the algorithm with 'for' cycle and ticket parameter changing\nПример реализации алгоритма с циклом 'for' и измененем параметров тикетов\n\nThe algorithm implements double sweep: primary sweep is done in the 'iv_curve' \nticket, secondary sweep is done via 'for' cycle.\nSecondary voltage sweep is from 1 to 2.5 volts, 5 points.\n\nАлгоритм реализует двойную развертку: первичная развертка по напряжению идет\nв тикете iv_curve, вторичная развертка по напряжению реализуется циклом for.\nВторичная развертка по граничному напряжению - от 1 до 2.5 вольт, 5 точек.\n\"\"\"\nimport numpy as np\n\n# Helper function that changes voltage in the ticket\n# Вспомогательная функция изменения напряжения в тикете\ndef change_ticket_voltage(ticket, voltage):\n    ticket['params']['stop_dir'] = voltage\n    ticket['params']['stop_rev'] = voltage\n    return ticket\n\n\n# Main algorithm function | Функция алгоритма\ndef algorithm():\n    # Creating secondary voltage array\n    # Создаем массив напряжений для вторичной развертки\n    v_array = np.linspace(1, 2.5, 5, dtype=float)\n    # Getting ticket as a dict | Получаем тикет как dict для редактирования\n    base_ticket = get_ticket_dict('iv-curve')\n    # Creating for cycle | Делаем цикл for\n    for voltage in v_array:\n        # Editing ticket | Редактируем тикет\n        ticket = change_ticket_voltage(base_ticket, voltage)\n        # Executing ticket | Выполняем тикет\n        send_ticket_dict(ticket)\n    ",
+    "tickets": {
+        "iv-curve": {
+            "name": "iv-curve",
+            "mode": "volt_sweep",
+            "params": {
+                "start_dir": 0.0,
+                "stop_dir": 1.7,
+                "step_dir": 0.05,
+                "start_rev": 0.0,
+                "stop_rev": 1.7,
+                "step_rev": 0.05,
+                "pulse_width_dir": 0.0001,
+                "pulse_width_rev": 0.0001,
+                "amount_dir": 1,
+                "amount_rev": 1,
+                "double_dir": true,
+                "double_rev": true,
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        }
+    },
+    "executed_tickets": []
+}

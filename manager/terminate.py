@@ -19,9 +19,12 @@ less: int res < value : <
 bigger: res > value : >
 """
 
+import statistics
+from collections import deque
+
 # pylint: disable=too-few-public-methods
 
-class Pass():
+class Pass:
     """
     Прерывание не требуется
     """
@@ -32,7 +35,7 @@ class Pass():
     def __call__(self, result: list) -> bool:
         return False
 
-class Equal():
+class Equal:
     """
     Проверка равности
     """
@@ -46,7 +49,7 @@ class Equal():
             flag = True
         return flag
 
-class EqualIn():
+class EqualIn:
     """
     Проверка равности в диапазоне
     """
@@ -61,7 +64,7 @@ class EqualIn():
             flag = True
         return flag
 
-class EqualOut():
+class EqualOut:
     """
     Проверка равности за диапазоном
     """
@@ -76,7 +79,7 @@ class EqualOut():
             flag = True
         return flag
 
-class Less():
+class Less:
     """
     Проверка меньше
     """
@@ -90,7 +93,7 @@ class Less():
             flag = True
         return flag
 
-class Bigger():
+class Bigger:
     """
     Проверка больше
     """
@@ -104,11 +107,31 @@ class Bigger():
             flag = True
         return flag
 
+class EqualOutAccum:
+    """
+    Проверка равности за диапазоном с накоплением
+    """
+
+    accum = deque(maxlen=10)
+
+    def __init__(self, values: list) -> None:
+        self.minv = values[0]
+        self.maxv = values[1]
+
+    def __call__(self, result: list) -> bool:
+        flag = False
+        self.accum.append(result[0])
+        mean_value = statistics.mean(self.accum)
+        if mean_value <= self.minv or mean_value >= self.maxv:
+            flag = True
+        return flag
+
 # привязка ярлыков к терминаторам
 terminators = {'pass': Pass,
                '==': Equal,
+               '<': Less,
+               '>': Bigger,
                '><': EqualIn,
                '<>': EqualOut,
-               '<': Less,
-               '>': Bigger
+               '<>a': EqualOutAccum
                }

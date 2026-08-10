@@ -14,7 +14,7 @@ https://doi.org/10.3390/math11051268
 import math as m
 import numpy as np
 
-class MemristorModel():
+class MemristorModel:
     '''
     Модель мемристивного устройства
     '''
@@ -76,10 +76,8 @@ class MemristorModel():
         if self.noise_flag:
             if (self.min_w_lock_noise < self.state_variable < self.max_w_lock_noise) and (not (self.voltage_react_set < v_inp < self.voltage_react_reset)):
                 self.state_variable += np.random.normal(loc=0, scale=abs(self.state_variable*self.noise_rate))
-            if self.state_variable > 1:
-                self.state_variable = 1
-            if self.state_variable < 0:
-                self.state_variable = 0
+            self.state_variable = min(self.state_variable, 1)
+            self.state_variable = max(self.state_variable, 0)
             if self.state_variable <= self.min_w_lock_noise and (not (self.voltage_react_set < v_inp < self.voltage_react_reset)):
                 self.state_variable += abs(np.random.normal(loc=0.01, scale=abs(self.noise_rate)))
         # считаем ток

@@ -1,20 +1,27 @@
 """
 Диалоговое окно сигнала
 """
-
+# TODO integrate current compliance
+# TODO add shortcut for numpad enter
 # pylint: disable=E0611,W0401,W0611,R0903,R0915,R0912,C0301,C0103
 
 import os
 import json
-from functools import partial
 from PyQt5 import uic
-from PyQt5.QtWidgets import QDialog
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QDialog, QComboBox, QSpinBox, QShortcut
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QKeySequence
 
-from manager.service.plots import plot_with_save
-from manager.service import v2d, r2a, d2v, a2r
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+from manager.service.plots import plot_for_signal_graph
 from manager.service.global_settings import TICKET_PATH
-from gui.src import show_warning_messagebox, show_choose_window
+from manager.terminate import terminators
+from manager.menu import Menu
+from gui.src import show_warning_messagebox, show_choose_window, convert_ticket_to_reduced_format
+from gui.widgets.SignalParametersConfig import SignalParameters
+from gui.widgets.MplGraphicsView import MplGraphicsView
+from gui.widgets.ScientificQLineEdit import ScientificQLineEdit
 
 class SignalMod(QDialog):
     """
@@ -29,7 +36,6 @@ class SignalMod(QDialog):
     """
 
     GUI_PATH: str = os.path.join(os.getcwd(),"gui","uies","signal.ui")
-    IMG_PATH: str = "ticket.png" # временный рисунок для тикета
     total_task_count: int # счетчик тасков в тикете
     one_value_terminators: list # терминаторы с одним значением
     base_json: dict # базовый тикет
@@ -43,15 +49,36 @@ class SignalMod(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        # Linting widget types
+        self.graph: MplGraphicsView
+        self.terminate_left: ScientificQLineEdit
+        self.terminate_right: ScientificQLineEdit
+        self.signal_mode: QComboBox
+        self.direction_combobox: QComboBox
+        self.repeat_count: QSpinBox
+        self.menu: Menu = self.parent.man.menu
+        # Adding widgets
+        self.signal_param = SignalParameters(self)
+        self.horizontalLayout_2.addWidget(self.signal_param)
+        self._init_plot()
+        # Filling terminator values
+        self.terminator_combobox.addItems(list(terminators.keys()))
+        self.terminator_combobox.activated.connect(self._choose_terminator)
+        self.terminate_left.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_left, text))
+        self.terminate_right.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_right, text))
+        # Filling signal modes
+        self.signal_mode.addItems(list(self.menu.alias_to_mode().keys()))
+        self.signal_mode.currentTextChanged.connect(self._change_signal_mode)
+        # UI stuff
         self.change_language()
         self.setModal(True)
         # обработчики кнопок
         self.ui.button_graph.clicked.connect(self._plot_ticket)
         self.ui.button_save.clicked.connect(self._save_json)
         self.ui.button_cancel.clicked.connect(self.close)
-        # другие события
-        self.ui.terminator_combobox.activated.connect(self._choose_terminator)
-        self.ui.menu_combobox.activated.connect(self._choose_time_setting)
+        # Shortcut for plot
+        shortcut = QShortcut(QKeySequence(Qt.Key_Return), self)
+        shortcut.activated.connect(self._plot_ticket)
         # начальные значения
         self.set_up_init_values()
         # режим
@@ -76,6 +103,10 @@ class SignalMod(QDialog):
             self.ui.terminator_combobox.setEnabled(False)
             self.ui.json_name.setEnabled(False)
         self._load_json() # загружаем blank или для редактирования
+        self.groupBox.setVisible(False)
+        self.groupBox_2.setVisible(False)
+        # Centering QSplitter after the window is rendered
+        QTimer.singleShot(0, self.center_splitter)
 
     def change_language(self):
         """
@@ -84,43 +115,35 @@ class SignalMod(QDialog):
         ok, self.lang_pack = self.parent.read_language_json("signal")
         if ok:
             self.ui.setWindowTitle(self.lang_pack.get("name"))
-            self.ui.groupBox.setTitle(self.lang_pack.get("voltage"))
-            self.ui.groupBox_2.setTitle(self.lang_pack.get("time"))
-            self.ui.groupBox_3.setTitle(self.lang_pack.get("send_signal"))
-            self.ui.groupBox_4.setTitle(self.lang_pack.get("stop_condition"))
-            self.ui.groupBox_5.setTitle(self.lang_pack.get("view"))
-            self.ui.label_3.setText(self.lang_pack.get("start"))
-            self.ui.label_4.setText(self.lang_pack.get("stop"))
-            self.ui.label_5.setText(self.lang_pack.get("step"))
-            self.ui.label_6.setText(self.lang_pack.get("amount"))
-            self.ui.label_7.setText(self.lang_pack.get("dec"))
-            self.ui.label_18.setText(self.lang_pack.get("compliance"))
-            self.ui.label_10.setText(self.lang_pack.get("forward"))
-            self.ui.label_11.setText(self.lang_pack.get("backward"))
-            self.ui.label_8.setText(self.lang_pack.get("ms"))
-            self.ui.label_9.setText(self.lang_pack.get("mcs"))
-            self.ui.label_trig_interval.setText(self.lang_pack.get("trigger_interval"))
-            self.ui.label_2.setText(self.lang_pack.get("sending_order"))
-            self.ui.label_13.setText(self.lang_pack.get("times"))
-            self.ui.label_14.setText(self.lang_pack.get("repeat"))
-            self.ui.terminator_measure_combobox.setItemText(0, self.lang_pack.get("ohm"))
+            self.ui.groupBox_signal_settings.setTitle(self.lang_pack.get("signal_settings"))
+            self.ui.groupBox_sending_settings.setTitle(self.lang_pack.get("sending_settings"))
+            self.ui.groupBox_terminate.setTitle(self.lang_pack.get("stop_condition"))
+            self.ui.groupBox_graph.setTitle(self.lang_pack.get("graph"))
+            self.ui.label_signal_mode.setText(self.lang_pack.get("signal_mode"))
+            self.ui.label_sending_order.setText(self.lang_pack.get("sending_order"))
+            self.ui.label_repeat_times.setText(self.lang_pack.get("times"))
+            self.ui.label_repeat.setText(self.lang_pack.get("repeat"))
             self.ui.direction_combobox.setItemText(0, self.lang_pack.get("forth-back"))
             self.ui.direction_combobox.setItemText(1, self.lang_pack.get("back-forth"))
-            self.ui.shutdown_value_label.setText(self.lang_pack.get("value"))
-            self.ui.shutdown_min_label.setText(self.lang_pack.get("min"))
-            self.ui.label_12.setText(self.lang_pack.get("condition"))
-            self.ui.label_15.setText(self.lang_pack.get("value"))
-            self.ui.shutdown_max_label.setText(self.lang_pack.get("max"))
-            self.ui.shutdown_enc_label.setText(self.lang_pack.get("accumulator"))
-            self.ui.terminator_measure_combobox_label.setText(self.lang_pack.get("measure"))
-            self.ui.label_17.setText(self.lang_pack.get("current"))
-            self.ui.label_mode.setText(self.lang_pack.get("mode"))
-            self.ui.button_graph.setText(self.lang_pack.get("graphic"))
-            self.ui.label_16.setText(self.lang_pack.get("board_req"))
-            self.ui.label.setText(self.lang_pack.get("exp_name"))
+            self.ui.button_graph.setText(self.lang_pack.get("plot"))
+            self.ui.label_board_req.setText(self.lang_pack.get("board_req"))
+            self.ui.label_exp_name.setText(self.lang_pack.get("exp_name"))
             self.ui.button_save.setText(self.lang_pack.get("save"))
             self.ui.button_cancel.setText(self.lang_pack.get("cancel"))
-            self.ui.label_png.setPixmap(QPixmap(os.path.join(os.getcwd(),"gui","uies",self.lang_pack.get("hold_path"))))
+            self.ui.label_terminate_type.setText(self.lang_pack.get("condition_type"))
+            self._choose_terminator()
+            self.terminate_left.set_unit(self.lang_pack.get('ohm'))
+            self.terminate_right.set_unit(self.lang_pack.get('ohm'))
+            # Scientific widgets
+            ok, scientific_lang_pack = self.parent.read_language_json("ScientificQLineEdit")
+            if ok:
+                self.terminate_left.change_prefix_dict(scientific_lang_pack)
+                self.terminate_right.change_prefix_dict(scientific_lang_pack)
+            # Parameters widget
+            ok, params_lang_pack = self.parent.read_language_json("signal_parameters")
+            if ok:
+                self.signal_param.change_language(params_lang_pack, scientific_lang_pack)
+                self._change_signal_mode()  # Update signal mode ui
 
     def set_up_init_values(self) -> None:
         """
@@ -130,52 +153,63 @@ class SignalMod(QDialog):
         self.one_value_terminators = ['==', '>', '<']
         self.base_json = {}
         self.file_saved = False
-        self.ui.menu_combobox.clear()
-        self.ui.menu_combobox.addItems(self.parent.man.menu.keys())
-        # Set units for scientific lines
-        self.scientific_widgets = {  # {widget: unit}
-            self.ui.forward_start: 'V',
-            self.ui.forward_step: 'V',
-            self.ui.forward_stop: 'V',
-            self.ui.backward_start: 'V',
-            self.ui.backward_step: 'V',
-            self.ui.backward_stop: 'V',
-            self.ui.forward_limiter: 'A',
-            self.ui.backward_limiter: 'A',
-            self.ui.forward_trig_interval: 's',
-            self.ui.backward_trig_interval: 's'
-        }
-        def warn(widget, text):  # Warning for ScientificQLineEdit
-            if not widget.isModified(): # Avoiding Qt bug where warning is shown twice
-                return
-            widget.setModified(False)
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"')
-        for widget, unit in self.scientific_widgets.items():
-            widget.set_unit(unit)
-            widget.bad_value.connect(partial(warn, widget))
-        # Modes for which setting trigger interval is needed
-        self.trigger_interval_modes = ['smu_pulsed_retention', 'smu_endurance', 'smu_pot_dep']
-
+            
+    def warn_scientific_widget(self, widget, text):
+        """Warn if scientific widget has a bad value"""
+        if not widget.isModified(): # Avoiding Qt bug where warning is shown twice
+            return
+        widget.setModified(False)
+        show_warning_messagebox(parent=self, message=self.lang_pack.get("symbol_incorrect") + f'\n"{text}"')
+            
+    def _init_plot(self) -> None:
+        """
+        Initialize the matplotlib widget
+        """
+        self.toolbar = NavigationToolbar(self.graph.canvas, self)
+        self.groupBox_graph.layout().addWidget(self.toolbar)
+        
+    def _change_signal_mode(self) -> None:
+        """
+        Change ui based on the signal mode
+        """
+        signal_mode = self.menu.alias_to_mode()[self.signal_mode.currentText()]
+        self.signal_param.set_mode(signal_mode)
+        
     def _plot_ticket(self) -> None:
         """
         Просмотр json
         """
+        self.ui.button_graph.setFocus()
+        plot_type = self.ui.json_plot_type.currentText()
+        plot_limits = {  # Maximum number of pulses (tasks) on the plot
+            'stem': 10000,
+            'plot': 1000
+        }
         if self._make_json(): # если json сделан
             json_for_plot = self.base_json.copy()
-            self.total_task_count = plot_with_save(self.parent.man,
-                                                   json_for_plot,
-                                                   self.ui.json_plot_type.currentText(),
-                                                   save_path=self.IMG_PATH)
-            self._show_signal_png()
+            # Plotting
+            self.total_task_count, limit_hit = plot_for_signal_graph(
+                manager=self.parent.man,
+                ticket=json_for_plot,
+                plot_type=plot_type,
+                ax=self.graph.ax,
+                plot_limits=plot_limits
+            )
+            # Labels
+            self.graph.ax.set_ylabel(self.lang_pack.get("plot_voltage"))
+            if plot_type == 'stem':
+                self.graph.ax.set_xlabel(self.lang_pack.get("plot_pulse_count"))
+            else:
+                self.graph.ax.set_xlabel(self.lang_pack.get("plot_time"))
+            self.graph.canvas.draw_idle()
+            # Label with plot limit
+            if limit_hit:
+                self.ui.groupBox_graph.setTitle(self.lang_pack.get("graph") + \
+                                                self.lang_pack.get("plot_limit_reached") + str(plot_limits[plot_type]) + ')')
+            else:
+                self.ui.groupBox_graph.setTitle(self.lang_pack.get("graph"))
             # указываем сколько будет задач
             self.ui.label_count_tasks.setText(str(self.total_task_count))
-
-    def _show_signal_png(self) -> None:
-        """
-        Отобразить png
-        """
-        pixmap = QPixmap(self.IMG_PATH)
-        self.ui.label_png.setPixmap(pixmap)
 
     def _make_json(self) -> bool:
         """
@@ -186,66 +220,18 @@ class SignalMod(QDialog):
         """
         status = False
         try:
-            # Check if data in scientific lines is correct
-            for widget in self.scientific_widgets:
-                if widget.get_value() is None:
-                    raise ValueError
-                
-            # Режим работы (manager/menu)
-            self.base_json['mode'] = self.ui.menu_combobox.currentText()
-
-            # dir inc
-            self.base_json['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
-            self.base_json['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
-            self.base_json['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
-            self.base_json['params']['t_dir_msec_inc'] = int(self.ui.forward_ms.text())
-            self.base_json['params']['t_dir_usec_inc'] = int(self.ui.forward_mcs.text())
-            self.base_json['params']['dir_inc_countr'] = int(self.ui.forward_count.value())
-            self.base_json['params']['dir_cc'] = self.ui.forward_limiter.get_value()
-            self.base_json['params']['dir_interval'] = self.ui.forward_trig_interval.get_value()
-            # чекбокс dir dec
-            if self.ui.forward_dec.isChecked():
-                self.base_json['params']['v_dir_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_stop.get_value())
-                self.base_json['params']['v_dir_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_start.get_value())
-                self.base_json['params']['v_dir_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.forward_step.get_value())
-                self.base_json['params']['t_dir_msec_dec'] = int(self.ui.forward_ms.text())
-                self.base_json['params']['t_dir_usec_dec'] = int(self.ui.forward_mcs.text())
-                self.base_json['params']['dir_dec_countr'] = int(self.ui.forward_count.value())
-            else:
-                self.base_json['params']['v_dir_strt_dec'] = 0
-                self.base_json['params']['v_dir_stop_dec'] = 0
-                self.base_json['params']['v_dir_step_dec'] = 0
-                self.base_json['params']['t_dir_msec_dec'] = 0
-                self.base_json['params']['t_dir_usec_dec'] = 0
-                self.base_json['params']['dir_dec_countr'] = 0
-            # rev inc
-            self.base_json['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
-            self.base_json['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
-            self.base_json['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
-            self.base_json['params']['t_rev_msec_inc'] = int(self.ui.backward_ms.text())
-            self.base_json['params']['t_rev_usec_inc'] = int(self.ui.backward_mcs.text())
-            self.base_json['params']['rev_inc_countr'] = int(self.ui.backward_count.value())
-            self.base_json['params']['rev_cc'] = self.ui.backward_limiter.get_value()
-            self.base_json['params']['rev_interval'] = self.ui.backward_trig_interval.get_value()
-            # чекбокс rev dec
-            if self.ui.backward_dec.isChecked():
-                self.base_json['params']['v_rev_strt_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_stop.get_value())
-                self.base_json['params']['v_rev_stop_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_start.get_value())
-                self.base_json['params']['v_rev_step_dec'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ui.backward_step.get_value())
-                self.base_json['params']['t_rev_msec_dec'] = int(self.ui.backward_ms.text())
-                self.base_json['params']['t_rev_usec_dec'] = int(self.ui.backward_mcs.text())
-                self.base_json['params']['rev_dec_countr'] = int(self.ui.backward_count.value())
-            else:
-                self.base_json['params']['v_rev_strt_dec'] = 0
-                self.base_json['params']['v_rev_stop_dec'] = 0
-                self.base_json['params']['v_rev_step_dec'] = 0
-                self.base_json['params']['t_rev_msec_dec'] = 0
-                self.base_json['params']['t_rev_usec_dec'] = 0
-                self.base_json['params']['rev_dec_countr'] = 0
-
-            self.base_json['params']['reverse'] = int(self.ui.direction_combobox.currentIndex())
-            self.base_json['params']['count'] = int(self.ui.repeat_count.text())
+            # Signal mode
+            self.base_json['mode'] = self.menu.alias_to_mode()[self.signal_mode.currentText()]
+            
+            # Filling signal parameters
+            self.base_json = self.signal_param.fill_params_to_ticket(self.base_json)
+            
+            # Other parameters
+            self.base_json['params']['count'] = self.repeat_count.value()
+            self.base_json['params']['reverse'] = self.direction_combobox.currentIndex()
             self.base_json['params']['id'] = 0
+            self.base_json['params']['wl'] = 0
+            self.base_json['params']['bl'] = 0
 
             # терминаторы
             term = self.ui.terminator_combobox.currentText()
@@ -253,29 +239,16 @@ class SignalMod(QDialog):
             if term == 'pass':
                 self.base_json['terminate']['value'] = 0
             elif term in self.one_value_terminators:
-                self.base_json['terminate']['value'] = r2a(self.parent.man.gain,
-                                                           self.parent.man.res_load,
-                                                           self.parent.man.vol_read,
-                                                           self.parent.man.adc_bit,
-                                                           self.parent.man.vol_ref_adc,
-                                                           self.parent.man.res_switches,
-                                                           int(self.ui.shutdown_value.text()))
+                if self.terminate_left.get_value() is None:
+                    raise ValueError
+                self.base_json['terminate']['value'] = self.terminate_left.get_value()
             else:
+                if self.terminate_left.get_value() is None:
+                    raise ValueError
+                if self.terminate_right.get_value() is None:
+                    raise ValueError
                 # сортируем
-                term_values = [r2a(self.parent.man.gain,
-                                   self.parent.man.res_load,
-                                   self.parent.man.vol_read,
-                                   self.parent.man.adc_bit,
-                                   self.parent.man.vol_ref_adc,
-                                   self.parent.man.res_switches,
-                                   int(self.ui.shutdown_min.text())),
-                               r2a(self.parent.man.gain,
-                                   self.parent.man.res_load,
-                                   self.parent.man.vol_read,
-                                   self.parent.man.adc_bit,
-                                   self.parent.man.vol_ref_adc,
-                                   self.parent.man.res_switches,
-                                   int(self.ui.shutdown_max.text()))]
+                term_values = [self.terminate_left.get_value(), self.terminate_right.get_value()]
                 term_values.sort()
                 self.base_json['terminate']['value'] = term_values
 
@@ -296,28 +269,26 @@ class SignalMod(QDialog):
             elif self.mode == "edit" or self.mode == "edit_for_programming":
                 answer = show_choose_window(self, self.lang_pack.get("save_changes"))
             if answer:
+                if self.mode == "create":
+                    fname = self.ui.json_name.text().strip()
+                    if fname == '':
+                        show_warning_messagebox(parent=self, message=self.lang_pack.get("fill_in_filename"))
+                        return
+                    if fname in self.parent.protected_modes or fname in self.parent.exp_settings_dialog.ticket_files:
+                        show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_exists"))
+                        return
+                    # открываем файл и пишем
+                    self.base_json["name"] = fname
+                elif self.mode in ["edit", "edit_for_programming"]:
+                    fname = 'temp'
                 try:
-                    if self.mode == "create":
-                        fname = self.ui.json_name.text()
-                        # имя из одних пробелов
-                        # todo: сменить логику на более подробную
-                        if fname.replace(" ", "") == '':
-                            raise ValueError
-                        if fname in self.parent.protected_modes:
-                            raise ValueError
-                        if fname in self.parent.exp_settings_dialog.ticket_files:
-                            raise ValueError
-                        # открываем файл и пишем
-                        self.base_json["name"] = fname
-                    elif self.mode == "edit" or "edit_for_programming":
-                        fname = 'temp'
                     with open(os.path.join(TICKET_PATH,
                                         fname+'.json'),
                                         'w', encoding='utf-8') as outfile:
                         json.dump(self.base_json, outfile)
                     self.file_saved = True
-                except ValueError:
-                    show_warning_messagebox(parent=self, message=self.lang_pack.get("file_name_wrong"))
+                except Exception as e:
+                    show_warning_messagebox(parent=self, message=self.lang_pack.get("could_not_save") + f'{type(e).__name__}: {e}')
             if self.file_saved:
                 self.close()
 
@@ -330,142 +301,103 @@ class SignalMod(QDialog):
         self.ui.json_name.setText(file_name)
         if self.mode == "edit":
             self.json_name.setEnabled(False)
-
-        self.ui.menu_combobox.setCurrentText(self.base_json['mode'])
+            
+        # Converting to new format for backward compatibility
+        if 'v_dir_strt_inc' in self.base_json['params']:
+            try:
+                self.base_json = convert_ticket_to_reduced_format(manager=self.parent.man, ticket=self.base_json)
+            except Exception as e:
+                show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + f'\n{type(e).__name__}: {e}')
+                self.close()
+                return
+            
+        # Signal mode
+        signal_mode = self.menu.mode_to_alias()[self.base_json['mode']]
+        self.signal_mode.setCurrentText(signal_mode)
+        self._change_signal_mode()
         
-        self.ui.forward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_strt_inc']))
-        self.ui.forward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_stop_inc']))
-        self.ui.forward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_dir_step_inc']))
-        self.ui.forward_ms.setText(str(self.base_json['params']['t_dir_msec_inc']))
-        self.ui.forward_mcs.setText(str(self.base_json['params']['t_dir_usec_inc']))
-        self.ui.forward_count.setValue(self.base_json['params']['dir_inc_countr'])
-        self.ui.forward_limiter.set_value(self.base_json['params']['dir_cc'])
+        # Params
+        self.signal_param.load_ticket_to_ui(self.base_json)
+        self.direction_combobox.setCurrentIndex(self.base_json['params']['reverse'])
+        self.repeat_count.setValue(self.base_json['params']['count'])
 
-        if self.base_json['params']['dir_dec_countr'] != 0:
-            self.ui.forward_dec.setCheckState(2)
-        else:
-            self.ui.forward_dec.setCheckState(0)
-
-        self.ui.backward_start.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_strt_inc']))
-        self.ui.backward_stop.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_stop_inc']))
-        self.ui.backward_step.set_value(d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.base_json['params']['v_rev_step_inc']))
-        self.ui.backward_ms.setText(str(self.base_json['params']['t_rev_msec_inc']))
-        self.ui.backward_mcs.setText(str(self.base_json['params']['t_rev_usec_inc']))
-        self.ui.backward_count.setValue(self.base_json['params']['rev_inc_countr'])
-        self.ui.backward_limiter.set_value(self.base_json['params']['rev_cc'])
-
-        if self.base_json['params']['rev_dec_countr'] != 0:
-            self.ui.backward_dec.setCheckState(2)
-        else:
-            self.ui.backward_dec.setCheckState(0)
-
-        self.ui.direction_combobox.setCurrentIndex(self.base_json['params']['reverse'])
-        
-        self._choose_time_setting()
-        if self.base_json['mode'] in self.trigger_interval_modes:
-            if 'dir_interval' in self.base_json['params']:
-                self.ui.forward_trig_interval.set_value(self.base_json['params']['dir_interval'])
-            if 'rev_interval' in self.base_json['params']:
-                self.ui.backward_trig_interval.set_value(self.base_json['params']['rev_interval'])
-
-        # терминаторы
+        # Terminators
         self.ui.terminator_combobox.setCurrentText(self.base_json['terminate']['type'])
         self._choose_terminator()
         if self.base_json['terminate']['type'] in self.one_value_terminators:
-            self.ui.shutdown_value.setText(str(int(a2r(self.parent.man.gain,
-                                                       self.parent.man.res_load,
-                                                       self.parent.man.vol_read,
-                                                       self.parent.man.adc_bit,
-                                                       self.parent.man.vol_ref_adc,
-                                                       self.parent.man.res_switches,
-                                                       self.base_json['terminate']['value']))))
+            self.terminate_left.set_value(self.base_json['terminate']['value'])
         elif self.base_json['terminate']['type'] != 'pass':
-            term_values = [int(a2r(self.parent.man.gain,
-                                   self.parent.man.res_load,
-                                   self.parent.man.vol_read,
-                                   self.parent.man.adc_bit,
-                                   self.parent.man.vol_ref_adc,
-                                   self.parent.man.res_switches,
-                                   self.base_json['terminate']['value'][0])), int(a2r(self.parent.man.gain,
-                                                                                      self.parent.man.res_load,
-                                                                                      self.parent.man.vol_read,
-                                                                                      self.parent.man.adc_bit,
-                                                                                      self.parent.man.vol_ref_adc,
-                                                                                      self.parent.man.res_switches,
-                                                                                      self.base_json['terminate']['value'][1]))]
+            term_values = [self.base_json['terminate']['value'][0], self.base_json['terminate']['value'][1]]
             term_values.sort()
-            self.ui.shutdown_min.setText(str(term_values[0]))
-            self.ui.shutdown_max.setText(str(term_values[1]))
-
-        self.ui.repeat_count.setValue(self.base_json['params']['count'])
+            self.terminate_left.set_value(term_values[0])
+            self.terminate_right.set_value(term_values[1])
 
     def _choose_terminator(self) -> None:
         """
-        Изменение отображения терминаора
+        Изменение отображения терминатора
         """
         term = self.ui.terminator_combobox.currentText()
-        if term == 'pass':
-            self._hide_list_terminate()
-            self._hide_int_terminate()
-        elif term in self.one_value_terminators:
-            self._show_int_terminate()
-            self._hide_list_terminate()
-        else:
-            self._hide_int_terminate()
-            self._show_list_terminate()
-
-    def _hide_list_terminate(self) -> None:
-        """
-        Скрыть виджеты
-        """
-        self.ui.shutdown_max.hide()
-        self.ui.shutdown_max_label.hide()
-        self.ui.shutdown_enc.hide()
-        self.ui.shutdown_enc_label.hide()
-        self.ui.shutdown_min.hide()
-        self.ui.shutdown_min_label.hide()
-
-    def _show_list_terminate(self) -> None:
-        """
-        Показать виджеты
-        """
-        self.ui.shutdown_max.show()
-        self.ui.shutdown_max_label.show()
-        self.ui.shutdown_min.show()
-        self.ui.shutdown_min_label.show()
-
-    def _hide_int_terminate(self) -> None:
-        """
-        Скрыть виджеты
-        """
-        self.ui.shutdown_value.hide()
-        self.ui.shutdown_value_label.hide()
-
-    def _show_int_terminate(self) -> None:
-        """
-        Показать виджеты
-        """
-        self.ui.shutdown_value.show()
-        self.ui.shutdown_value_label.show()
-    
-    def _choose_time_setting(self) -> None:
-        """Choose time settings area: show or hide trigger interval"""
-        if self.menu_combobox.currentText() in self.trigger_interval_modes:
-            self._show_trig_interval()
-        else:
-            self._hide_trig_interval()
+        if term == 'pass':  # Hiding all widgets
+            self.ui.label_terminate_left.hide()
+            self.ui.label_terminate_right.hide()
+            self.terminate_left.hide()
+            self.terminate_right.hide()
+        elif term == '==':
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R=="))
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("value"))
+            self.ui.label_terminate_left.show()
+            self.terminate_left.show()
+            self.ui.label_terminate_right.hide()
+            self.terminate_right.hide()
+        elif term == '>':
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R>"))
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("value"))
+            self.ui.label_terminate_left.show()
+            self.terminate_left.show()
+            self.ui.label_terminate_right.hide()
+            self.terminate_right.hide()
+        elif term == '<':
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R<"))
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("value"))
+            self.ui.label_terminate_left.show()
+            self.terminate_left.show()
+            self.ui.label_terminate_right.hide()
+            self.terminate_right.hide()
+        elif term == '><':
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("min"))
+            self.terminate_right.setPlaceholderText(self.lang_pack.get("max"))
+            self.ui.label_terminate_left.hide()
+            self.terminate_left.show()
+            self.ui.label_terminate_right.setText(self.lang_pack.get("R><"))
+            self.ui.label_terminate_right.show()
+            self.terminate_right.show()
+        elif term == '<>':
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("min"))
+            self.terminate_right.setPlaceholderText(self.lang_pack.get("max"))
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R<"))
+            self.ui.label_terminate_left.show()
+            self.terminate_left.show()
+            self.ui.label_terminate_right.setText(self.lang_pack.get("R>+"))
+            self.ui.label_terminate_right.show()
+            self.terminate_right.show()
+        elif term == '<>a':
+            self.terminate_left.setPlaceholderText(self.lang_pack.get("min"))
+            self.terminate_right.setPlaceholderText(self.lang_pack.get("max"))
+            self.ui.label_terminate_left.setText(self.lang_pack.get("R<a"))
+            self.ui.label_terminate_left.show()
+            self.terminate_left.show()
+            self.ui.label_terminate_right.setText(self.lang_pack.get("R>a"))
+            self.ui.label_terminate_right.show()
+            self.terminate_right.show()
         
-    def _show_trig_interval(self) -> None:
-        """Show widgets for setting trigger interval"""
-        self.ui.label_trig_interval.show()
-        self.ui.forward_trig_interval.show()
-        self.ui.backward_trig_interval.show()
-        
-    def _hide_trig_interval(self) -> None:
-        """Hide widgets for setting trigger interval"""
-        self.ui.label_trig_interval.hide()
-        self.ui.forward_trig_interval.hide()
-        self.ui.backward_trig_interval.hide()
+    def center_splitter(self) -> None:
+        """
+        Center the QSplitter widget
+        """
+        sizes = self.splitter.sizes()
+        s1 = int(sum(sizes) / 2)
+        s2 = sum(sizes) - s1
+        self.splitter.setSizes([s1, s2])
 
     def closeEvent(self, event):
         """
@@ -484,6 +416,3 @@ class SignalMod(QDialog):
         else: # событие вызвала кнопка отмена
             self.set_up_init_values()
             event.accept()
-        # удаление ticket.png при закрытии окна
-        if os.path.isfile(self.IMG_PATH):
-            os.remove(self.IMG_PATH)

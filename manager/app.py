@@ -11,12 +11,13 @@ from configparser import ConfigParser
 from logging import Logger
 from io import StringIO
 from typing import Union
+from manager.menu import Menu
 from manager.model.db import DBOperate
 from manager.service.templates import TEMPLATE_INI
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
 
-class Application():
+class Application:
     """
     Application
     """
@@ -34,6 +35,7 @@ class Application():
     res_switches: float # сопротивление переключателей
     gain: int # усиление
     sum_gain: int # сопротивление ОС
+    menu: Menu # меню режимов
     board_type: str # тип платы
     connected_port: str # com порт
     db: DBOperate
@@ -42,6 +44,7 @@ class Application():
     writable_cells: str
     language: str
     lock_board_type: bool
+    database_mode: str
     new_config_keys: Union[None, list] = None
 
     def __init__(self) -> None:
@@ -78,11 +81,8 @@ class Application():
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки
+        self.menu = Menu()
         self.db = DBOperate(parent=self)
-        status_db_connect = self.db.db_connect('app.__init__()')
-        if not status_db_connect:
-            assert 0 # нет подключения к БД
-        self.db.db_disconnect('app.__init__()')
 
     def read_settings(self) -> None:
         """
@@ -94,7 +94,7 @@ class Application():
         # для отдельных настроек создаем алиасы
         self.connected_port = self.ap_config['connector']['com_port']
         self.board_type = self.ap_config['board']['board_type']
-        self.backup = self.ap_config['backup']['backup_path']
+        self.backup = self.ap_config['database']['backup_path']
         self.dac_bit = int(self.ap_config['board']['dac_bit'])
         self.vol_ref_dac = float(self.ap_config['board']['vol_ref_dac'])
         self.res_load = int(self.ap_config['board']['res_load'])
@@ -107,6 +107,7 @@ class Application():
         self.writable_cells = self.ap_config['gui']['writable_cells']
         self.language = self.ap_config['gui']['language']
         self.lock_board_type = eval(self.ap_config['gui']['lock_board_type'])
+        self.database_mode = self.ap_config['database']['database_mode']
         # TODO remove
         self.apply_csv_path = self.ap_config['gui']['apply_csv_path']
         self.apply_save_csv = eval(self.ap_config['gui']['apply_save_csv'])
@@ -140,7 +141,7 @@ class Application():
         if "board_type" in kwargs:
             self.ap_config['board']['board_type'] = kwargs["board_type"]
         if "backup" in kwargs:
-            self.ap_config['backup']['backup_path'] = kwargs["backup"]
+            self.ap_config['database']['backup_path'] = kwargs["backup"]
         if "writable_cells" in kwargs:
             self.ap_config['gui']['writable_cells'] = kwargs["writable_cells"]
         if "language" in kwargs:
@@ -159,6 +160,8 @@ class Application():
             self.ap_config['logging']['app_log_rewrite_on_start'] = kwargs['app_log_rewrite_on_start']
         if 'db_log_rewrite_on_start' in kwargs:
             self.ap_config['logging']['database_log_rewrite_on_start'] = kwargs['db_log_rewrite_on_start']
+        if "database_mode" in kwargs:
+            self.ap_config['database']['database_mode'] = kwargs["database_mode"]
         if 'visa_addresses' in kwargs:
             for i in range(5):
                 self.ap_config['connector'][f'visa_address_{i}'] = kwargs['visa_addresses'][i] 
@@ -216,6 +219,7 @@ class Application():
         meta_info['db_logging_level'] = self.ap_config['logging']['database_logging_level'].strip().upper()
         meta_info['app_log_rewrite_on_start'] = self.ap_config['logging']['app_log_rewrite_on_start']
         meta_info['db_log_rewrite_on_start'] = self.ap_config['logging']['database_log_rewrite_on_start']
+        meta_info['database_mode'] = self.database_mode
         return deepcopy(meta_info)
     
     def new_log_path(self, log_path: str) -> str:
@@ -229,8 +233,7 @@ class Application():
                 name_spl = name.rsplit('.', 2)  # ['app', '2', 'log'] or ['app', 'log']
                 if len(name_spl) == 3:
                     try:
-                        if int(name_spl[1]) > last_name:
-                            last_name = int(name_spl[1])
+                        last_name = max(last_name, int(name_spl[1]))
                     except Exception:
                         pass
         return os.path.join(os.path.dirname(log_path), f'{keyword}.{last_name+1}.log')

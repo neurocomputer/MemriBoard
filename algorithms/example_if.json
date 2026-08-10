@@ -1,0 +1,85 @@
+{
+    "name": "example_if",
+    "mode": "algorithm",
+    "params": {
+        "wl": 0,
+        "bl": 0
+    },
+    "code": "\"\"\" \nAn example of a branching algorithm\nПример реализации алгоритма с ветвлением\n\nAlgorithm uses experiments as .json files, you need to export them\nto some folder via 'Ticket export' button and specify this folder in\n'send_experiment' function via 'folder_path' argument. If the experiments\nare in the standard 'tickets' folder, the argument may be omitted.\n\nАлгоритм ссылается на эксперименты в виде .json файлов, их нужно\nэкспортировать в какую-нибудь папку при помощи кнопки 'Экспорт тикетов'\nи указать в функции 'send_experiment' аргументом 'folder_path'. Если \nэкспортировать в стандартную папку 'tickets', то аргумент можно не указывать.\n\"\"\"\n    \n\ndef algorithm():\n    # Measuring resistance | Измеряем сопротивление\n    measure_resistance()\n    # Doing an experiment based on measured resistance\n    # Делаем эксперимент в зависимости от измеренного сопротивления\n    if last_resistance() > 10000:\n        # Sending SET experiment | Делаем SET\n        send_experiment('Experiment_SET')  # Voltage sweep from 0 to -2 V\n    else:\n        # Sending RESET experiment | Делаем RESET\n        send_experiment('Experiment_RESET')  # Voltage sweep from 0 to +2 V",
+    "tickets": {
+        "measure": {
+            "name": "measure",
+            "mode": "retention",
+            "params": {
+                "count": 1,
+                "reverse": 0,
+                "id": 0,
+                "wl": 0,
+                "bl": 0
+            },
+            "terminate": {
+                "type": "pass",
+                "value": 0
+            }
+        },
+        "Experiment_SET": {
+            "0": {
+                "name": "iv-curve-set",
+                "mode": "volt_sweep",
+                "params": {
+                    "start_dir": 0.0,
+                    "stop_dir": 0.0,
+                    "step_dir": 0.0,
+                    "start_rev": 0.0,
+                    "stop_rev": 2.0,
+                    "step_rev": 0.05,
+                    "pulse_width_dir": 0.0,
+                    "pulse_width_rev": 1e-4,
+                    "amount_dir": 1,
+                    "amount_rev": 1,
+                    "double_dir": false,
+                    "double_rev": true,
+                    "count": 1,
+                    "reverse": 0,
+                    "id": 0,
+                    "wl": 0,
+                    "bl": 0
+                },
+                "terminate": {
+                    "type": "pass",
+                    "value": 0
+                }
+            }
+        },
+        "Experiment_RESET": {
+            "0": {
+                "name": "iv-curve-reset",
+                "mode": "volt_sweep",
+                "params": {
+                    "start_dir": 0.0,
+                    "stop_dir": 2.0,
+                    "step_dir": 0.05,
+                    "start_rev": 0.0,
+                    "stop_rev": 0.0,
+                    "step_rev": 0.0,
+                    "pulse_width_dir": 1e-4,
+                    "pulse_width_rev": 0.0,
+                    "amount_dir": 1,
+                    "amount_rev": 1,
+                    "double_dir": true,
+                    "double_rev": false,
+                    "count": 1,
+                    "reverse": 0,
+                    "id": 0,
+                    "wl": 0,
+                    "bl": 0
+                },
+                "terminate": {
+                    "type": "pass",
+                    "value": 0
+                }
+            }
+        }
+    },
+    "executed_tickets": []
+}

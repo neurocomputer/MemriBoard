@@ -14,9 +14,10 @@ import json
 import csv
 import numpy as np
 from numpy import inf
+from typing import Union
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu, QInputDialog, QFileDialog
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
@@ -24,7 +25,6 @@ matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
 
 from manager import Manager
-from manager.service import a2r
 from manager.service.global_settings import TICKET_PATH
 from manager.menu import get_crossbar_scan
 
@@ -47,7 +47,7 @@ from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
 from gui.windows.help import Help
-from gui.src import show_choose_window, show_warning_messagebox, change_src_language
+from gui.src import show_choose_window, show_warning_messagebox, change_src_language, convert_ticket_to_reduced_format
 
 class Window(QMainWindow):
     """
@@ -95,7 +95,6 @@ class Window(QMainWindow):
     opener: str = ''
     extra = []
     coordinate_error = False
-    lang_pack: dict
     filter_rmin = None
     filter_rmax = None
 
@@ -152,6 +151,7 @@ class Window(QMainWindow):
         self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
         self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
         self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_menu.addAction('', self.convert_ticket_to_new_format)
         self.tool_button_menu.addAction('', self.show_help, QKeySequence("F1"))
         self.tool_button_actions_text = ['info', 
                                          'terminal', 
@@ -159,6 +159,7 @@ class Window(QMainWindow):
                                          'show_weights', 
                                          'write', 
                                          'read_all_btn',
+                                         'convert_ticket',
                                          'help']
         self.ui.tool_button.setMenu(self.tool_button_menu)
         self.ui.tool_button.setPopupMode(2)
@@ -230,12 +231,10 @@ class Window(QMainWindow):
         if self.math_dialog is Math:
             mode = ''
             if self.man.cb_type == "real":
-                if self.man.board_type in ['memardboard_single', 'rp5_rram_python', 'rp5_rram_c', 'rp5_rram_elbear_nano']:
-                    mode = "no_crossbar"
-                if self.man.board_type in ['memardboard_crossbar', 'rp5_python', 'rp5_c', 'rp5_fpga_python', 'rp5_fpga_c', 'elbear_nano']:
-                    mode = "normal"
-                else:
+                if self.man.driver_attr['math_mode'] is None:
                     show_warning_messagebox(parent=self, message=self.lang_pack.get("warn"))
+                else:
+                    mode = self.man.driver_attr['math_mode']  # no_crossbar | normal                    
             elif self.man.cb_type == "simulator":
                 mode = "normal"
             if mode != '':
@@ -249,7 +248,6 @@ class Window(QMainWindow):
                 self.current_last_resistance = self.ui.table_crossbar.item(self.current_bl, self.current_wl).text()
                 self.math_dialog = Math(parent=self, mode=mode)
                 self.math_dialog.show()
-                self.showMinimized()
    
     def show_new_ann_dialog(self, mode=None) -> None: 
         """
@@ -286,7 +284,7 @@ class Window(QMainWindow):
         self.connect_dialog = ConnectDialog(parent=self)
         self.connect_dialog.show()
 
-    def show_history_dialog(self, mode: str = None) -> None:
+    def show_history_dialog(self, mode: Union[str, None] = None) -> None:
         """
         Показать окно истории
         """
@@ -347,7 +345,6 @@ class Window(QMainWindow):
         self.opener = 'testing'
         self.testing_dialog = Testing(parent=self)
         self.testing_dialog.show()
-        self.showMinimized()
 
     def show_map_dialog(self) -> None:
         """
@@ -378,7 +375,6 @@ class Window(QMainWindow):
         self.opener = 'rram'
         self.rram_dialog = Rram(parent=self)
         self.rram_dialog.show()
-        self.showMinimized()
 
     def show_wait_dialog(self, opener) -> None:
         """
@@ -404,24 +400,30 @@ class Window(QMainWindow):
                 self.snapshot_dialog.plot_matrix()
                 self.snapshot_dialog.activateWindow()     
             
-    def show_help(self) -> None:
+    def show_help(self, parent=None, section: Union[str, None] = None) -> None:
         """
         Окно со справкой
         """
+        if parent is None: 
+            parent = self
         if self.help_dialog is None:
-            self.help_dialog = Help(self)
+            self.help_dialog = Help(main_window=self, parent=parent, section=section)
             self.help_dialog.show()
         else:
             session_type = os.environ.get('XDG_SESSION_TYPE')
             if session_type is not None and session_type == 'wayland':  # Workaround for wayland
                 self.help_dialog.close()
-                self.show_help()
+                self.show_help(parent, section)
             else:
-                self.help_dialog.activateWindow()
+                if self.help_dialog.parent != parent:
+                    self.help_dialog.close()
+                    self.show_help(parent, section)
+                else:
+                    self.help_dialog.activateWindow()
 
     # обработчики кнопок
 
-    def custom_shaphop(self, data, title, save_flag=True, save_path=os.getcwd()):
+    def custom_shaphop(self, data, title, save_flag=True, save_path=None):
         """
         Картинка imshow
         """
@@ -437,6 +439,8 @@ class Window(QMainWindow):
         plt.title(title, linespacing=1.5)
         plt.tight_layout()
         if save_flag:
+            if save_path is None:
+                save_path = os.getcwd()
             plt.savefig(os.path.join(save_path,"result_map.png"))
             plt.close()
         else:
@@ -447,7 +451,9 @@ class Window(QMainWindow):
         Обновить информацию
         """
         _, mem_id = self.man.db.get_memristor_id(self.current_wl, self.current_bl, self.man.crossbar_id)
-        _, self.current_last_resistance = self.man.db.get_last_resistance(mem_id)
+        status, res = self.man.db.get_last_resistance(mem_id)
+        if status:
+            self.current_last_resistance = int(res)
 
     def fill_table(self) -> None:
         """
@@ -465,7 +471,7 @@ class Window(QMainWindow):
             bl, wl, res = range(3)
             # раскрашиваем
             for item in resistances:
-                self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(item[res])))
+                self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(int(item[res]))))
                 self.all_resistances[item[bl]][item[wl]] = item[res]
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
@@ -583,20 +589,14 @@ class Window(QMainWindow):
         task_generator = self.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.man.blank_type)
         for task in task_generator:
             if task[0]['mode_flag'] in [7, 9, 'sense']:
-                result = self.man.conn.impact(task[0]) # result = (adc, id)
+                result = self.man.conn.impact(task[0]) # result = (resistance, id, adc)
             else:
                 request_status = self.man.conn.impact(task[0]) # todo: Предупреждение пользователю
                 if not request_status:
                     task_generator.throw(Exception("bad request"))
                     continue
         try:
-            last_resistance = int(a2r(self.man.gain,
-                                      self.man.res_load,
-                                      self.man.vol_read,
-                                      self.man.adc_bit,
-                                      self.man.vol_ref_adc,
-                                      self.man.res_switches,
-                                      result[0]))
+            last_resistance = result[0]
         except IndexError:
             last_resistance = 0
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
@@ -654,6 +654,57 @@ class Window(QMainWindow):
         with open(fname, encoding='utf-8') as file:
             ticket = json.load(file)
         return ticket
+    
+    def convert_ticket_to_new_format(self) -> None:
+        """Convert ticket to reduced format"""
+        filename, _ = QFileDialog.getOpenFileName(self, 
+                                                  caption=self.lang_pack.get("choose_ticket_convert"),
+                                                  directory=TICKET_PATH,
+                                                  filter=('JSON files (*.json)'))
+        if filename == '':
+            return
+        try:
+            with open(filename, encoding='utf-8') as file:
+                ticket = json.load(file)
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_open") + filename + f'\n{type(e).__name__}: {e}')
+            return
+        try:
+            if 'params' in ticket:  # Assuming its a ticket
+                mode, ok = QInputDialog.getItem(
+                    self,
+                    self.lang_pack.get("choose_signal_mode"),
+                    self.lang_pack.get("signal_mode"),
+                    self.man.menu.alias_to_mode().keys(),
+                    current=0,
+                    editable=False
+                )
+                if not ok:
+                    return
+                new_ticket = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=self.man.menu.alias_to_mode()[mode])
+            else:  # Assuming its an experiment
+                new_ticket = {}
+                for i, tick in ticket.items():
+                    mode, ok = QInputDialog.getItem(
+                        self,
+                        self.lang_pack.get("choose_signal_mode"),
+                        self.lang_pack.get("signal_mode_for_tick") + f'{i} ({tick["name"]})',
+                        self.man.menu.alias_to_mode().keys(),
+                        current=0,
+                        editable=False
+                    )
+                    if not ok:
+                        return
+                    new_tick = convert_ticket_to_reduced_format(self.man, tick, mode_to_convert=self.man.menu.alias_to_mode()[mode])
+                    new_ticket[i] = new_tick
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + filename + f'\n{type(e).__name__}: {e}')
+            return
+        try:
+            with open(filename, 'w', encoding='utf-8') as file:
+                json.dump(new_ticket, file, indent=4, ensure_ascii=False)
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_save") + filename + f'\n{type(e).__name__}: {e}')
 
     def on_count_changed(self, value: int) -> None:
         """
@@ -690,16 +741,6 @@ class Window(QMainWindow):
         """
         Безопасное завершение
         """
-        # поиск и удаление бэкапа
-        backup = self.man.get_meta_info()["backup"]
-        if os.path.exists(backup+"backup.db"):
-            os.remove(backup+"backup.db")
-        elif os.path.exists(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db"):
-            os.remove(os.path.join(os.getcwd(), "base.db")[:-7] +"backup.db")
-        # резервное копирование дб
-        if not os.path.isdir(backup):
-            backup = os.path.join(os.getcwd(), "base.db")[:-7]
-        _ = self.man.db.db_backup(backup)
         # closing snapshot window
         if self.snapshot_dialog is not None:
             self.snapshot_dialog.safe_close() 
@@ -746,7 +787,7 @@ class SendTicketAll(QThread):
                                                                             self.parent.man.blank_type)
                     for task in task_generator:
                         if task[0]['mode_flag'] in [7, 9, 'sense']:
-                            result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                            result = self.parent.man.conn.impact(task[0]) # result = (resistance, id, adc)
                         else:
                             request_status = self.parent.man.conn.impact(task[0]) # todo: Предупреждение пользователю
                             if not request_status:
@@ -754,13 +795,7 @@ class SendTicketAll(QThread):
                                 self.need_stop = False
                                 continue
                     try:
-                        last_resistance = int(a2r(self.parent.man.gain,
-                                                self.parent.man.res_load,
-                                                self.parent.man.vol_read,
-                                                self.parent.man.adc_bit,
-                                                self.parent.man.vol_ref_adc,
-                                                self.parent.man.res_switches,
-                                                result[0]))
+                        last_resistance = result[0]
                     except IndexError:
                         last_resistance = 0
                     _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
@@ -782,13 +817,7 @@ class SendTicketAll(QThread):
                 if task[0]['mode_flag'] in [7, 9, 'sense']:
                     result = self.parent.man.conn.impact(task[0]) # result = (resistance, id, wl, bl)
                     try:
-                        last_resistance = int(a2r(self.parent.man.gain,
-                                                self.parent.man.res_load,
-                                                self.parent.man.vol_read,
-                                                self.parent.man.adc_bit,
-                                                self.parent.man.vol_ref_adc,
-                                                self.parent.man.res_switches,
-                                                result[0]))
+                        last_resistance = result[0]
                     except IndexError:
                         last_resistance = 0
                     _, memristor_id = self.parent.man.db.get_memristor_id(result[2], result[3], self.parent.man.crossbar_id)

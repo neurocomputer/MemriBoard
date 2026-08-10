@@ -8,14 +8,15 @@ import os
 import csv
 import json
 import pickle
+import struct
 from PyQt5 import uic
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QHeaderView
 
 from manager.service.global_settings import TICKET_PATH
-from manager.service.saves import results_from_bytes
-from manager.service import  d2v, a2r
+from manager.service.saves import results_from_float_bytes, results_from_bytes
+from manager.service import v2d, a2r, d2v
 from gui.src import show_warning_messagebox, bool_to_label
 
 class History(QDialog):
@@ -120,44 +121,68 @@ class History(QDialog):
                     ticket_id = self.tickets[row][0]
                     _, ticket_result = self.parent.man.db.get_ticket_from_id(ticket_id)
                     _, experiment_id = self.parent.man.db.get_experiment_id_from_ticket_id(ticket_id)
-                    all_raw_data = results_from_bytes(ticket_result[0][0])
-                    raw_sign = all_raw_data[0::3]
-                    raw_dac = all_raw_data[1::3]
-                    raw_adc = all_raw_data[2::3]
-                    _, meta_info = self.parent.man.db.get_meta_info_from_experiment_id(experiment_id)
-                    if isinstance(meta_info, dict):
-                        dac_bit = meta_info['dac_bit']
-                        vol_ref_dac = meta_info['vol_ref_dac']
-                        gain = meta_info['gain']
-                        res_load = meta_info['res_load']
-                        vol_read = meta_info['vol_read']
-                        adc_bit = meta_info['adc_bit']
-                        vol_ref_adc = meta_info['vol_ref_adc']
-                        res_switches = meta_info['res_switches']
-                    else:
-                        dac_bit = self.parent.man.dac_bit
-                        vol_ref_dac = self.parent.man.vol_ref_dac
-                        gain = self.parent.man.gain
-                        res_load = self.parent.man.res_load
-                        vol_read = self.parent.man.vol_read
-                        adc_bit = self.parent.man.adc_bit
-                        vol_ref_adc = self.parent.man.vol_ref_adc
-                        res_switches = self.parent.man.res_switches
-                    for i, item in enumerate(raw_sign):
-                        file_wr.writerow([item,
-                                        raw_dac[i],
-                                        raw_adc[i],
-                                        str(d2v(dac_bit,
-                                                vol_ref_dac,
-                                                raw_dac[i],
-                                                sign=item)).replace('.',','),
-                                        str(a2r(gain,
-                                                res_load,
-                                                vol_read,
-                                                adc_bit,
-                                                vol_ref_adc,
-                                                res_switches,
-                                                raw_adc[i])).replace('.',',')])
+                    try:  # New format in floats
+                        all_raw_data = results_from_float_bytes(ticket_result, additional_items_size=1)  # TODO pass dac from connector
+                        raw_sign, raw_vol, raw_res, raw_adc = [], [], [], []
+                        for data in all_raw_data:
+                            raw_sign.append(data[0])
+                            raw_vol.append(data[1])
+                            raw_res.append(data[2])
+                            raw_adc.append(data[3])
+                        _, meta_info = self.parent.man.db.get_meta_info_from_experiment_id(experiment_id)
+                        if isinstance(meta_info, dict):
+                            dac_bit = meta_info['dac_bit']
+                            vol_ref_dac = meta_info['vol_ref_dac']
+                        else:
+                            dac_bit = self.parent.man.dac_bit
+                            vol_ref_dac = self.parent.man.vol_ref_dac
+                        for i, item in enumerate(raw_sign):
+                            file_wr.writerow([item,  # sign
+                                              str(v2d(dac_bit,  # dac
+                                                    vol_ref_dac,
+                                                    raw_vol[i])),
+                                              raw_adc[i],  # adc
+                                              raw_vol[i],  # vol
+                                              raw_res[i]])  # res
+                    except struct.error:  # Fallback to old format for backwards compatibility
+                        all_raw_data = results_from_bytes(ticket_result)
+                        raw_sign = all_raw_data[0::3]
+                        raw_dac = all_raw_data[1::3]
+                        raw_adc = all_raw_data[2::3]
+                        _, meta_info = self.parent.man.db.get_meta_info_from_experiment_id(experiment_id)
+                        if isinstance(meta_info, dict):
+                            dac_bit = meta_info['dac_bit']
+                            vol_ref_dac = meta_info['vol_ref_dac']
+                            gain = meta_info['gain']
+                            res_load = meta_info['res_load']
+                            vol_read = meta_info['vol_read']
+                            adc_bit = meta_info['adc_bit']
+                            vol_ref_adc = meta_info['vol_ref_adc']
+                            res_switches = meta_info['res_switches']
+                        else:
+                            dac_bit = self.parent.man.dac_bit
+                            vol_ref_dac = self.parent.man.vol_ref_dac
+                            gain = self.parent.man.gain
+                            res_load = self.parent.man.res_load
+                            vol_read = self.parent.man.vol_read
+                            adc_bit = self.parent.man.adc_bit
+                            vol_ref_adc = self.parent.man.vol_ref_adc
+                            res_switches = self.parent.man.res_switches
+                        for i, item in enumerate(raw_sign):
+                            file_wr.writerow([item,
+                                            raw_dac[i],
+                                            raw_adc[i],
+                                            str(d2v(dac_bit,
+                                                    vol_ref_dac,
+                                                    raw_dac[i],
+                                                    sign=item)).replace('.',','),
+                                            str(a2r(gain,
+                                                    res_load,
+                                                    vol_read,
+                                                    adc_bit,
+                                                    vol_ref_adc,
+                                                    res_switches,
+                                                    raw_adc[i])).replace('.',',')])
             show_warning_messagebox(parent=self, message=self.lang_pack.get("exported") + fname)
         else:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("pick_ticket"))

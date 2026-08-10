@@ -101,13 +101,13 @@ def send_mode_mvm_to_crossbar(crossbar: list, **kwargs) -> int:
         v_out = sum_current * kwargs['sum_gain']
         # wl = kwargs['wl']
         # print(f'wl={wl}, v_out={v_out}')
-        res = int(2**kwargs['adc_bit'] * v_out * kwargs['gain'] / kwargs['vol_ref_adc'])
+        res = int(2**kwargs['adc_bit'] * v_out / kwargs['vol_ref_adc'])
     else:
         res = 0
     # print('Результат', res)
     return res
 
-class BoardSimulator():
+class BoardSimulator:
     """
     Симулятор платы с кроссбаром
     """
@@ -163,8 +163,7 @@ class BoardSimulator():
         vol = d2v(int(self.config['board']['dac_bit']),
                   float(self.config['board']['vol_ref_dac']),
                   v_dac)
-        if vol >= 0.3:
-            vol = 0.3
+        vol = min(0.3, vol)
         res = send_mode_9_to_crossbar(self.crossbar,
                                       vol = vol,
                                       wl=wl,

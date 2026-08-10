@@ -8,7 +8,6 @@ import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 
-from manager.service import r2a, a2v
 from gui.src import show_warning_messagebox
 
 class CellInfo(QDialog):
@@ -32,7 +31,7 @@ class CellInfo(QDialog):
         # инфо
         self.fill_info()
         # Connection to external terminals
-        if self.parent.man.board_type not in ['memardboard_crossbar', 'ITC_1T1R_32x8_switched']:  # TODO add other boards
+        if self.parent.man.driver_attr['connect_to_ext'] is None:
             self.ui.groupBox_ext_connection.setVisible(False)
         self.adjustSize()
         # обработчики кнопок
@@ -75,24 +74,10 @@ class CellInfo(QDialog):
         Прочитать одну
         """
         self.ui.button_read_one_cells.setEnabled(False)
-        self.parent.current_last_resistance = self.parent.read_cell(self.parent.current_wl,
-                                                                    self.parent.current_bl)
+        self.parent.current_last_resistance = int(self.parent.read_cell(self.parent.current_wl,
+                                                                        self.parent.current_bl))
         self.fill_info()
         self.ui.button_read_one_cells.setEnabled(True)
-        # проверка проблем с АЦП
-        current_adc = r2a(self.parent.man.gain,
-                            self.parent.man.res_load,
-                            self.parent.man.vol_read,
-                            self.parent.man.adc_bit,
-                            self.parent.man.vol_ref_adc,
-                            self.parent.man.res_switches,
-                            self.parent.current_last_resistance)
-        adc_vol = a2v(self.parent.man.gain,
-                        self.parent.man.adc_bit,
-                        self.parent.man.vol_ref_adc,
-                        current_adc)
-        if adc_vol > 3.5: # todo: вынести 3.5 в константы
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("high_adc"))
 
     def fill_info(self) -> None:
         """
@@ -101,6 +86,9 @@ class CellInfo(QDialog):
         self.ui.label_bl.setText(self.lang_pack.get("bl") + str(self.parent.current_bl))
         self.ui.label_wl.setText(self.lang_pack.get("wl") + str(self.parent.current_wl))
         self.ui.label_resistance.setText(self.lang_pack.get("res") + str(self.parent.current_last_resistance) + self.lang_pack.get("ohm"))
+        _, mem_id = self.parent.man.db.get_memristor_id(self.parent.current_wl, self.parent.current_bl, self.parent.man.crossbar_id)
+        _, tasks = self.parent.man.db.count_tasks_on_memristor_id(mem_id)
+        self.ui.label_tasks.setText(f"Запросы = {tasks}")
 
     def set_up_init_values(self) -> None:
         """

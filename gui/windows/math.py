@@ -14,7 +14,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QWidget
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib.pyplot as plt
-from manager.service import w2r, r2w, v2d, a2v
+from manager.service import w2r, r2w, a2v
 from manager.service.converters import quantization
 from gui.src import show_warning_messagebox, open_file_dialog
 from gui.windows.snapshot import Snapshot
@@ -408,17 +408,15 @@ class Math(QWidget):
         """
         Нахождение максимума, минимума из списка
         """
-        min = list[0][0]
-        max = list[0][0]
+        min_val = list[0][0]
+        max_val = list[0][0]
         k = 0
         for i in range(len(list)):
             for j in range(len(list[0])):
                 k = list[i][j]
-                if k < min:
-                    min = k
-                if k > max:
-                    max = k
-        return(max, min)
+                min_val = min(min_val, k)
+                max_val = max(max_val, k)
+        return(max_val, min_val)
 
     def update_summary_weights(self):
         """
@@ -1009,15 +1007,9 @@ class Math(QWidget):
         if self.tabwidget_mode.currentIndex() == 0:
             # поэлементное умножение
             self.result = []
-            v_dac = []
-            # генерация ЦАП
-            for vol in self.voltages:
-                v_dac.append(v2d(self.parent.man.dac_bit,
-                                self.parent.man.vol_ref_dac,
-                                vol))
             # 3 подаем значения в плату
-            self.ui.progress_bar.setMaximum(len(v_dac))
-            mult_thread = MakeMult(v_dac, parent=self)
+            self.ui.progress_bar.setMaximum(len(self.voltages))
+            mult_thread = MakeMult(self.voltages, parent=self)
             mult_thread.count_changed.connect(self.on_count_changed) # заполнение прогрессбара
             mult_thread.value_got.connect(self.on_value_got) # после выполнения
             mult_thread.progress_finished.connect(self.on_progress_finished) # после выполнения
@@ -1073,12 +1065,12 @@ class Math(QWidget):
         for item in self.result:
             # постобработка
             if self.ui.combo_postprocess.currentText() == 'scaling':
-                result_for_show.append(a2v(self.parent.man.gain,
+                result_for_show.append(a2v(1,
                                         self.parent.man.adc_bit,
                                         self.parent.man.vol_ref_adc,
                                         item) * float(self.ui.spinbox_max_input.value()) * float(self.ui.spinbox_max_weight.value()))
             elif self.ui.combo_postprocess.currentText() == self.lang_pack.get("no"):
-                result_for_show.append(a2v(self.parent.man.gain,
+                result_for_show.append(a2v(1,
                                         self.parent.man.adc_bit,
                                         self.parent.man.vol_ref_adc,
                                         item))
@@ -1140,17 +1132,17 @@ class MakeMult(QThread):
     value_got = pyqtSignal(int)
     progress_finished = pyqtSignal(int)
 
-    def __init__(self, v_dac, parent=None):
+    def __init__(self, voltages, parent=None):
         QThread.__init__(self, parent)
         self.parent = parent
-        self.v_dac = v_dac
+        self.voltages = voltages
 
     def run(self):
         """
         Запуск потока умножения
         """
         counter = 0
-        for item in self.v_dac:
+        for item in self.voltages:
             # посылка запроса на плату
             # todo: сделать для кроссбара и единичных 8 и 9
             task = {'mode_flag': 9,
@@ -1158,11 +1150,11 @@ class MakeMult(QThread):
                     'id': 0,
                     'wl': self.parent.parent.current_wl,
                     'bl': self.parent.parent.current_bl}
-            v_adc, _ = self.parent.parent.man.conn.impact(task)
+            res = self.parent.parent.man.conn.impact(task)  # Resistance(Ohm), id, adc
             # учет значения
             counter += 1
             self.count_changed.emit(counter)
-            self.value_got.emit(v_adc)
+            self.value_got.emit(res[2])
         self.progress_finished.emit(counter)
 
 class MatMul(QThread):
@@ -1186,36 +1178,40 @@ class MatMul(QThread):
         #print(self.mask)
         counter = 0
         for i in range(self.parent.input_array_scaled.shape[0]): #100
+            voltages = [min(self.parent.input_array_scaled[i][h], 0.3) for h in range(self.parent.input_array_scaled.shape[1])]
+            # !!! Voltages - в вольтах. Ниже была конвертация в отсчеты, она теперь не нужна
             # подготавливаем семпл
             # v_dac = [0 for i in range(32)] # todo: перенести в драйвер
-            v_dac = [0 for i in range(self.parent.input_array_scaled.shape[1])]
-            for h in range(self.parent.input_array_scaled.shape[1]):
-                if self.parent.input_array_scaled[i][h] > 0.3:
-                    v_dac[h] = v2d(self.parent.parent.man.dac_bit,
-                                self.parent.parent.man.vol_ref_dac,
-                                0.3)
-                else:
-                    v_dac[h] = v2d(self.parent.parent.man.dac_bit,
-                                self.parent.parent.man.vol_ref_dac,
-                                self.parent.input_array_scaled[i][h])
+            # v_dac = [0 for i in range(self.parent.input_array_scaled.shape[1])]
+            # for h in range(self.parent.input_array_scaled.shape[1]):
+            #     if self.parent.input_array_scaled[i][h] > 0.3:
+            #         v_dac[h] = v2d(self.parent.parent.man.dac_bit,
+            #                     self.parent.parent.man.vol_ref_dac,
+            #                     0.3)
+            #     else:
+            #         v_dac[h] = v2d(self.parent.parent.man.dac_bit,
+            #                     self.parent.parent.man.vol_ref_dac,
+            #                     self.parent.input_array_scaled[i][h])
             # проходим по всем строкам кроссбара
             for j in range(self.parent.parent.man.col_num): #8
                 if self.parent.matmul_predicted_results[i][j] < self.parent.vol_comp:
                     # маскирование v_adc
-                    v_dac_current = deepcopy(v_dac)
+                    v_current = deepcopy(voltages)
                     # наложение на v dac 8-ми разных масок
+                    # print(v_current)
                     for z in range(self.parent.parent.man.row_num):
                         if self.mask[j][z] == 0:
-                            v_dac_current[z] = 0
+                            v_current[z] = 0
                     task = {'mode_flag': 10,
-                            'vol': v_dac_current,
+                            'vol': v_current,
                             'id': 0,
                             'wl': j}
-                    v_adc, _ = self.parent.parent.man.conn.impact(task)
+                    res = self.parent.parent.man.conn.impact(task)
+                    v_adc = res[2]
                     #print(v_adc)
                 else:
                     v_adc = 0
-                self.parent.matmul_crossbar_results[i][j] = a2v(self.parent.parent.man.gain,
+                self.parent.matmul_crossbar_results[i][j] = a2v(1,
                                         self.parent.parent.man.adc_bit,
                                         self.parent.parent.man.vol_ref_adc,
                                         v_adc)

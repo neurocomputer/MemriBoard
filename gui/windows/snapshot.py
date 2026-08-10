@@ -3,6 +3,7 @@ Snapshot window
 """
 
 import numpy as np
+from typing import Union
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -38,7 +39,7 @@ class Snapshot(QWidget):
     fig: Figure
     lang_pack: dict
      
-    def __init__(self, parent=None, data: list = None, mode: str = 'resistances') -> None:
+    def __init__(self, parent=None, data: Union[list, None] = None, mode: str = 'resistances') -> None:
         """Snapshot window
 
         Args:
@@ -162,6 +163,8 @@ class Snapshot(QWidget):
             save_funcs[extension](filename, self.data)
         except PermissionError:
             show_warning_messagebox(parent=self, message=self.lang_pack['file_busy'])
+        except ModuleNotFoundError as e:
+            show_warning_messagebox(parent=self, message=self.lang_pack['module_not_found'] + str(e))
         except Exception as e:
             show_warning_messagebox(parent=self, message=e)
             

@@ -5,7 +5,6 @@
 # pylint: disable=E0611, C0103, R0903, W0212
 
 import os
-import platform
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog, QFileDialog
 
@@ -84,22 +83,14 @@ class Settings(QDialog):
         """
         Сохранение настроек
         """
-        backup_path = self.ui.lineedit_backup.text()
         writable_cells = self.ui.lineedit_writable_cells.text()
         language = self.ui.choose_language.currentText()
-        if len(backup_path) != 0:
-            if platform.system() == "Linux" and backup_path[len(backup_path)-1] != "/":
-                backup_path = backup_path + "/"
-            elif platform.system() == "Windows" and backup_path[len(backup_path)-1] != '\\':
-                backup_path = backup_path + '\\'
-        if not os.path.isdir(backup_path):
-            backup_path = os.path.join(os.getcwd(), "base.db")[:-7]
         if len(writable_cells) != 0:
             if not os.path.isfile(writable_cells):
                 writable_cells = ''
         self.parent.man.save_settings(adc_bit = self.ui.choose_adc_bit.currentText(),
                                       gain = str(self.ui.choose_gain.value()),
-                                      backup = backup_path,
+                                      backup = '',  # TODO вернуть бэкап???
                                       writable_cells = writable_cells,
                                       language = language,
                                       app_logging_level=self.ui.comboBox_app_log.currentText(),

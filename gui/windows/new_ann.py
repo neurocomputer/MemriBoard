@@ -8,12 +8,12 @@ import os
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5 import uic, QtWidgets
 from PyQt5.QtWidgets import QDialog, QTableWidgetItem, QHeaderView, QFileDialog
 from PyQt5.QtGui import QColor
 
-from manager.service import r2a, r2w, w2r, a2r, v2d, d2v
+from manager.service import r2w, w2r
 from manager.service.plots import calculate_counts_for_ticket
 from manager.service.global_settings import TICKET_PATH
 from gui.src import show_warning_messagebox, choose_cells, open_file_dialog, write_csv_data
@@ -111,13 +111,18 @@ class NewAnn(QDialog):
         # загружаем тикет
         ticket_name = self.parent.man.ap_config['gui']['program_ticket']
         self.ticket = self.parent.read_ticket_from_disk(ticket_name)
+        # Проверяем режим тикета
+        if self.ticket['mode'] != 'volt_sweep': # TODO: reimplement in VISA-instruments
+            show_warning_messagebox(parent, self.lang_pack.get('wrong_ticket'))
+            QTimer.singleShot(0, self.close)
+            return
         # меняем параметры тикета
-        self.ticket['params']['v_dir_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MIN)
-        self.ticket['params']['v_dir_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_VOL_MAX)
-        self.ticket['params']['v_dir_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.RESET_STEP)
-        self.ticket['params']['v_rev_strt_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MIN)
-        self.ticket['params']['v_rev_stop_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_VOL_MAX)
-        self.ticket['params']['v_rev_step_inc'] = v2d(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.SET_STEP)
+        self.ticket['params']['start_dir'] = self.RESET_VOL_MIN
+        self.ticket['params']['stop_dir'] = self.RESET_VOL_MAX
+        self.ticket['params']['step_dir'] = self.RESET_STEP
+        self.ticket['params']['start_rev'] = self.SET_VOL_MIN
+        self.ticket['params']['stop_rev'] = self.SET_VOL_MAX
+        self.ticket['params']['step_rev'] = self.SET_STEP
         self.ticket['params']['count'] = self.PROG_COUNT
         # привязываем к кнопке
         self.ui.button_signal_parameters.clicked.connect(self.change_signal_parameters)
@@ -169,9 +174,9 @@ class NewAnn(QDialog):
         else:
             random_res = np.random.uniform(res_min, res_max, size=(self.parent.man.row_num*self.parent.man.col_num,))
         if self.mode == 'matmul':
-            random_weights = map(lambda x: self.parent.man.sum_gain/float(x), random_res)
+            random_weights = (self.parent.man.sum_gain/float(x) for x in random_res)
         else:
-            random_weights = map(lambda x: r2w(self.parent.man.res_load, float(x)), random_res)
+            random_weights = (r2w(self.parent.man.res_load, float(x)) for x in random_res)
         self.weights_target_all = list(random_weights)
         #print(self.weights_target_all)
         self.fill_table_match()
@@ -190,12 +195,12 @@ class NewAnn(QDialog):
         """
         self.ticket = self.parent.read_ticket_from_disk("temp.json")
         os.remove(os.path.join(TICKET_PATH,"temp.json"))
-        self.RESET_VOL_MIN = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_dir_strt_inc'])
-        self.RESET_VOL_MAX = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_dir_stop_inc'])
-        self.RESET_STEP = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_dir_step_inc'])
-        self.SET_VOL_MIN = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_rev_strt_inc'])
-        self.SET_VOL_MAX = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_rev_stop_inc'])
-        self.SET_STEP = d2v(self.parent.man.dac_bit,self.parent.man.vol_ref_dac,self.ticket['params']['v_rev_step_inc'])
+        self.RESET_VOL_MIN = self.ticket['params']['start_dir']
+        self.RESET_VOL_MAX = self.ticket['params']['stop_dir']
+        self.RESET_STEP = self.ticket['params']['step_dir']
+        self.SET_VOL_MIN = self.ticket['params']['start_rev']
+        self.SET_VOL_MAX = self.ticket['params']['stop_rev']
+        self.SET_STEP = self.ticket['params']['step_rev']
         self.PROG_COUNT = self.ticket['params']['count']
 
     # методы для таблицы с сопротивлениями
@@ -348,7 +353,7 @@ class NewAnn(QDialog):
                     show_warning_messagebox(parent=self, message=f'{ex}')
             if status_open:
                 try:
-                    self.weights_target_all = list(map(lambda x: float(x.rstrip()), self.weights_target_all))
+                    self.weights_target_all = [float(x.rstrip()) for x in self.weights_target_all]
                     # уникальные абсолютные округленные
                     if self.mode != 'matmul':
                         self.weights_target_all = list(map(float, np.round(np.unique(np.abs(self.weights_target_all)), 4)))
@@ -469,20 +474,7 @@ class NewAnn(QDialog):
         tolerance = self.ui.spinbox_tolerance.value()
         shutdown_min = self.target_resistances[self.counter] - self.target_resistances[self.counter]*tolerance/100
         shutdown_max = self.target_resistances[self.counter] + self.target_resistances[self.counter]*tolerance/100
-        term_values = [r2a(self.parent.man.gain,
-                            self.parent.man.res_load,
-                            self.parent.man.vol_read,
-                            self.parent.man.adc_bit,
-                            self.parent.man.vol_ref_adc,
-                            self.parent.man.res_switches,
-                            shutdown_min),
-                        r2a(self.parent.man.gain,
-                            self.parent.man.res_load,
-                            self.parent.man.vol_read,
-                            self.parent.man.adc_bit,
-                            self.parent.man.vol_ref_adc,
-                            self.parent.man.res_switches,
-                            shutdown_max)]
+        term_values = [shutdown_min, shutdown_max]
         term_values.sort()
         # print(term_values)
         return copy.deepcopy(term_values)
@@ -583,7 +575,7 @@ class NewAnn(QDialog):
                             bl = closest_key[1]
                             self.target_cells_resistances[(wl,bl)] = target_resistance
                     self.not_writen_cells = list(self.target_cells_resistances.keys())
-                    self.not_written_weights = list(map(lambda x: r2w(self.parent.man.res_load, x), list(self.target_cells_resistances.values())))
+                    self.not_written_weights = [r2w(self.parent.man.res_load, x) for x in list(self.target_cells_resistances.values())]
                     self.written_cells = []
                     self.written_weights = []
                     self.coordinates = list(self.target_cells_resistances.keys()) # apply.py
@@ -606,10 +598,10 @@ class NewAnn(QDialog):
                     self.ticket['terminate']['type'] = "><"
                     self.ticket['terminate']['value'] = self.get_tolerance_ranges()
                     # заполняем список экспериментов
-                    task_list, count = calculate_counts_for_ticket(self.parent.man, self.ticket.copy())
+                    count = calculate_counts_for_ticket(self.parent.man, self.ticket.copy())
                     self.parent.exp_list_params['total_tickets'] += 1
                     self.parent.exp_list_params['total_tasks'] += count
-                    self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), task_list.copy(), count)]
+                    self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), count)]
                     # параметры прогресс бара
                     self.ui.progress_bar_mapping.setValue(0)
                     self.ui.progress_bar_mapping.setMaximum(len(self.target_resistances))
@@ -670,7 +662,7 @@ class NewAnn(QDialog):
         self.counter += 1
         if self.counter < len(self.target_resistances):
             self.ticket['terminate']['value'] = self.get_tolerance_ranges()
-            self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), self.parent.exp_list[0][2].copy(), self.parent.exp_list[0][3])]
+            self.parent.exp_list = [(self.ticket["name"], self.ticket.copy(), self.parent.exp_list[0][2])]
         # рисунок для базы в matplotlib
         plt.clf()
         plt.plot(data_for_plot_y, marker='o', linewidth=0.5)
@@ -699,14 +691,7 @@ class NewAnn(QDialog):
         Получили значение из тикета
         """
         value = value.split(",")
-        adc_value = int(value[1])
-        self.data_for_plot_y.append(a2r(self.parent.man.gain,
-                                        self.parent.man.res_load,
-                                        self.parent.man.vol_read,
-                                        self.parent.man.adc_bit,
-                                        self.parent.man.vol_ref_adc,
-                                        self.parent.man.res_switches,
-                                        adc_value))
+        self.data_for_plot_y.append(float(value[1]))  # Resistance in Ohms
 
     def on_ticket_finished(self, value):
         '''
