@@ -1,0 +1,31 @@
+SIGNAL UI
+    integrate current compliance
+    integrate VISA-modes
+    add shortcut for numpad enter
+
+MANAGER
+    init_board(combo_board_type) instead of init_menu()
+
+CROSSBAR
+    crossbar scan: add scanning types to driver attr
+
+DRIVER_ATTR
+    Check implicit driver naming in the app
+
+CHECKINGS
+    check file saving in apply and testing
+
+MENU 
+    Implement in plots.py
+    Remove `get_menu`, replace it with Menu class
+
+TICKETS 
+    bring back dir_cc and rev_cc
+
+VISA_DRIVERS
+    board.py: check if voltage in `sense` is passed correctly
+    board.py: get visa impact to a separate file; reduce everything
+
+
+TODO IN BOTH BRANCHES
+    std.py: Check for key errors when parsing the ticket

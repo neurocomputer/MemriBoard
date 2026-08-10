@@ -2,6 +2,7 @@
 Диалоговое окно сигнала
 """
 # TODO integrate current compliance
+# TODO integrate VISA-modes
 # TODO add shortcut for numpad enter
 # pylint: disable=E0611,W0401,W0611,R0903,R0915,R0912,C0301,C0103
 

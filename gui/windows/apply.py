@@ -474,7 +474,7 @@ class ApplyExp(QThread):
             # TODO remove: Initializing .csv save file -----------------
             if self.parent.parent.man.apply_save_csv:
                 _, crossbar_serial = self.parent.parent.man.db.get_crossbar_serial_from_id(self.parent.parent.man.crossbar_id)
-                csv_header = ['sign', 'vol', 'res', 'timestamp', 'temperature(C)', 'V_temp', 'smu_volt', 'smu_current', 'crossbar_id', "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "ticket_mode", "terminate_type", "terminate_1", "terminate_2"]
+                csv_header = ['sign', 'vol', 'res', 'timestamp', 'temperature(C)', 'V_temp', 'smu_volt', 'smu_current', 'crossbar_id', "wl", "bl", "pulse_width", "exp_name", "ticket_name", "ticket_mode", "terminate_type", "terminate_1", "terminate_2"]
                 csv_path = init_csv_apply(self.parent.parent.man.apply_csv_path, name, crossbar_serial, item[0], item[1], csv_header)
             # ----------------------------------------------------------
             # инициируем цикл по тикетам

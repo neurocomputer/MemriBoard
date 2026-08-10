@@ -11,7 +11,6 @@ from configparser import ConfigParser
 from logging import Logger
 from io import StringIO
 from typing import Union
-from manager.menu import Menu
 from manager.model.db import DBOperate
 from manager.service.templates import TEMPLATE_INI
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
@@ -35,7 +34,6 @@ class Application:
     res_switches: float # сопротивление переключателей
     gain: int # усиление
     sum_gain: int # сопротивление ОС
-    menu: Menu # меню режимов
     board_type: str # тип платы
     connected_port: str # com порт
     db: DBOperate
@@ -81,7 +79,6 @@ class Application:
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки
-        self.menu = Menu()
         self.db = DBOperate(parent=self)
 
     def read_settings(self) -> None:
