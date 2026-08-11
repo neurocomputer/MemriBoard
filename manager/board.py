@@ -562,10 +562,10 @@ class Connector:
                         trig_flag = task['triggered']
                     else:
                         trig_flag = False
-                    if 'skip_one' in task and task['skip_one']:  # Skip one value for endurance
+                    if task.get('skip_one'):  # Skip one value for endurance
                         self.interface.sense(trigger=trig_flag)
                     if 'vol' in task:
-                        if 'read' in task and task['read']:
+                        if task.get('read'):
                             vol = float(self.config['board']['vol_read'])
                         else:
                             vol = -task['vol'] if task['sign'] else task['vol']

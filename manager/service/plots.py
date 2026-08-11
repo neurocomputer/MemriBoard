@@ -33,43 +33,46 @@ def plot_for_signal_graph(manager, ticket: dict, plot_type: str, ax: Axes, plot_
     ax.clear()
     # получаем генератор задач
     task_gen = manager.menu[ticket['mode']](ticket['params'], ticket['terminate'], manager.blank_type)
-    READ_VOLTAGE = manager.vol_read
-    READ_TIME = int(manager.ap_config['board']['read_time'])
-    BLANK_TIME = int(manager.ap_config['board']['blank_time'])
-    result_stem = [] # отсчеты сигнала
-    result_plot = []
-    plot_limit_hit = False 
-    count = 0
-    # генерируем отсчеты сигнала и заполняем
-    for task in task_gen:
-        count += 1
-        if count > plot_limits[plot_type]:
-            plot_limit_hit = True
-        if not plot_limit_hit:  # Stop appending to the plot list if the limit is hit
-            vol = task[0]['vol']
-            t = int(task[0]['pulse_width'] * 1e6)  # us
-            sign = task[0]['sign']
-            if sign:
-                vol = -vol
-            if plot_type == 'stem':
-                if t > 0:
-                    result_stem.append(vol)
-                result_stem.append(READ_VOLTAGE)
-            else:
-                for _ in range(BLANK_TIME):
-                    result_plot.append(0)
-                for _ in range(t):
-                    result_plot.append(vol)
-                for _ in range(BLANK_TIME):
-                    result_plot.append(0)
-                for _ in range(READ_TIME):
-                    result_plot.append(READ_VOLTAGE)
-    if plot_type == 'plot':
-        for _ in range(BLANK_TIME):
-            result_plot.append(0)
-    if plot_type == 'stem':
-        ax.stem(result_stem)
-    else:
-        ax.plot(result_plot)
-    ax.grid(ls='--', color='grey')
-    return count, plot_limit_hit
+    for task in task_gen:  # TODO remove, reimplement
+        print(task) 
+    return 0, False
+    # READ_VOLTAGE = manager.vol_read
+    # READ_TIME = int(manager.ap_config['board']['read_time'])
+    # BLANK_TIME = int(manager.ap_config['board']['blank_time'])
+    # result_stem = [] # отсчеты сигнала
+    # result_plot = []
+    # plot_limit_hit = False 
+    # count = 0
+    # # генерируем отсчеты сигнала и заполняем
+    # for task in task_gen:
+    #     count += 1
+    #     if count > plot_limits[plot_type]:
+    #         plot_limit_hit = True
+    #     if not plot_limit_hit:  # Stop appending to the plot list if the limit is hit
+    #         vol = task[0]['vol']
+    #         t = int(task[0]['pulse_width'] * 1e6)  # us
+    #         sign = task[0]['sign']
+    #         if sign:
+    #             vol = -vol
+    #         if plot_type == 'stem':
+    #             if t > 0:
+    #                 result_stem.append(vol)
+    #             result_stem.append(READ_VOLTAGE)
+    #         else:
+    #             for _ in range(BLANK_TIME):
+    #                 result_plot.append(0)
+    #             for _ in range(t):
+    #                 result_plot.append(vol)
+    #             for _ in range(BLANK_TIME):
+    #                 result_plot.append(0)
+    #             for _ in range(READ_TIME):
+    #                 result_plot.append(READ_VOLTAGE)
+    # if plot_type == 'plot':
+    #     for _ in range(BLANK_TIME):
+    #         result_plot.append(0)
+    # if plot_type == 'stem':
+    #     ax.stem(result_stem)
+    # else:
+    #     ax.plot(result_plot)
+    # ax.grid(ls='--', color='grey')
+    # return count, plot_limit_hit

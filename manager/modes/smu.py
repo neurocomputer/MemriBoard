@@ -14,12 +14,18 @@ from manager.terminate import terminators
 from logging import Logger
 
 
-_modes = {'dir': 0,  # Режимы прямо и обратно
+_signs = {'dir': 0,  # Режимы прямо и обратно
           'rev': 1}
 
+DIR_REV = 'dir'  # Global variable
+ 
+def dr(key: str) -> str:
+    """Helper function that appends 'dir' or 'rev' to the end of the key"""
+    return f'{key}_{DIR_REV}'
 
 class SMUGen:
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, parent, logger: Logger) -> None:
+        self.parent = parent  # Menu
         self.logger = logger
         
         
@@ -57,7 +63,23 @@ class SMUGen:
         """Check if the experiment was interrupted and send panic flag"""
         if self.interrupt_flag:
             task = {'mode_flag': 'panic', 'id': 0}
-            yield [task, terminator]
+            yield [task, self.terminator]
+            
+            
+    def _create_sweep_array(self, params: dict) -> dict:
+        """Create sweep array based on sweep parameters"""
+        arrays = {}
+        for dir_rev in ['dir', 'rev']:
+            try:
+                arrays[dir_rev] = np.arange(
+                    params[f'start_{dir_rev}'],
+                    params[f'stop_{dir_rev}'] + params[f'step_{dir_rev}'],
+                    params[f'step_{dir_rev}']
+                )
+            except ZeroDivisionError:
+                arrays[dir_rev] = []
+        return arrays  # {dir: array_dir, rev: array_rev}
+    
     
     def smu_prog_sync(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
         pass
@@ -65,15 +87,69 @@ class SMUGen:
 
     def smu_iv_dc(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
         """Generator for IV DC mode"""
+        global DIR_REV
+        # Preparing
         self._prepare(terminate)
+        # dir-rev sequence
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        arrays = self._create_sweep_array(params)
+        sense_task = {  # Sense task template
+            'mode_flag': 'sense',
+            'vol': 0,
+            'id': params['id'],
+            'sign': 'dir'
+        }
         # Generating
         try:
             yield from self._connect_cell(params)
-
+            for _ in range(params['count']):  # Outer cycle
+                for dir_rev in sequence:  # dir and rev
+                    DIR_REV = dir_rev
+                    for _ in range(params[f'amount_{dir_rev}']):
+                        if len(arrays[dir_rev]) != 0:
+                            config_task = {
+                                'mode_flag': 'config_iv_dc',
+                                'vol': 0,
+                                'time_interval': params[dr('interval')],
+                                'id': params['id'],
+                                'sign': _signs[dir_rev],
+                                'v_start': params[dr('start')],
+                                'v_stop': params[dr('stop')],
+                                'n_points': len(arrays[dir_rev]),
+                                'double': params[dr('double')],
+                                'current_compliance': params[dr('compliance')]
+                            }
+                            yield [config_task, self.terminator]  # Config task
+                            
+                            sense_task['sign'] = _signs[dir_rev]
+                            for vol in arrays[dir_rev]:
+                                sense_task['vol'] = vol
+                                yield [sense_task, self.terminator]  # Sense tasks
+                            if params[dr('double')]:
+                                for vol in arrays[dir_rev][::-1]:
+                                    sense_task['vol'] = vol
+                                    yield [sense_task, self.terminator]  # Sense tasks
+            # Reading after sweep
+            measure_ticket = self.parent.get_measure_ticket()
+            config_task = {  # FIXME
+                'mode_flag': 'config_smu_pulsed_retention',
+                'current_compliance': measure_ticket['params']['compliance'],
+                'pulse_width': measure_ticket['params']['pulse_width'],
+                'pulse_period': measure_ticket['params']['pulse_period'],
+                'read_voltage': measure_ticket['params']['read_voltage'],
+                'sign': _signs[measure_ticket['params']['read_direction']],
+                'count': 1,
+                'id': params['id']
+            }
+            yield [config_task, self.terminator]  # Config measure
+            del sense_task['vol']
+            sense_task['sign'] = _signs[measure_ticket['params']['read_direction']]
+            yield [sense_task, self.terminator]  # Read measure
+            
             yield from self._disconnect_cell()
         except Exception as e:
             yield from self._handle_exception(e)
-        yield from self.
+        yield from self._check_interruption()
             
 
     def smu_pulsed_retention(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
@@ -290,7 +366,7 @@ def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -
                                     't_ms': params[f't_{dir}_msec_inc'],
                                     't_us': params[f't_{dir}_usec_inc'],
                                     'id': params['id'],
-                                    'sign': _modes[dir],
+                                    # 'sign': _modes[dir],
                                     'v_start': v_arrays[dir][0],
                                     'v_stop': v_arrays[dir][-1],
                                     'n_points': n_points[dir],
@@ -301,8 +377,8 @@ def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -
                                     'vol': 0,
                                     't_ms': params[f't_{dir}_msec_inc'],
                                     't_us': params[f't_{dir}_usec_inc'],
-                                    'id': params['id'],
-                                    'sign': _modes[dir]}
+                                    'id': params['id']}
+                                    # 'sign': _modes[dir]}
                     for vol in v_arrays[dir]:
                         sense_data['vol'] = abs(int(vol))
                         yield [sense_data, terminator]  # Sense task
@@ -351,7 +427,7 @@ def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> 
                             't_ms': params[f't_{dir}_msec_inc'],
                             't_us': params[f't_{dir}_usec_inc'],
                             'id': params['id'],
-                            'sign': _modes[dir],
+                            # 'sign': _modes[dir],
                             'current_compliance': params[f'{dir}_cc']}
             pulse_sequence = []
             for _ in range(params[f'{dir}_inc_countr']):  # One config per direction
@@ -376,7 +452,7 @@ def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> 
                             't_ms': params[f't_{dir}_msec_inc'],
                             't_us': params[f't_{dir}_usec_inc'],
                             'id': params['id'],
-                            'sign': _modes[dir],
+                            # 'sign': _modes[dir],
                             'triggered': True}
                 for pulse in pulse_sequence:
                     if pulse == 'read':
@@ -537,7 +613,7 @@ def _visa_crossbar_scan_gen(params, n_points, v_arrays, double, terminator, blan
                    't_ms': params[f't_{dir}_msec_inc'],
                    't_us': params[f't_{dir}_usec_inc'],
                    'id': params['id'],
-                   'sign': _modes[dir],
+                #    'sign': _modes[dir],
                    'current_compliance': params[f'{dir}_cc'],
                    'pulse_sequence': ['read' for _ in range(params['col_num'] * params['row_num'])]}
     yield [config_task, terminator]

@@ -1,8 +1,12 @@
 """
 Меню режимов
 """
-from manager.modes import get_tst, get_std, SMUGen
+import os
+import json
 from collections.abc import Generator
+
+from manager.service.global_settings import TICKET_PATH
+from manager.modes import get_tst, get_std, SMUGen
 
 
 # Basic modes used in example tickets
@@ -58,7 +62,7 @@ class Menu:
                 'smu_pot_dep': 'Potentiation-Depression (async)',
             }
             # Generator functions for each mode
-            self._smu_gen = SMUGen(logger=self.parent.ap_logger)
+            self._smu_gen = SMUGen(parent=self, logger=self.parent.ap_logger)
             self._mode_functions = {
                 'prog_sync': self._smu_gen.smu_prog_sync,
                 'smu_iv_dc': self._smu_gen.smu_iv_dc,
@@ -108,3 +112,12 @@ class Menu:
     def check_mode_compatibility(self, mode: str) -> bool:
         """Check if the mode is compatible with driver in use"""
         return mode in self._modes
+    
+    
+    def get_measure_ticket(self) -> dict:
+        """Get measure ticket from the settings.ini"""
+        name = self.parent.ap_config['gui']['measure_ticket']
+        fname = os.path.join(TICKET_PATH, name)
+        with open(fname, encoding='utf-8') as file:
+            ticket = json.load(file)
+        return ticket
