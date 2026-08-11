@@ -271,61 +271,40 @@ class History(QDialog):
         """
         Экспортировать тикет в json
         """
-        if self.export_to_json_mode:
-            # экспорт тикетов
-            fname = self.tickets_ids[len(self.tickets_ids)-1]
-            self.tickets_ids.pop()
-            ticket_info_list = []
-            for ticket_id in self.tickets_ids:
-                blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
-                ticket_info_list.append(pickle.loads(blob))
-            with open(os.path.join(TICKET_PATH,
-                                fname+'.json'),
-                                'w+', encoding='utf-8') as outfile:
-                outfile.write("{")
-                for i in range(len(ticket_info_list)):
-                    outfile.write('"' + str(i) + '":')
-                    json.dump(ticket_info_list[i], outfile)
-                    if i < len(ticket_info_list)-1:
-                        outfile.write(",\n")
-                outfile.write("}")
-                outfile.close()
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("exported") + os.path.join(TICKET_PATH, fname + '.json'))
-        else:
-            items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
-            # проверки на выбор
-            ok = True
-            if len(items) == 0:
-                show_warning_messagebox(parent=self, message=self.lang_pack.get("pick_ticket"))
-                ok = False
-            elif len(items) > 3:
+        items = self.ui.table_history_tickets.selectedItems() # все выделенные ячейки
+        # проверки на выбор
+        ok = True
+        if len(items) == 0:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("pick_ticket"))
+            ok = False
+        elif len(items) > 3:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("pick_one"))
+            ok = False
+        rows = []
+        for item in items:
+            cur_row = self.ui.table_history_tickets.row(item)
+            more_than_one = False
+            for row in rows:
+                if row != cur_row:
+                    more_than_one = True
+                    break
+            if more_than_one:
                 show_warning_messagebox(parent=self, message=self.lang_pack.get("pick_one"))
                 ok = False
-            rows = []
-            for item in items:
-                cur_row = self.ui.table_history_tickets.row(item)
-                more_than_one = False
-                for row in rows:
-                    if row != cur_row:
-                        more_than_one = True
-                        break
-                if more_than_one:
-                    show_warning_messagebox(parent=self, message=self.lang_pack.get("pick_one"))
-                    ok = False
-                else:
-                    rows.append(cur_row)
-            # экспорт тикета
-            if ok:
-                ticket_id = self.tickets[cur_row][0]
-                blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
-                ticket_info = pickle.loads(blob)
-                fname = ticket_info["name"] + "_" + str(ticket_id)
-                with open(os.path.join(TICKET_PATH,
-                                    fname+'.json'),
-                                    'w', encoding='utf-8') as outfile:
-                    json.dump(ticket_info, outfile)
-                    outfile.close()
-                show_warning_messagebox(parent=self, message=self.lang_pack.get("exported") + os.path.join(TICKET_PATH, fname + '.json'))
+            else:
+                rows.append(cur_row)
+        # экспорт тикета
+        if ok:
+            ticket_id = self.tickets[cur_row][0]
+            blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
+            ticket_info = pickle.loads(blob)
+            fname = ticket_info["name"] + "_" + str(ticket_id)
+            with open(os.path.join(TICKET_PATH,
+                                fname+'.json'),
+                                'w', encoding='utf-8') as outfile:
+                json.dump(ticket_info, outfile, ensure_ascii=False, indent=4)
+                outfile.close()
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("exported") + os.path.join(TICKET_PATH, fname + '.json'))
 
     def show_ticket(self) -> None:
         """
@@ -347,8 +326,18 @@ class History(QDialog):
             for i in range(len(tickets)):
                 self.tickets_ids.append(tickets[i][0])
             self.tickets_ids.append(self.experiments[current_row][2])
-            self.export_ticket_to_json()
+            # экспорт эксперимента
+            fname = self.tickets_ids[len(self.tickets_ids)-1]
+            self.tickets_ids.pop()
+            experiment_dict = {}
+            for k, ticket_id in enumerate(self.tickets_ids):
+                blob = self.parent.man.db.get_BLOB_from_ticket_id(ticket_id)[1]
+                experiment_dict[k] = pickle.loads(blob)
+            with open(os.path.join(TICKET_PATH, fname+'.json'), 'w', encoding='utf-8') as file:
+                json.dump(experiment_dict, file, ensure_ascii=False, indent=4)
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("exported") + os.path.join(TICKET_PATH, fname + '.json'))
             self.tickets_ids = []
+        
 
     def set_up_init_values(self) -> None:
         """

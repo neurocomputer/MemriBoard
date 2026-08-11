@@ -183,7 +183,7 @@ class ExpSettings(QDialog):
         time_done = round(((self.parent.exp_list_params['total_tasks'] * 55) / 1000) / 60, 0) # todo: скорректировать время
         self.ui.label_count_tasks.setText(self.lang_pack.get("tickets") + str(self.parent.exp_list_params['total_tickets']) + self.lang_pack.get("board_req") + str(self.parent.exp_list_params['total_tasks']) + self.lang_pack.get("est_time") + str(time_done) + self.lang_pack.get("min"))
 
-    def _add_exp_to_list(self, **kwargs) -> None:
+    def _add_exp_to_list(self, **kwargs) -> bool:
         """
         Заполнить эксперимент
         """
@@ -195,17 +195,19 @@ class ExpSettings(QDialog):
                 file_name = self.ui.exp_list.currentIndex().data()
                 # 2 загружаем тикет в память
                 ticket = self.parent.read_ticket_from_disk(file_name+".json")
+            if 'params' not in ticket:  # It's an experiment
+                self.importing_experiment = True
+                self._add_experiment_to_list(ticket)
+                return
             # 3 указываем ячейку
             ticket["params"]["wl"] = self.parent.current_wl
             ticket["params"]["bl"] = self.parent.current_bl
             # 4 считаем сколько тикетов и тасков в списке
             if not self.parent.man.menu.check_mode_compatibility(ticket['mode']):
-                show_warning_messagebox(self, self.lang_pack("mode_incompatible"))
-                if self.importing_experiment:
-                    raise Exception
-                else:
-                    return
-            count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+                show_warning_messagebox(self, self.lang_pack.get("mode_incompatible"))
+                return False
+            # count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
+            count = 0
             self.parent.exp_list_params['total_tickets'] += 1
             self.parent.exp_list_params['total_tasks'] += count
             # 5 отображаем название тикета в списке
@@ -213,11 +215,20 @@ class ExpSettings(QDialog):
             self._refresh_exp_list()
             # 6 обновляем значение лейблов
             self.label_total_update()
-        except KeyError:
-            self.import_experiment_json(mode='dblclick')
-            if not self.importing_experiment:
-                self.importing_experiment = False
-                show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
+            return True
+        except Exception as e:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable") + f'\n{type(e).__name__}: {e}')
+                
+    def _add_experiment_to_list(self, experiment: dict) -> None:
+        """
+        Add experiment (multiple tickets) to list
+        """
+        for ticket in experiment.values():
+            status = self._add_exp_to_list(ticket=ticket)
+            if not status:
+                break
+        self.importing_experiment = False
+                
                 
     def _add_alg_to_list(self, **kwargs) -> None:
         """
@@ -381,23 +392,15 @@ class ExpSettings(QDialog):
         """
         Импорт json с экспериментом
         """
-        try:
-            filepath = ''
-            if mode == 'dblclick':
-                self.importing_experiment = True
-                filepath = os.path.join(TICKET_PATH, self.ui.exp_list.currentIndex().data()) + ".json"
-            if not filepath:
-                filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
-            if filepath:
-                data: str
-                with open (filepath, "r+") as f:
-                    data = f.read()
-                tickets = json.loads(data)
-                for i in range(len(tickets)):
-                    self._add_exp_to_list(ticket=tickets.get(str(i)))
-                self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
-        except Exception as e:
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable") + f'\n{type(e).__name__}: {e}')
+        filepath = open_file_dialog(self, file_types="JSON Files (*.json)")
+        if filepath:
+            try:
+                with open(filepath, "r", encoding='utf-8') as file:
+                    tickets = json.load(file)
+            except Exception as e:
+                show_warning_messagebox(self, self.lang_pack.get("could_not_read") + f'{type(e).__name__}: {e}')
+            self._add_exp_to_list(tickets)
+            self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
 
     def duplicate_ticket(self) -> None:
         """

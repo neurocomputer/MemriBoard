@@ -1,6 +1,6 @@
 {
     "name": "iv-curve-reversed",
-    "mode": "volt_sweep",
+    "mode": "smu_iv_dc",
     "params": {
         "start_dir": 0.0,
         "stop_dir": 1.7,
@@ -8,10 +8,10 @@
         "start_rev": 0.0,
         "stop_rev": 1.7,
         "step_rev": 0.05,
-        "compliance_dir": 0.04,
-        "compliance_rev": 0.002,
-        "pulse_width_dir": 1e-4,
-        "pulse_width_rev": 1e-4,
+        "compliance_dir": 0.0003,
+        "compliance_rev": 0.01,
+        "interval_dir": 0.0001,
+        "interval_rev": 0.0001,
         "amount_dir": 1,
         "amount_rev": 1,
         "double_dir": true,

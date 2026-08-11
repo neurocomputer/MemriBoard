@@ -60,7 +60,7 @@ class Menu:
             # Generator functions for each mode
             self._smu_gen = SMUGen(logger=self.parent.ap_logger)
             self._mode_functions = {
-                'prog_sync': self._smu_gen.smu_std,
+                'prog_sync': self._smu_gen.smu_prog_sync,
                 'smu_iv_dc': self._smu_gen.smu_iv_dc,
                 'smu_pulsed_retention': self._smu_gen.smu_pulsed_retention,
                 'smu_endurance': self._smu_gen.smu_endurance,
@@ -70,7 +70,7 @@ class Menu:
             self._ui_fields = {
                 'prog_sync': 'volt_sweep, +amp_read',  # Standard volt_sweep
                 'smu_iv_dc': 'volt_sweep, pw_to_int',  # Replace pulse width with trigger interval
-                'smu_pulsed_retention': 'endurance, -amp, +amp_read, +period, -amount',  # Standard endurance + remove amplitude, add read amplitude, add period, remove amount
+                'smu_pulsed_retention': 'retention, +amp_read, +pw, +period, +comp',  # Standard retention (nothing) + read voltage + pulse width + pulse period + compliance
                 'smu_endurance': 'endurance, +period, +amp_read',  # Add period, add read amplitude
                 'smu_pot_dep': 'endurance, +period'  # Add period
             }

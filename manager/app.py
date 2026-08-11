@@ -162,6 +162,8 @@ class Application:
         if 'visa_addresses' in kwargs:
             for i in range(5):
                 self.ap_config['connector'][f'visa_address_{i}'] = kwargs['visa_addresses'][i] 
+        if 'last_ticket_modes' in kwargs:
+            self.ap_config['gui']['last_ticket_modes'] = kwargs["last_ticket_modes"]
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)

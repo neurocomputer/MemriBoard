@@ -209,6 +209,7 @@
         "amplitude":"Amplitude",
         "pulse":"Pulse",
         "read_vol":"Read voltage",
+        "read_direction":"Read direction",
         "voltage_in_settings":"Read voltage is set in the settings"
     },
     "cell_info":{
@@ -259,7 +260,8 @@
         "exp_name_expected":"Experiment name is expected!",
         "fill_plan":"Experiment plan is expected to be filled!",
         "not_done":"This feature is under development!",
-        "list_empty":"The list is empty!"
+        "list_empty":"The list is empty!",
+        "could_not_read":"Could not read the file!\n"
     },
     "testing":{
         "name":"Testing",

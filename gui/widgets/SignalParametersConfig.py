@@ -2,7 +2,15 @@
 import os
 from functools import partial
 
-from PyQt5.QtWidgets import QWidget, QLabel, QGroupBox, QCheckBox, QSpinBox, QFrame
+from PyQt5.QtWidgets import (
+    QWidget, 
+    QLabel, 
+    QGroupBox, 
+    QCheckBox, 
+    QSpinBox, 
+    QFrame, 
+    QComboBox
+)
 from PyQt5 import uic
 
 from gui.widgets.ScientificQLineEdit import ScientificQLineEdit
@@ -20,6 +28,8 @@ class SignalParameters(QWidget):
         # Variables
         self.signal_mode = signal_mode
         self.used_scientific_widgets = []
+        self.direction_items = {0: 'dir', 1: 'rev'}
+        self.direction_indexes = {val: key for key, val in self.direction_items.items()}
         
         # Linting widget types for convenience
         self.groupBox_sweep_params: QGroupBox
@@ -30,6 +40,7 @@ class SignalParameters(QWidget):
         self.label_stop: QLabel
         self.label_step: QLabel
         self.label_read_vol: QLabel
+        self.label_read_direction: QLabel
         self.label_pulse_width: QLabel
         self.label_amount: QLabel
         self.label_double: QLabel
@@ -46,8 +57,7 @@ class SignalParameters(QWidget):
         self.start_rev: ScientificQLineEdit
         self.stop_rev: ScientificQLineEdit
         self.step_rev: ScientificQLineEdit
-        self.read_vol_dir: ScientificQLineEdit
-        self.read_vol_rev: ScientificQLineEdit
+        self.read_voltage: ScientificQLineEdit
         self.pulse_width_dir: ScientificQLineEdit
         self.pulse_width_rev: ScientificQLineEdit
         self.pulse_period_dir: ScientificQLineEdit
@@ -59,6 +69,8 @@ class SignalParameters(QWidget):
         self.amount_rev: QSpinBox
         self.double_dir: QCheckBox
         self.double_rev: QCheckBox
+        self.read_direction: QComboBox
+        self.read_voltage_group: QGroupBox
         
         self.create_item_groups()
         # Scientific widget warnings
@@ -76,6 +88,7 @@ class SignalParameters(QWidget):
         self.label_step.setText(lang_pack.get("step"))
         self.label_stop.setText(self.lang_pack.get("stop"))
         self.label_read_vol.setText(lang_pack.get("read_vol"))
+        self.label_read_direction.setText(lang_pack.get("read_direction"))
         self.label_pulse_period.setText(lang_pack.get("pulse_period"))
         self.label_amount.setText(lang_pack.get("amount"))
         self.label_double.setText(lang_pack.get("double"))
@@ -85,6 +98,12 @@ class SignalParameters(QWidget):
         self.label_compliance.setText(lang_pack.get("compliance") + self.lang_pack.get(comp_type))
         self.label_compliance.setToolTip(lang_pack.get(f"{comp_type}_tooltip"))
         self.label_compliance_val.setToolTip(lang_pack.get(f"{comp_type}_tooltip"))
+        # Read directions
+        self.read_direction.clear()
+        for item in self.direction_items.values():
+            self.read_direction.addItem(lang_pack.get(item))
+        self.read_direction.setCurrentIndex(1)  # TODO Check if it works
+        # self.read_
         # ScientificQLineEdits
         self.start_dir.set_unit(lang_pack.get("volt"))
         self.stop_dir.set_unit(lang_pack.get("volt"))
@@ -92,8 +111,7 @@ class SignalParameters(QWidget):
         self.start_rev.set_unit(lang_pack.get("volt"))
         self.stop_rev.set_unit(lang_pack.get("volt"))
         self.step_rev.set_unit(lang_pack.get("volt"))
-        self.read_vol_dir.set_unit(lang_pack.get("volt"))
-        self.read_vol_rev.set_unit(lang_pack.get("volt"))
+        self.read_voltage.set_unit(lang_pack.get("volt"))
         self.compliance_dir.set_unit(lang_pack.get("amperes"))
         self.compliance_rev.set_unit(lang_pack.get("amperes"))
         self.pulse_width_dir.set_unit(lang_pack.get("second"))
@@ -113,8 +131,7 @@ class SignalParameters(QWidget):
             self.start_rev,
             self.stop_rev,
             self.step_rev,
-            self.read_vol_dir,
-            self.read_vol_rev,
+            self.read_voltage,
             self.compliance_dir,
             self.compliance_rev,
             self.pulse_width_dir,
@@ -126,7 +143,6 @@ class SignalParameters(QWidget):
         self.start_group = WidgetGroup(self, self.label_start, self.start_dir, self.start_rev)
         self.stop_group = WidgetGroup(self, self.label_stop, self.stop_dir, self.stop_rev)
         self.step_group = WidgetGroup(self, self.label_step, self.step_dir, self.step_rev)
-        self.read_vol_group = WidgetGroup(self, self.label_read_vol, self.read_vol_dir, self.read_vol_rev)
         self.compliance_group = WidgetGroup(self, self.label_compliance, self.compliance_dir, self.compliance_rev)
         self.pulse_width_group = WidgetGroup(self, self.label_pulse_width, self.pulse_width_dir, self.pulse_width_rev)
         self.pulse_period_group = WidgetGroup(self, self.label_pulse_period, self.pulse_period_dir, self.pulse_period_rev)
@@ -137,11 +153,12 @@ class SignalParameters(QWidget):
         self.lines_h_1 = HorizontalLines(self.line_1_0, self.line_1_1, self.line_1_2, self.line_1_3)
         self.lines_h_2 = HorizontalLines(self.line_2_0, self.line_2_1, self.line_2_2, self.line_2_3)
         self.lines_h_3 = HorizontalLines(self.line_3_0, self.line_3_1, self.line_3_2, self.line_3_3)
+        self.lines_h_4 = HorizontalLines(self.line_4_0, self.line_4_1, self.line_4_2, self.line_4_3)
         
         
     def set_horizontal_lines_visible(self, visible_flags: list[bool]) -> None:
             """Change visibility of the horizontal lines"""
-            for line_group, flag in zip([self.lines_h_0, self.lines_h_1, self.lines_h_2, self.lines_h_3], visible_flags):
+            for line_group, flag in zip([self.lines_h_0, self.lines_h_1, self.lines_h_2, self.lines_h_3, self.lines_h_4], visible_flags):
                 line_group.setVisible(flag)
                     
                     
@@ -163,7 +180,7 @@ class SignalParameters(QWidget):
         elif self.base_mode == 'retention':
             self.show_retention()
         else:
-            raise RuntimeError(f'Unknown signal mode: {mode}')
+            raise RuntimeError(f'Unknown signal mode: {self.base_mode}')
         
         
     def show_sweep(self) -> None:
@@ -176,19 +193,19 @@ class SignalParameters(QWidget):
         self.start_group.show()
         self.stop_group.show()
         self.step_group.show()
-        self.read_vol_group.setVisible('+amp_read' in self.ui_fields)
         self.compliance_group.show()
-        self.pulse_width_group.setVisible('-pw' not in self.ui_fields)
-        self.pulse_period_group.setVisible('+period' in self.ui_fields)
+        self.pulse_width_group.show()
+        self.pulse_period_group.hide()
         self.amount_group.show()
         self.double_group.show()
+        self.read_voltage_group.setVisible('+amp_read' in self.ui_fields)
         # Left widgets
         self.label_sweep_val.show()
         self.label_compliance_val.show()
         self.label_time.show()
         self.label_sweep_params.show()
         # Gray lines
-        self.set_horizontal_lines_visible([True, True, True, True])
+        self.set_horizontal_lines_visible([True, True, True, True, '+amp_read' in self.ui_fields])
         self.set_vertical_lines_visible([True, True, True])
         # Labels
         self.label_sweep_val.setText(self.lang_pack.get("voltage"))
@@ -208,34 +225,36 @@ class SignalParameters(QWidget):
         self.label_dir.show()
         self.label_rev.show()
         # Group widgets
-        self.start_group.setVisible('-amp' not in self.ui_fields)
+        self.start_group.show()
         self.stop_group.hide()
         self.step_group.hide()
-        self.read_vol_group.setVisible('+amp_read' in self.ui_fields)
         self.compliance_group.show()
         self.pulse_width_group.show()
         self.pulse_period_group.setVisible('+period' in self.ui_fields)
-        self.amount_group.setVisible('-amount' not in self.ui_fields)
+        self.amount_group.show()
         self.double_group.hide()
+        self.read_voltage_group.setVisible('+amp_read' in self.ui_fields)
         # Left widgets
         self.label_sweep_val.show()
         self.label_compliance_val.show()
         self.label_time.show()
-        self.label_sweep_params.setVisible('-amount' not in self.ui_fields)
+        self.label_sweep_params.show()
         # Gray lines
-        self.set_horizontal_lines_visible([True, True, True, '-amount' not in self.ui_fields])
+        self.set_horizontal_lines_visible([True, True, True, True, '+amp_read' in self.ui_fields])
         self.set_vertical_lines_visible([True, True, True])
         # Labels
+        self.label_start.setText(self.lang_pack.get("amplitude"))
         self.label_sweep_val.setText(self.lang_pack.get("voltage"))
         self.label_compliance_val.setText(self.lang_pack.get("current"))
-        self.label_start.setText(self.lang_pack.get("amplitude"))
         self.label_sweep_params.setText(self.lang_pack.get("pulse"))
         self.label_pulse_width.setText(self.lang_pack.get("pulse_width"))
-        
+                
         
     def show_retention(self) -> None:
         """Show retention ui (reduced)"""
         self.used_scientific_widgets = []
+        # Checking whether to show one column (dir) or hide the whole table
+        show_table_flag = '+pw' in self.ui_fields or '+period' in self.ui_fields or '+comp' in self.ui_fields
         # Top widgets
         self.label_dir.hide()
         self.label_rev.hide()
@@ -243,98 +262,217 @@ class SignalParameters(QWidget):
         self.start_group.hide()
         self.stop_group.hide()
         self.step_group.hide()
-        self.compliance_group.hide()
-        self.pulse_width_group.hide()
-        self.pulse_period_group.hide()
+        self.compliance_group.setVisible_dir('+comp' in self.ui_fields)
+        self.pulse_width_group.setVisible_dir('+pw' in self.ui_fields)
+        self.pulse_period_group.setVisible_dir('+period' in self.ui_fields)
         self.amount_group.hide()
         self.double_group.hide()
-        # Left widgets
-        self.label_sweep_val.show()
-        self.label_compliance_val.hide()
-        self.label_time.hide()
-        self.label_sweep_params.hide()
-        # Gray lines
-        self.set_horizontal_lines_visible([False, False, False, False])
-        self.set_vertical_lines_visible([False, False, False])
-        # Labels
-        self.label_sweep_val.setText(self.lang_pack.get("voltage_in_settings"))
+        self.read_voltage_group.setVisible('+amp_read' in self.ui_fields)
+        if not show_table_flag:  # Hiding everything except label_sweep_val
+            # Left widgets
+            self.label_sweep_val.show()
+            self.label_compliance_val.hide()
+            self.label_time.hide()
+            self.label_sweep_params.hide()
+            # Gray lines
+            self.set_horizontal_lines_visible([False, False, False, False, False])
+            self.set_vertical_lines_visible([False, False, False])
+            # Labels
+            self.label_sweep_val.setText(self.lang_pack.get("voltage_in_settings"))
+        else:  # Showing table with one column
+            show_time_flag = '+pw' in self.ui_fields or '+period' in self.ui_fields
+            # Left widgets
+            self.label_sweep_val.hide()
+            self.label_compliance_val.setVisible('+comp' in self.ui_fields)
+            self.label_time.setVisible(show_time_flag)
+            self.label_sweep_params.hide()
+            # Gray lines
+            if show_time_flag and '+comp' in self.ui_fields:  # Both time and compliance are present, separate them by a line
+                self.lines_h_2.show_specific([0, 1, 2])
+            else:
+                self.lines_h_2.hide()
+            for line_gr in [self.lines_h_0, self.lines_h_1, self.lines_h_3, self.lines_h_4]:
+                line_gr.hide()
+            self.set_vertical_lines_visible([True, True, False])
+            # Labels
+            self.label_compliance_val.setText(self.lang_pack.get("current"))
+            self.label_pulse_width.setText(self.lang_pack.get("pulse_width"))
             
             
-    def fill_params_to_ticket(self, ticket: dict) -> dict:
+    def fill_params_to_ticket(self, ticket: dict) -> tuple[bool, dict]:
         """Fill in params in the ticket dict"""
         # Checking if all scientific widgets are fine
         for widget in self.used_scientific_widgets:
             if widget.get_value() is None:
-                raise ValueError
+                return False, ticket
         ticket['params'] = {}  # Clearing parameters
         # Filling in based on the mode
-        if self.mode == 'volt_sweep':
-            # Sweep
-            ticket['params']['start_dir'] = self.start_dir.get_value()
-            ticket['params']['stop_dir'] = self.stop_dir.get_value()
-            ticket['params']['step_dir'] = self.step_dir.get_value()
-            ticket['params']['start_rev'] = self.start_rev.get_value()
-            ticket['params']['stop_rev'] = self.stop_rev.get_value()
-            ticket['params']['step_rev'] = self.step_rev.get_value()
-            # Time
-            ticket['params']['pulse_width_dir'] = self.pulse_width_dir.get_value()
-            ticket['params']['pulse_width_rev'] = self.pulse_width_rev.get_value()
-            # Sweep params
-            ticket['params']['amount_dir'] = self.amount_dir.value()
-            ticket['params']['amount_rev'] = self.amount_rev.value()
-            ticket['params']['double_dir'] = self.double_dir.isChecked()
-            ticket['params']['double_rev'] = self.double_rev.isChecked()
-        elif self.mode in ['endurance', 'pot-dep']:
-            # Pulse
-            ticket['params']['amplitude_dir'] = self.start_dir.get_value()
-            ticket['params']['amplitude_rev'] = self.start_rev.get_value()
-            # Time
-            ticket['params']['pulse_width_dir'] = self.pulse_width_dir.get_value()
-            ticket['params']['pulse_width_rev'] = self.pulse_width_rev.get_value()
-            # Amount params
-            ticket['params']['amount_dir'] = self.amount_dir.value()
-            ticket['params']['amount_rev'] = self.amount_rev.value()
-        elif self.mode == 'retention':
-            pass  # No parameters for this mode
+        if self.base_mode == 'volt_sweep':
+            ticket = self.fill_params_sweep(ticket)
+        elif self.base_mode == 'endurance':
+            ticket = self.fill_params_endurance(ticket)
+        elif self.base_mode == 'retention':
+            ticket = self.fill_params_retention(ticket)
         else:
-            raise RuntimeError(f'Filling params: unknown mode {self.mode}')
+            print(f'Filling params: unknown mode {self.base_mode}')
+            return False, ticket
+        return True, ticket
+    
+    
+    def fill_params_sweep(self, ticket: dict) -> dict:
+        """Fill in params for a sweep based mode"""
+        # Sweep
+        ticket['params']['start_dir'] = self.start_dir.get_value()
+        ticket['params']['stop_dir'] = self.stop_dir.get_value()
+        ticket['params']['step_dir'] = self.step_dir.get_value()
+        ticket['params']['start_rev'] = self.start_rev.get_value()
+        ticket['params']['stop_rev'] = self.stop_rev.get_value()
+        ticket['params']['step_rev'] = self.step_rev.get_value()
+        # Compliance
+        ticket['params']['compliance_dir'] = self.compliance_dir.get_value()
+        ticket['params']['compliance_rev'] = self.compliance_rev.get_value()
+        # Time
+        if 'pw_to_int' in self.ui_fields:  # Replace pulse width with interval
+            ticket['params']['interval_dir'] = self.pulse_width_dir.get_value()
+            ticket['params']['interval_rev'] = self.pulse_width_rev.get_value()
+        else:
+            ticket['params']['pulse_width_dir'] = self.pulse_width_dir.get_value()
+            ticket['params']['pulse_width_rev'] = self.pulse_width_rev.get_value()
+        # Sweep params
+        ticket['params']['amount_dir'] = self.amount_dir.value()
+        ticket['params']['amount_rev'] = self.amount_rev.value()
+        ticket['params']['double_dir'] = self.double_dir.isChecked()
+        ticket['params']['double_rev'] = self.double_rev.isChecked()
+        # Read
+        if '+amp_read' in self.ui_fields:
+            ticket['params']['read_voltage'] = self.read_voltage.get_value()
+            ticket['params']['read_direction'] = self.direction_items[self.read_direction.currentIndex()]
         return ticket
+        
+        
+    def fill_params_endurance(self, ticket: dict) -> dict:
+        """Fill in params for an endurance based mode"""
+        # Pulse
+        ticket['params']['amplitude_dir'] = self.start_dir.get_value()
+        ticket['params']['amplitude_rev'] = self.start_rev.get_value()
+        # Compliance
+        ticket['params']['compliance_dir'] = self.compliance_dir.get_value()
+        ticket['params']['compliance_rev'] = self.compliance_rev.get_value()
+        # Time
+        ticket['params']['pulse_width_dir'] = self.pulse_width_dir.get_value()
+        ticket['params']['pulse_width_rev'] = self.pulse_width_rev.get_value()
+        if '+period' in self.ui_fields:  # Add period
+            ticket['params']['pulse_period_dir'] = self.pulse_period_dir.get_value()
+            ticket['params']['pulse_period_rev'] = self.pulse_period_rev.get_value()
+        # Amount params
+        ticket['params']['amount_dir'] = self.amount_dir.value()
+        ticket['params']['amount_rev'] = self.amount_rev.value()
+        # Read
+        if '+amp_read' in self.ui_fields:  # Add read voltage
+            ticket['params']['read_voltage'] = self.read_voltage.get_value()
+            ticket['params']['read_direction'] = self.direction_items[self.read_direction.currentIndex()]
+        return ticket
+    
+            
+    def fill_params_retention(self, ticket: dict) -> dict:
+        """Fill in params for a retention based mode"""
+        # Compliance
+        if '+comp' in self.ui_fields:
+            ticket['params']['compliance'] = self.compliance_dir.get_value()
+        # Time
+        if '+pw' in self.ui_fields:
+            ticket['params']['pulse_width'] = self.pulse_width_dir.get_value()
+        if '+period' in self.ui_fields:
+            ticket['params']['pulse_period'] = self.pulse_period_dir.get_value()
+        # Read 
+        if '+amp_read' in self.ui_fields:
+            ticket['params']['read_voltage'] = self.read_voltage.get_value()
+            ticket['params']['read_direction'] = self.direction_items[self.read_direction.currentIndex()]
+        return ticket
+    
     
     def load_ticket_to_ui(self, ticket: dict) -> None:
         """Load ticket to the ui. The .set_mode() is expected to be called before this method"""
         # Filling in based on the mode
-        # if self.mode == 'volt_sweep':
-        #     # Sweep
-        #     self.start_dir.set_value(ticket['params']['start_dir'])
-        #     self.stop_dir.set_value(ticket['params']['stop_dir'])
-        #     self.step_dir.set_value(ticket['params']['step_dir'])
-        #     self.start_rev.set_value(ticket['params']['start_rev'])
-        #     self.stop_rev.set_value(ticket['params']['stop_rev'])
-        #     self.step_rev.set_value(ticket['params']['step_rev'])
-        #     # Time
-        #     self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
-        #     self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
-        #     # Sweep params
-        #     self.amount_dir.setValue(ticket['params']['amount_dir'])
-        #     self.amount_rev.setValue(ticket['params']['amount_rev'])
-        #     self.double_dir.setChecked(ticket['params']['double_dir'])
-        #     self.double_rev.setChecked(ticket['params']['double_rev'])
-        # elif self.mode in ['endurance', 'pot-dep']:
-        #     # Pulse
-        #     self.start_dir.set_value(ticket['params']['amplitude_dir'])
-        #     self.start_rev.set_value(ticket['params']['amplitude_rev'])
-        #     # Time
-        #     self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
-        #     self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
-        #     # Amount params
-        #     self.amount_dir.setValue(ticket['params']['amount_dir'])
-        #     self.amount_rev.setValue(ticket['params']['amount_rev'])        
-        # elif self.mode == 'retention':
-        #     pass  # No parameters for this mode
-        # else:
-        #     raise RuntimeError(f'Filling params: unknown mode {self.mode}')
+        if self.base_mode == 'volt_sweep':
+            self.load_ticket_sweep(ticket)
+        elif self.base_mode == 'endurance':
+            self.load_ticket_endurance(ticket)
+        elif self.base_mode == 'retention':
+            self.load_ticket_retention(ticket)
+        else:
+            raise RuntimeError(f'Loading ticket to ui: unknown mode {self.base_mode}')
         
+    
+    def load_ticket_sweep(self, ticket: dict) -> None:
+        """Load a sweep based ticket to the UI"""
+        # Sweep
+        self.start_dir.set_value(ticket['params']['start_dir'])
+        self.stop_dir.set_value(ticket['params']['stop_dir'])
+        self.step_dir.set_value(ticket['params']['step_dir'])
+        self.start_rev.set_value(ticket['params']['start_rev'])
+        self.stop_rev.set_value(ticket['params']['stop_rev'])
+        self.step_rev.set_value(ticket['params']['step_rev'])
+        # Compliance
+        self.compliance_dir.set_value(ticket['params']['compliance_dir'])
+        self.compliance_rev.set_value(ticket['params']['compliance_rev'])
+        # Time
+        if 'pw_to_int' in self.ui_fields:  # Replace pulse width with interval
+            self.pulse_width_dir.set_value(ticket['params']['interval_dir'])
+            self.pulse_width_rev.set_value(ticket['params']['interval_rev'])
+        else:
+            self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
+            self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
+        # Sweep params
+        self.amount_dir.setValue(ticket['params']['amount_dir'])
+        self.amount_rev.setValue(ticket['params']['amount_rev'])
+        self.double_dir.setChecked(ticket['params']['double_dir'])
+        self.double_rev.setChecked(ticket['params']['double_rev'])
+        # Read
+        if '+amp_read' in self.ui_fields:  # Add read voltage
+            self.read_voltage.set_value(ticket['params']['read_voltage'])
+            self.read_direction.setCurrentIndex(self.direction_indexes[ticket['params']['read_direction']])
+        
+        
+    def load_ticket_endurance(self, ticket: dict) -> None:
+        """Load an endurance based ticket to the UI"""
+        # Pulse
+        self.start_dir.set_value(ticket['params']['amplitude_dir'])
+        self.start_rev.set_value(ticket['params']['amplitude_rev'])
+        # Compliance
+        self.compliance_dir.set_value(ticket['params']['compliance_dir'])
+        self.compliance_rev.set_value(ticket['params']['compliance_rev'])
+        # Time
+        self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
+        self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
+        if '+period' in self.ui_fields:  # Add period
+            self.pulse_period_dir.set_value(ticket['params']['pulse_period_dir'])
+            self.pulse_period_rev.set_value(ticket['params']['pulse_period_rev'])
+        # Amount params
+        self.amount_dir.setValue(ticket['params']['amount_dir'])
+        self.amount_rev.setValue(ticket['params']['amount_rev'])
+        # Read
+        if '+amp_read' in self.ui_fields:  # Add read voltage
+            self.read_voltage.set_value(ticket['params']['read_voltage'])
+            self.read_direction.setCurrentIndex(self.direction_indexes[ticket['params']['read_direction']])
+        
+            
+    def load_ticket_retention(self, ticket: dict) -> None:
+        """Load a retention based ticket to the UI"""
+        # Compliance
+        if '+comp' in self.ui_fields:
+            self.compliance_dir.set_value(ticket['params']['compliance'])
+        # Time
+        if '+pw' in self.ui_fields:
+            self.pulse_width_dir.set_value(ticket['params']['pulse_width'])
+        if '+period' in self.ui_fields:
+            self.pulse_period_dir.set_value(ticket['params']['pulse_period'])
+        # Read 
+        if '+amp_read' in self.ui_fields:
+            self.read_voltage.set_value(ticket['params']['read_voltage'])
+            self.read_direction.setCurrentIndex(self.direction_indexes[ticket['params']['read_direction']])      
  
+        
         
 # ----- HELPER CLASSES -----
 
@@ -354,6 +492,14 @@ class WidgetGroup:
         if isinstance(self.dir_widget, ScientificQLineEdit):
             self.parent.used_scientific_widgets.append(self.dir_widget)
             self.parent.used_scientific_widgets.append(self.rev_widget)
+            
+    def show_dir(self) -> None:
+        """Show label and dir widget only, hide rev widget"""
+        self.label.show()
+        self.dir_widget.show()
+        self.rev_widget.hide()
+        if isinstance(self.dir_widget, ScientificQLineEdit):
+            self.parent.used_scientific_widgets.append(self.dir_widget)
         
     def hide(self) -> None:
         """Hide widget group"""
@@ -368,6 +514,13 @@ class WidgetGroup:
         else:
             self.hide()
             
+    def setVisible_dir(self, visible_flag: bool) -> None:
+        """Set visible dir widget only"""
+        if visible_flag:
+            self.show_dir()
+        else:
+            self.hide()
+            
             
 class HorizontalLines:
     """Widget group for a row of horizontal lines"""
@@ -378,6 +531,11 @@ class HorizontalLines:
         """Show widget group"""
         for line in self.lines:
             line.show()
+            
+    def show_specific(self, indexes: list[int]) -> None:
+        """Show specific lines by their indexes"""
+        for i, line in enumerate(self.lines):
+            line.setVisible(i in indexes)
     
     def hide(self) -> None:
         """Hide widget group"""

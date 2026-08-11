@@ -286,10 +286,10 @@ class Connector:
                         pass
                     except ConnectionError:
                         open_flag = False
-            elif self.board_type == 'ITC_1T1R_32x8_probe_station':
+            elif self.board_type == 'ITC_1T1R_probe_station':
                 try:
-                    from RRAM_VISA_Drivers import ITC_1T1R_32x8_probe_station  # type: ignore
-                    self.interface = ITC_1T1R_32x8_probe_station(
+                    from RRAM_VISA_Drivers import ITC_1T1R_probe_station  # type: ignore
+                    self.interface = ITC_1T1R_probe_station(
                         B2902B_1_address=kwargs['visa_addresses'][0],
                         B2902B_2_address=kwargs['visa_addresses'][1],
                         VISA_library_path=kwargs['visa_library_path']

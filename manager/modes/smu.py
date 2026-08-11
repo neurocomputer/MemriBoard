@@ -21,15 +21,60 @@ _modes = {'dir': 0,  # Режимы прямо и обратно
 class SMUGen:
     def __init__(self, logger: Logger) -> None:
         self.logger = logger
+        
+        
+    def _prepare(self, terminate: dict) -> None:
+        """Prepare parameters before generating tasks"""
+        self.interrupt_flag = False
+        self.terminator = terminators[terminate['type']](terminate['value'])
+        
+        
+    def _connect_cell(self, params: dict) -> Generator[list, None, None]:
+        """Connect cell before generating main sequence"""
+        task = {
+            'mode_flag': 'connect_cell',
+            'wl': params['wl'], 
+            'bl': params['bl'], 
+            'id': 0
+        }
+        yield [task, self.terminator]
+        
+        
+    def _disconnect_cell(self) -> Generator[list, None, None]:
+        """Closing all cells"""
+        task = {'mode_flag': 'standby', 'id': 0}
+        yield [task, self.terminator]
+        
+        
+    def _handle_exception(self, e: Exception) -> Generator[list, None, None]:
+        """Handle exeption while generating"""
+        self.logger.warning(f'Task_generator: {type(e).__name__}: {e}')
+        self.interrupt_flag = True
+        yield
+        
+        
+    def _check_interruption(self) -> Generator[list, None, None]:
+        """Check if the experiment was interrupted and send panic flag"""
+        if self.interrupt_flag:
+            task = {'mode_flag': 'panic', 'id': 0}
+            yield [task, terminator]
     
-    
-    def smu_std(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+    def smu_prog_sync(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
         pass
     
 
     def smu_iv_dc(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        """Generator for IV DC mode"""
+        self._prepare(terminate)
+        # Generating
+        try:
+            yield from self._connect_cell(params)
 
+            yield from self._disconnect_cell()
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self.
+            
 
     def smu_pulsed_retention(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
         pass

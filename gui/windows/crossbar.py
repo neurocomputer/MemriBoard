@@ -139,11 +139,7 @@ class Window(QMainWindow):
         self.ui.button_snapshot.clicked.connect(self.show_snapshot)
         self.ui.button_settings.clicked.connect(self.show_settings_dialog)
         # диалоговое окно подключения
-        # self.show_connect_dialog()
-        self.man.init_board('ITC_1T1R_32x8_switched')
-        # self.man.init_board('memardboard_crossbar')
-        ticket = self.read_ticket_from_disk('iv-curve.json')
-        self.show_signal_dialog(ticket, 'edit')
+        self.show_connect_dialog()
         
     def set_shortcuts(self):
         """

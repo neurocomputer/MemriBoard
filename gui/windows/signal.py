@@ -1,9 +1,6 @@
 """
 Диалоговое окно сигнала
 """
-# TODO integrate current compliance
-# TODO integrate VISA-modes
-# TODO add shortcut for numpad enter
 # pylint: disable=E0611,W0401,W0611,R0903,R0915,R0912,C0301,C0103
 
 import os
@@ -229,11 +226,14 @@ class SignalMod(QDialog):
             if self.base_json['name'] == '':
                 show_warning_messagebox(parent=self, message=self.lang_pack.get("fill_in_filename"))
                 return False
+            
             # Signal mode
             self.base_json['mode'] = self.menu.alias_to_mode()[self.signal_mode.currentText()]
             
             # Filling signal parameters
-            self.base_json = self.signal_param.fill_params_to_ticket(self.base_json)
+            status, self.base_json = self.signal_param.fill_params_to_ticket(self.base_json)
+            if not status:
+                raise ValueError
             
             # Other parameters
             self.base_json['params']['count'] = self.repeat_count.value()
@@ -312,11 +312,9 @@ class SignalMod(QDialog):
         """
         Загрузка json файла
         """
-        try:
-            self.menu.mode_to_alias()[self.base_json['mode']]
-        except KeyError:
+        if not self.menu.check_mode_compatibility(self.base_json['mode']):
             show_warning_messagebox(self, self.lang_pack.get("other_driver"))
-            self.close()
+            QTimer.singleShot(0, self.close)
             return
 
         file_name = self.base_ticket_name
@@ -328,7 +326,7 @@ class SignalMod(QDialog):
                 self.base_json = convert_ticket_to_reduced_format(manager=self.parent.man, ticket=self.base_json)
             except Exception as e:
                 show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + f'\n{type(e).__name__}: {e}')
-                self.close()
+                QTimer.singleShot(0, self.close)
                 return
             
         # Signal mode
@@ -337,7 +335,12 @@ class SignalMod(QDialog):
         self._change_signal_mode()
         
         # Params
-        self.signal_param.load_ticket_to_ui(self.base_json)
+        try:
+            self.signal_param.load_ticket_to_ui(self.base_json)
+        except KeyError as e:
+            show_warning_messagebox(self, self.lang_pack.get("other_driver") + f'\nKeyError: {e}')
+            QTimer.singleShot(0, self.close)
+            return
         self.direction_combobox.setCurrentIndex(self.base_json['params']['reverse'])
         self.repeat_count.setValue(self.base_json['params']['count'])
 

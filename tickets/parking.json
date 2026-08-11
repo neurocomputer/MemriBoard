@@ -1,21 +1,23 @@
 {
     "name": "parking",
-    "mode": "volt_sweep",
+    "mode": "prog_sync",
     "params": {
         "start_dir": 0.0,
         "stop_dir": 0.0,
         "step_dir": 0.0,
         "start_rev": 0.0,
-        "stop_rev": 1.499,
-        "step_rev": 0.01,
-        "compliance_dir": 0.04,
-        "compliance_rev": 0.002,
+        "stop_rev": 1.5,
+        "step_rev": 0.05,
+        "compliance_dir": 0.0,
+        "compliance_rev": 0.1,
         "pulse_width_dir": 0.0,
-        "pulse_width_rev": 1e-4,
+        "pulse_width_rev": 0.0001,
         "amount_dir": 0,
         "amount_rev": 1,
         "double_dir": false,
         "double_rev": false,
+        "read_voltage": 0.2,
+        "read_direction": "rev",
         "count": 1,
         "reverse": 0,
         "id": 0,
@@ -24,6 +26,6 @@
     },
     "terminate": {
         "type": ">",
-        "value": 80000
+        "value": 80000.0
     }
 }

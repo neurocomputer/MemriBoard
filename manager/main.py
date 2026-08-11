@@ -144,8 +144,7 @@ class Manager(Application):
             for ticket in tickets:
                 with open(os.path.join(TICKET_PATH, ticket['name'] + '.json'), 'w', encoding='utf-8') as file:
                     json.dump(ticket, file, ensure_ascii=False, indent=4)
-            self.ap_config['gui']['last_ticket_modes'] = self.driver_attr['modes']
-            self.save_settings()
+            self.save_settings(board_type=self.board_type, last_ticket_modes=self.driver_attr['modes'])
 
     def connect(self, **kwargs) -> bool:
         """

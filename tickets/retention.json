@@ -1,8 +1,13 @@
 {
     "name": "retention",
-    "mode": "retention",
+    "mode": "smu_pulsed_retention",
     "params": {
-        "count": 1,
+        "compliance": 0.1,
+        "pulse_width": 0.0001,
+        "pulse_period": 0.0002,
+        "read_voltage": 0.2,
+        "read_direction": "rev",
+        "count": 10,
         "reverse": 0,
         "id": 0,
         "wl": 0,

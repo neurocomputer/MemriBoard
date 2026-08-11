@@ -13,11 +13,6 @@ VISA_DRIVERS
     board.py: check if voltage in `sense` is passed correctly
     board.py: get visa impact to a separate file; reduce everything
 
-HISTORY
-    Спасти export_ticket_to_json и export_experiment
-EXPERIMENT
-    Проверить, как импортируются эксперименты (попробовать эксперимент, потом тикет). Флаг self.importing_tickets
-
 
 TODO IN BOTH BRANCHES
     std.py: Check for key errors when parsing the ticket
