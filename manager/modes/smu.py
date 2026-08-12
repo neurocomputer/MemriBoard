@@ -9,7 +9,7 @@
 """
 
 import numpy as np
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from manager.terminate import terminators
 from logging import Logger
 
@@ -66,23 +66,102 @@ class SMUGen:
             yield [task, self.terminator]
             
             
-    def _create_sweep_array(self, params: dict) -> dict:
+    def _create_sweep_array(self, params: dict, include_double: bool = True) -> dict:
         """Create sweep array based on sweep parameters"""
         arrays = {}
         for dir_rev in ['dir', 'rev']:
             try:
-                arrays[dir_rev] = np.arange(
+                arr = np.arange(
                     params[f'start_{dir_rev}'],
                     params[f'stop_{dir_rev}'] + params[f'step_{dir_rev}'],
                     params[f'step_{dir_rev}']
                 )
             except ZeroDivisionError:
-                arrays[dir_rev] = []
+                arr = np.array([])
+            if include_double:  # Include double sweep in the array
+                if params[f'double_{dir_rev}']:
+                    arr = np.hstack((arr, arr[::-1]))
+            arrays[dir_rev] = arr
         return arrays  # {dir: array_dir, rev: array_rev}
     
     
+    def _generate_measure_ticket(self, params: dict) -> Generator[list, None, None]:
+        """Generate a measure ticket to measure resistance with one pulse"""
+        measure_ticket = self.parent.get_measure_ticket()
+        config_task = {  # FIXME
+            'mode_flag': 'config_smu_pulsed_retention',
+            'current_compliance': measure_ticket['params']['compliance'],
+            'pulse_width': measure_ticket['params']['pulse_width'],
+            'pulse_period': measure_ticket['params']['pulse_period'],
+            'read_voltage': measure_ticket['params']['read_voltage'],
+            'sign': _signs[measure_ticket['params']['read_direction']],
+            'count': 1,
+            'id': params['id']
+        }
+        yield [config_task, self.terminator]  # Config measure
+        sense_task = {
+            'mode_flag': 'sense',
+            'id': params['id'],
+            'sign': 'dir'
+        }
+        sense_task['sign'] = _signs[measure_ticket['params']['read_direction']]
+        yield [sense_task, self.terminator]  # Read measure
+    
+    
+    def _chunk_generator(self, array: Iterable, chunk_len: int) -> Generator[list, None, None]:
+        """Split an array into chunks if it's too long"""
+        for i in range(0, len(array), chunk_len):
+            yield array[i:i + chunk_len]
+
+    
     def smu_prog_sync(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        """Generator from sync programming mode"""
+        global DIR_REV
+        # Preparing 
+        self._prepare(terminate)
+        # dir-rev sequence
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        arrays = self._create_sweep_array(params, include_double=True)
+        sense_task = {  # Sense task template
+            'mode_flag': 'sense',
+            'vol': 0,
+            'id': params['id'],
+            'sign': 0
+        }
+        # Generating
+        try:
+            yield from self._connect_cell(params)
+            for _ in range(params['count']):
+                for dir_rev in sequence:
+                    DIR_REV = dir_rev
+                    for _ in range(params[dr('amount')]):
+                        if len(arrays[dir_rev]) == 0:
+                            self._generate_measure_ticket()
+                        else:
+                            # Splitting array to chunks if it's to long to be sent to the driver
+                            # Dividing by 2 because of additional read pulses
+                            for chunk in self._chunk_generator(arrays[dir_rev], int(params['batch_size']/2)):
+                                config_task = {
+                                    'mode_flag': 'config_std',
+                                    'volt_array': chunk,
+                                    'compliance': params[dr('compliance')],
+                                    'pulse_width': params[dr('pulse_width')],
+                                    'read_voltage': params['read_voltage'],
+                                    'read_direction': _signs[params['read_direction']],
+                                    'sign': _signs[dir_rev],
+                                    'id': params['id']
+                                }
+                                yield [config_task, self.terminator]
+                                
+                                sense_task['sign'] = _signs[dir_rev]
+                                for vol in chunk:
+                                    sense_task['vol'] = vol
+                                    yield [sense_task, self.terminator]
+                                
+            yield from self._disconnect_cell()
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
     
 
     def smu_iv_dc(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
@@ -92,12 +171,12 @@ class SMUGen:
         self._prepare(terminate)
         # dir-rev sequence
         sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
-        arrays = self._create_sweep_array(params)
+        arrays = self._create_sweep_array(params, include_double=False)
         sense_task = {  # Sense task template
             'mode_flag': 'sense',
             'vol': 0,
             'id': params['id'],
-            'sign': 'dir'
+            'sign': 0
         }
         # Generating
         try:
@@ -105,19 +184,18 @@ class SMUGen:
             for _ in range(params['count']):  # Outer cycle
                 for dir_rev in sequence:  # dir and rev
                     DIR_REV = dir_rev
-                    for _ in range(params[f'amount_{dir_rev}']):
+                    for _ in range(params[dr('amount')]):
                         if len(arrays[dir_rev]) != 0:
                             config_task = {
                                 'mode_flag': 'config_iv_dc',
-                                'vol': 0,
-                                'time_interval': params[dr('interval')],
-                                'id': params['id'],
-                                'sign': _signs[dir_rev],
                                 'v_start': params[dr('start')],
                                 'v_stop': params[dr('stop')],
                                 'n_points': len(arrays[dir_rev]),
+                                'compliance': params[dr('compliance')],
+                                'time_interval': params[dr('interval')],
                                 'double': params[dr('double')],
-                                'current_compliance': params[dr('compliance')]
+                                'sign': _signs[dir_rev],
+                                'id': params['id'],
                             }
                             yield [config_task, self.terminator]  # Config task
                             
@@ -130,30 +208,30 @@ class SMUGen:
                                     sense_task['vol'] = vol
                                     yield [sense_task, self.terminator]  # Sense tasks
             # Reading after sweep
-            measure_ticket = self.parent.get_measure_ticket()
-            config_task = {  # FIXME
-                'mode_flag': 'config_smu_pulsed_retention',
-                'current_compliance': measure_ticket['params']['compliance'],
-                'pulse_width': measure_ticket['params']['pulse_width'],
-                'pulse_period': measure_ticket['params']['pulse_period'],
-                'read_voltage': measure_ticket['params']['read_voltage'],
-                'sign': _signs[measure_ticket['params']['read_direction']],
-                'count': 1,
-                'id': params['id']
-            }
-            yield [config_task, self.terminator]  # Config measure
-            del sense_task['vol']
-            sense_task['sign'] = _signs[measure_ticket['params']['read_direction']]
-            yield [sense_task, self.terminator]  # Read measure
+            yield from self._generate_measure_ticket(params)
             
             yield from self._disconnect_cell()
         except Exception as e:
             yield from self._handle_exception(e)
         yield from self._check_interruption()
+        
+        
+    def smu_cc_cv(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
+    
+    
+    def smu_cv_cc(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
+    
+    
+    def smu_iv_current(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        pass
             
 
     def smu_pulsed_retention(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        # Preparing
+        self._prepare(terminate)
+        # config_data = 
     
 
     def smu_endurance(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:

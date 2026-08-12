@@ -180,7 +180,11 @@
         "plot_voltage":"Напряжение, В",
         "plot_pulse_count":"Номер импульса",
         "plot_time":"Время, мкс",
-        "plot_limit_reached":" (Число импульсов на графике ограничено: "
+        "plot_limit_reached":" (Число импульсов на графике ограничено: ",
+        "batch_size":"Размер пакета",
+        "batch_size_tooltip":"Максимальное число точек, измеряемых асинхронно",
+        "pulses":"импульсов",
+        "cycles":"циклов"
     },
     "signal_parameters": {
         "sweep_params":"Параметры развертки",
@@ -204,7 +208,7 @@
         "amount":"Количество",
         "double":"Обратный ход",
         "volt":"В",
-        "amperes":"А",
+        "ampere":"А",
         "second":"с",
         "amplitude":"Амплитуда",
         "pulse":"Импульсы",

@@ -12,6 +12,7 @@
         "pulse_period_rev": 0.0002,
         "amount_dir": 10,
         "amount_rev": 10,
+        "batch_size": 10000,
         "count": 1,
         "reverse": 0,
         "id": 0,

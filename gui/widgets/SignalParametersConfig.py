@@ -18,7 +18,7 @@ from gui.widgets.ScientificQLineEdit import ScientificQLineEdit
 
 
 class SignalParameters(QWidget):
-    """Widget which configures the voltage/time on the signal window"""         
+    """Widget which configures the voltage/time on the signal window"""      
     def __init__(self, parent, signal_mode: str = 'volt_sweep'):
         super().__init__(parent)
         self.parent = parent
@@ -30,6 +30,7 @@ class SignalParameters(QWidget):
         self.used_scientific_widgets = []
         self.direction_items = {0: 'dir', 1: 'rev'}
         self.direction_indexes = {val: key for key, val in self.direction_items.items()}
+        self.batch_size_field = None
         
         # Linting widget types for convenience
         self.groupBox_sweep_params: QGroupBox
@@ -83,8 +84,6 @@ class SignalParameters(QWidget):
         self.lang_pack = lang_pack
         self.groupBox_sweep_params.setTitle(lang_pack.get("sweep_params"))
         # Labels
-        self.label_dir.setText(lang_pack.get("dir"))
-        self.label_rev.setText(lang_pack.get("rev"))
         self.label_step.setText(lang_pack.get("step"))
         self.label_stop.setText(self.lang_pack.get("stop"))
         self.label_read_vol.setText(lang_pack.get("read_vol"))
@@ -103,23 +102,17 @@ class SignalParameters(QWidget):
         for item in self.direction_items.values():
             self.read_direction.addItem(lang_pack.get(item))
         self.read_direction.setCurrentIndex(1)  # TODO Check if it works
-        # self.read_
         # ScientificQLineEdits
-        self.start_dir.set_unit(lang_pack.get("volt"))
-        self.stop_dir.set_unit(lang_pack.get("volt"))
-        self.step_dir.set_unit(lang_pack.get("volt"))
-        self.start_rev.set_unit(lang_pack.get("volt"))
-        self.stop_rev.set_unit(lang_pack.get("volt"))
-        self.step_rev.set_unit(lang_pack.get("volt"))
         self.read_voltage.set_unit(lang_pack.get("volt"))
-        self.compliance_dir.set_unit(lang_pack.get("amperes"))
-        self.compliance_rev.set_unit(lang_pack.get("amperes"))
         self.pulse_width_dir.set_unit(lang_pack.get("second"))
         self.pulse_width_rev.set_unit(lang_pack.get("second"))
         self.pulse_period_dir.set_unit(lang_pack.get("second"))
         self.pulse_period_rev.set_unit(lang_pack.get("second"))
         for widget in self.scientific_widgets:
             widget.change_prefix_dict(scientific_lang_pack)
+        # Unit Handlers for ScientificQLineEdits
+        self.dir_unit_handler.change_lang_pack({'volt': lang_pack.get('volt'), 'ampere': lang_pack.get('ampere')})
+        self.rev_unit_handler.change_lang_pack({'volt': lang_pack.get('volt'), 'ampere': lang_pack.get('ampere')})
             
             
     def create_item_groups(self) -> None:
@@ -154,6 +147,21 @@ class SignalParameters(QWidget):
         self.lines_h_2 = HorizontalLines(self.line_2_0, self.line_2_1, self.line_2_2, self.line_2_3)
         self.lines_h_3 = HorizontalLines(self.line_3_0, self.line_3_1, self.line_3_2, self.line_3_3)
         self.lines_h_4 = HorizontalLines(self.line_4_0, self.line_4_1, self.line_4_2, self.line_4_3)
+        # Unit handlers for voltage/current units
+        self.dir_unit_handler = UnitHandler(
+            self.start_dir,
+            self.stop_dir,
+            self.step_dir,
+            self.compliance_dir,
+            lang_pack={'volt': 'V', 'ampere': 'A'}  # Basic lang_pack, it will be replaced on calling .change_language()
+        )
+        self.rev_unit_handler = UnitHandler(
+            self.start_rev,
+            self.stop_rev,
+            self.step_rev,
+            self.compliance_rev,
+            lang_pack={'volt': 'V', 'ampere': 'A'}
+        )
         
         
     def set_horizontal_lines_visible(self, visible_flags: list[bool]) -> None:
@@ -168,11 +176,65 @@ class SignalParameters(QWidget):
             line.setVisible(flag)
             
             
+    def handle_batch_size(self) -> None:
+        """Handle batch size widget (on parent)"""
+        if self.batch_size_field is None:
+            self.parent.hide_batch_size()
+            return
+        # Get the max batch size
+        if hasattr(self.parent.parent.man.conn.interface, 'batch_size'):
+            max_size = self.parent.parent.man.conn.interface.batch_size
+        else:
+            max_size = 10000
+        spl = self.batch_size_field.split('_')
+        if spl[1] == 'cycles':
+            max_size = int(max_size / int(spl[2]))
+        self.parent.show_batch_size(spl[1], max_size)
+            
+            
+    def set_sweep_units(self) -> None:
+        """Set sweep values and units (Voltage/Current) based on ui fields"""
+        if 'dir_to_curr' in self.ui_fields:  # Dir is Current
+            self.dir_unit_handler.change_values('curr')
+            if 'rev_to_curr' in self.ui_fields:  # dir - current, rev - current
+                self.rev_unit_handler.change_values('curr')
+                self.label_sweep_val.setText(self.lang_pack.get('current'))
+                self.label_compliance_val.setText(self.lang_pack.get('voltage'))
+                self.label_dir.setText(self.lang_pack.get("dir"))
+                self.label_rev.setText(self.lang_pack.get("rev"))
+            else:  # dir - current, rev - voltage
+                self.rev_unit_handler.change_values('volt')
+                self.label_sweep_val.setText(self.lang_pack.get('current') + ' | ' + self.lang_pack.get('voltage'))
+                self.label_compliance_val.setText(self.lang_pack.get('voltage') + ' | ' + self.lang_pack.get('current'))
+                self.label_dir.setText(self.lang_pack.get("dir") + ' (' + self.lang_pack.get('current') + ')')
+                self.label_rev.setText(self.lang_pack.get("rev") + ' (' + self.lang_pack.get('voltage') + ')')
+        else:  # Dir is voltage
+            self.dir_unit_handler.change_values('volt')
+            if 'rev_to_curr' in self.ui_fields:  # dir - voltage, rev - current
+                self.rev_unit_handler.change_values('curr')
+                self.label_sweep_val.setText(self.lang_pack.get('voltage') + ' | ' + self.lang_pack.get('current'))
+                self.label_compliance_val.setText(self.lang_pack.get('current') + ' | ' + self.lang_pack.get('voltage'))
+                self.label_dir.setText(self.lang_pack.get("dir") + ' (' + self.lang_pack.get('voltage') + ')')
+                self.label_rev.setText(self.lang_pack.get("rev") + ' (' + self.lang_pack.get('current') + ')')
+            else:  # dir - voltage, rev - voltage
+                self.rev_unit_handler.change_values('volt')
+                self.label_sweep_val.setText(self.lang_pack.get('voltage'))
+                self.label_compliance_val.setText(self.lang_pack.get('current'))
+                self.label_dir.setText(self.lang_pack.get("dir"))
+                self.label_rev.setText(self.lang_pack.get("rev"))
+            
+            
     def set_mode(self, mode: str) -> None:
         """Change ui based on signal mode"""
         self.mode = mode
         self.ui_fields = self.parent.parent.man.menu.ui_fields(mode).split(', ')
         self.base_mode = self.ui_fields[0]
+        for field in self.ui_fields:
+            if field.startswith('+batch'):
+                self.batch_size_field = field
+            else:
+                self.batch_size_field = None
+        self.handle_batch_size()
         if self.base_mode == 'volt_sweep':
             self.show_sweep()
         elif self.base_mode == 'endurance':
@@ -198,7 +260,11 @@ class SignalParameters(QWidget):
         self.pulse_period_group.hide()
         self.amount_group.show()
         self.double_group.show()
-        self.read_voltage_group.setVisible('+amp_read' in self.ui_fields)
+        if '+amp_read' in self.ui_fields:
+            self.read_voltage_group.show()
+            self.used_scientific_widgets.append(self.read_voltage)
+        else:
+            self.read_voltage_group.hide()
         # Left widgets
         self.label_sweep_val.show()
         self.label_compliance_val.show()
@@ -208,8 +274,7 @@ class SignalParameters(QWidget):
         self.set_horizontal_lines_visible([True, True, True, True, '+amp_read' in self.ui_fields])
         self.set_vertical_lines_visible([True, True, True])
         # Labels
-        self.label_sweep_val.setText(self.lang_pack.get("voltage"))
-        self.label_compliance_val.setText(self.lang_pack.get("current"))
+        self.set_sweep_units()
         self.label_start.setText(self.lang_pack.get("start"))
         self.label_sweep_params.setText(self.lang_pack.get("sweep"))
         if 'pw_to_int' in self.ui_fields:
@@ -233,7 +298,11 @@ class SignalParameters(QWidget):
         self.pulse_period_group.setVisible('+period' in self.ui_fields)
         self.amount_group.show()
         self.double_group.hide()
-        self.read_voltage_group.setVisible('+amp_read' in self.ui_fields)
+        if '+amp_read' in self.ui_fields:
+            self.read_voltage_group.show()
+            self.used_scientific_widgets.append(self.read_voltage)
+        else:
+            self.read_voltage_group.hide()
         # Left widgets
         self.label_sweep_val.show()
         self.label_compliance_val.show()
@@ -243,8 +312,8 @@ class SignalParameters(QWidget):
         self.set_horizontal_lines_visible([True, True, True, True, '+amp_read' in self.ui_fields])
         self.set_vertical_lines_visible([True, True, True])
         # Labels
+        self.set_sweep_units()  # All units will be dropped to voltage
         self.label_start.setText(self.lang_pack.get("amplitude"))
-        self.label_sweep_val.setText(self.lang_pack.get("voltage"))
         self.label_compliance_val.setText(self.lang_pack.get("current"))
         self.label_sweep_params.setText(self.lang_pack.get("pulse"))
         self.label_pulse_width.setText(self.lang_pack.get("pulse_width"))
@@ -267,7 +336,11 @@ class SignalParameters(QWidget):
         self.pulse_period_group.setVisible_dir('+period' in self.ui_fields)
         self.amount_group.hide()
         self.double_group.hide()
-        self.read_voltage_group.setVisible('+amp_read' in self.ui_fields)
+        if '+amp_read' in self.ui_fields:
+            self.read_voltage_group.show()
+            self.used_scientific_widgets.append(self.read_voltage)
+        else:
+            self.read_voltage_group.hide()
         if not show_table_flag:  # Hiding everything except label_sweep_val
             # Left widgets
             self.label_sweep_val.show()
@@ -295,7 +368,7 @@ class SignalParameters(QWidget):
                 line_gr.hide()
             self.set_vertical_lines_visible([True, True, False])
             # Labels
-            self.label_compliance_val.setText(self.lang_pack.get("current"))
+            self.set_sweep_units()  # All units will be dropped to voltage
             self.label_pulse_width.setText(self.lang_pack.get("pulse_width"))
             
             
@@ -316,6 +389,9 @@ class SignalParameters(QWidget):
         else:
             print(f'Filling params: unknown mode {self.base_mode}')
             return False, ticket
+        # Batch size
+        if self.batch_size_field is not None:
+            ticket['params']['batch_size'] = self.parent.batch_size.value()
         return True, ticket
     
     
@@ -402,6 +478,9 @@ class SignalParameters(QWidget):
             self.load_ticket_retention(ticket)
         else:
             raise RuntimeError(f'Loading ticket to ui: unknown mode {self.base_mode}')
+        # Batch size
+        if self.batch_size_field is not None:
+            self.parent.batch_size.setValue(ticket['params']['batch_size'])
         
     
     def load_ticket_sweep(self, ticket: dict) -> None:
@@ -548,4 +627,44 @@ class HorizontalLines:
             self.show()
         else:
             self.hide()
+            
+            
+class UnitHandler:
+    """This class handles units of the Scientific units so they can be changed from volts to amps easily"""
+    def __init__(
+        self, 
+        start: ScientificQLineEdit, 
+        stop: ScientificQLineEdit, 
+        step: ScientificQLineEdit, 
+        compliance: ScientificQLineEdit,
+        lang_pack: dict,
+        initial_sweep_val: str = 'volt'
+    ) -> None:
+        self.start = start
+        self.stop = stop
+        self.step = step
+        self.compliance = compliance
+        self.lang_pack = lang_pack
+        self.change_values(initial_sweep_val)
+        
+    def change_values(self, sweep_val: str) -> None:
+        """Change units in the Scientific widgets. Sweep_val is 'volt' or 'curr'"""
+        self.sweep_val = sweep_val
+        if self.sweep_val == 'volt':
+            self.start.set_unit(self.lang_pack.get('volt'))
+            self.stop.set_unit(self.lang_pack.get('volt'))
+            self.step.set_unit(self.lang_pack.get('volt'))
+            self.compliance.set_unit(self.lang_pack.get('ampere'))
+        elif self.sweep_val == 'curr':
+            self.start.set_unit(self.lang_pack.get('ampere'))
+            self.stop.set_unit(self.lang_pack.get('ampere'))
+            self.step.set_unit(self.lang_pack.get('ampere'))
+            self.compliance.set_unit(self.lang_pack.get('volt'))
+        else:
+            raise ValueError(f'Unknown sweep value: {sweep_val}')
+        
+    def change_lang_pack(self, lang_pack: dict) -> None:
+        """Update lang pack"""
+        self.lang_pack = lang_pack
+        self.change_values(self.sweep_val)
 # --------------------------

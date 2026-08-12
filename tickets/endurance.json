@@ -14,6 +14,7 @@
         "read_direction": "rev",
         "amount_dir": 1,
         "amount_rev": 1,
+        "batch_size": 2500,
         "count": 1,
         "reverse": 0,
         "id": 0,

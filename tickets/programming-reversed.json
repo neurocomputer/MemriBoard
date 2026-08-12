@@ -18,6 +18,7 @@
         "double_rev": true,
         "read_voltage": 0.2,
         "read_direction": "rev",
+        "batch_size": 10000,
         "count": 10,
         "reverse": 1,
         "id": 0,

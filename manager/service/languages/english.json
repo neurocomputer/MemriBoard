@@ -180,7 +180,11 @@
         "plot_voltage":"Voltage (V)",
         "plot_pulse_count":"Pulse count",
         "plot_time":"Time (μs)",
-        "plot_limit_reached":" (The pulse number on the chart is limited to "
+        "plot_limit_reached":" (The pulse number on the chart is limited to ",
+        "batch_size":"Batch size",
+        "batch_size_tooltip":"Maximum number of points that are measured asynchronously",
+        "pulses":"pulses",
+        "cycles":"cycles"
     },
     "signal_parameters": {
         "sweep_params":"Sweep parameters",
@@ -204,7 +208,7 @@
         "amount":"Amount",
         "double":"Double",
         "volt":"V",
-        "amperes":"A",
+        "ampere":"A",
         "second":"s",
         "amplitude":"Amplitude",
         "pulse":"Pulse",

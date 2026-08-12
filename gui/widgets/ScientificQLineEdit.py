@@ -42,6 +42,7 @@ class ScientificQLineEdit(QLineEdit):
     """
     bad_value = pyqtSignal(str)
     unit = ''
+    value = None
     def __init__(self, *args, **kwargs) -> None:
         """Custom QLineEdit class with SI prefixes
         """
@@ -114,7 +115,7 @@ class ScientificQLineEdit(QLineEdit):
             unit (str): SI unit to set.
         """
         self.unit = unit
-        self.update_value()
+        self.setText(self._convert_value_to_text())
         
         
     def get_value(self) -> Union[float, None]:

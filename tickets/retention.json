@@ -7,6 +7,7 @@
         "pulse_period": 0.0002,
         "read_voltage": 0.2,
         "read_direction": "rev",
+        "batch_size": 10000,
         "count": 10,
         "reverse": 0,
         "id": 0,

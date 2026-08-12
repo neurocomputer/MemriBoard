@@ -54,6 +54,7 @@ class SignalMod(QDialog):
         self.signal_mode: QComboBox
         self.direction_combobox: QComboBox
         self.repeat_count: QSpinBox
+        self.batch_size: QSpinBox
         self.menu: Menu = self.parent.man.menu
         # Adding widgets
         self.signal_param = SignalParameters(self)
@@ -126,6 +127,11 @@ class SignalMod(QDialog):
             self.ui.label_repeat.setText(self.lang_pack.get("repeat"))
             self.ui.direction_combobox.setItemText(0, self.lang_pack.get("forth-back"))
             self.ui.direction_combobox.setItemText(1, self.lang_pack.get("back-forth"))
+            self.ui.label_batch_size.setText(self.lang_pack.get("batch_size"))
+            self.ui.label_batch_size_unit.setText(self.lang_pack.get("pulses"))
+            self.ui.label_batch_size.setToolTip(self.lang_pack.get("batch_size_tooltip"))
+            self.ui.label_batch_size_unit.setToolTip(self.lang_pack.get("batch_size_tooltip"))
+            self.batch_size.setToolTip(self.lang_pack.get("batch_size_tooltip"))
             self.ui.button_graph.setText(self.lang_pack.get("plot"))
             self.ui.label_board_req.setText(self.lang_pack.get("board_req"))
             self.ui.label_exp_name.setText(self.lang_pack.get("exp_name"))
@@ -421,6 +427,25 @@ class SignalMod(QDialog):
         s1 = int(sum(sizes) / 2)
         s2 = sum(sizes) - s1
         self.splitter.setSizes([s1, s2])
+        
+    def show_batch_size(self, unit: str, max_size: int) -> None:
+        """
+        Show the batch size widgets
+        """
+        self.ui.label_batch_size.show()
+        self.ui.label_batch_size_unit.show()
+        self.ui.label_batch_size_unit.setText(self.lang_pack.get(unit))
+        self.batch_size.show()
+        self.batch_size.setMaximum(max_size)
+        self.batch_size.setValue(max_size)
+    
+    def hide_batch_size(self) -> None:
+        """
+        Hide the batch size widgets
+        """
+        self.ui.label_batch_size.hide()
+        self.ui.label_batch_size_unit.hide()
+        self.batch_size.hide()
 
     def closeEvent(self, event):
         """
