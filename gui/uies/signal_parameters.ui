@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>649</width>
-    <height>338</height>
+    <height>390</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,61 +32,24 @@
       <string>Параметры развертки</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="13" column="2">
-       <widget class="QLabel" name="label_double">
-        <property name="text">
-         <string>Обратный ход</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="6">
-       <widget class="ScientificQLineEdit" name="pulse_period_rev"/>
-      </item>
-      <item row="1" column="5" rowspan="14">
-       <widget class="Line" name="line_v_2">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="11" column="2">
-       <widget class="Line" name="line_3_1">
+      <item row="14" column="0">
+       <widget class="Line" name="line_4_0">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="4" column="2">
-       <widget class="QLabel" name="label_stop">
-        <property name="text">
-         <string>Стоп</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="14" column="6">
-       <widget class="Line" name="line_4_3">
+      <item row="14" column="2">
+       <widget class="Line" name="line_4_1">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="5" column="4">
-       <widget class="ScientificQLineEdit" name="step_dir"/>
+      <item row="4" column="4">
+       <widget class="ScientificQLineEdit" name="stop_dir"/>
       </item>
-      <item row="1" column="1" rowspan="14">
-       <widget class="Line" name="line_v_0">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="15" column="0" colspan="7">
+      <item row="17" column="0" colspan="7">
        <widget class="QGroupBox" name="read_voltage_group">
         <property name="title">
          <string/>
@@ -134,112 +97,17 @@
         </layout>
        </widget>
       </item>
-      <item row="9" column="4">
-       <widget class="ScientificQLineEdit" name="pulse_width_dir"/>
-      </item>
-      <item row="12" column="0" rowspan="2">
-       <widget class="QLabel" name="label_sweep_params">
-        <property name="text">
-         <string>Развертка</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="6">
-       <widget class="ScientificQLineEdit" name="stop_rev"/>
-      </item>
-      <item row="7" column="0">
-       <widget class="QLabel" name="label_compliance_val">
-        <property name="text">
-         <string>Ток</string>
-        </property>
-       </widget>
-      </item>
-      <item row="12" column="6">
-       <widget class="QSpinBox" name="amount_rev">
-        <property name="maximum">
-         <number>99999</number>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="6">
-       <widget class="Line" name="line_0_3">
+      <item row="14" column="6">
+       <widget class="Line" name="line_4_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="12" column="2">
-       <widget class="QLabel" name="label_amount">
+      <item row="3" column="0" rowspan="3">
+       <widget class="QLabel" name="label_sweep_val">
         <property name="text">
-         <string>Количество</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2">
-       <widget class="Line" name="line_0_1">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="6">
-       <widget class="Line" name="line_2_3">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="6">
-       <widget class="ScientificQLineEdit" name="compliance_rev"/>
-      </item>
-      <item row="9" column="2">
-       <widget class="QLabel" name="label_pulse_width">
-        <property name="text">
-         <string>Ширина импульса</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="6">
-       <widget class="Line" name="line_1_3">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="4">
-       <widget class="Line" name="line_1_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="13" column="6">
-       <widget class="QCheckBox" name="double_rev">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="4">
-       <widget class="Line" name="line_2_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="4">
-       <widget class="ScientificQLineEdit" name="stop_dir"/>
-      </item>
-      <item row="13" column="4">
-       <widget class="QCheckBox" name="double_dir">
-        <property name="text">
-         <string/>
+         <string>Напряжение</string>
         </property>
        </widget>
       </item>
@@ -253,62 +121,77 @@
         </property>
        </widget>
       </item>
-      <item row="14" column="0">
-       <widget class="Line" name="line_4_0">
+      <item row="12" column="4">
+       <widget class="QSpinBox" name="amount_dir">
+        <property name="maximum">
+         <number>99999</number>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="2">
+       <widget class="Line" name="line_2_1">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="5" column="2">
-       <widget class="QLabel" name="label_step">
+      <item row="12" column="0" rowspan="2">
+       <widget class="QLabel" name="label_sweep_params">
         <property name="text">
-         <string>Шаг</string>
+         <string>Развертка</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="5" rowspan="14">
+       <widget class="Line" name="line_v_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="15" column="2">
+       <widget class="QLabel" name="label_united_1">
+        <property name="text">
+         <string>Объединенный_1</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="6">
+       <widget class="ScientificQLineEdit" name="stop_rev"/>
+      </item>
+      <item row="10" column="2">
+       <widget class="QLabel" name="label_pulse_period">
+        <property name="text">
+         <string>Период импульсов</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
-      <item row="5" column="6">
-       <widget class="ScientificQLineEdit" name="step_rev"/>
+      <item row="12" column="6">
+       <widget class="QSpinBox" name="amount_rev">
+        <property name="maximum">
+         <number>99999</number>
+        </property>
+       </widget>
       </item>
-      <item row="14" column="2">
-       <widget class="Line" name="line_4_1">
+      <item row="11" column="6">
+       <widget class="Line" name="line_3_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="6" column="0">
-       <widget class="Line" name="line_1_0">
+      <item row="2" column="0">
+       <widget class="Line" name="line_0_0">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="1" column="6">
-       <widget class="QLabel" name="label_rev">
-        <property name="text">
-         <string>Обратно</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="9" column="6">
-       <widget class="ScientificQLineEdit" name="pulse_width_rev"/>
-      </item>
-      <item row="1" column="4">
-       <widget class="QLabel" name="label_dir">
-        <property name="text">
-         <string>Прямо</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
+      <item row="5" column="4">
+       <widget class="ScientificQLineEdit" name="step_dir"/>
       </item>
       <item row="7" column="4">
        <widget class="ScientificQLineEdit" name="compliance_dir"/>
@@ -323,41 +206,121 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="3" rowspan="14">
-       <widget class="Line" name="line_v_1">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
+      <item row="9" column="2">
+       <widget class="QLabel" name="label_pulse_width">
+        <property name="text">
+         <string>Ширина импульса</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
-      <item row="11" column="0">
-       <widget class="Line" name="line_3_0">
+      <item row="8" column="4">
+       <widget class="Line" name="line_2_2">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="2" column="4">
-       <widget class="Line" name="line_0_2">
+      <item row="10" column="6">
+       <widget class="ScientificQLineEdit" name="pulse_period_rev"/>
+      </item>
+      <item row="2" column="2">
+       <widget class="Line" name="line_0_1">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="8" column="2">
-       <widget class="Line" name="line_2_1">
+      <item row="1" column="4">
+       <widget class="QLabel" name="label_dir">
+        <property name="text">
+         <string>Прямо</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="4">
+       <widget class="ScientificQLineEdit" name="pulse_width_dir"/>
+      </item>
+      <item row="11" column="2">
+       <widget class="Line" name="line_3_1">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="Line" name="line_1_0">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="4">
+       <widget class="QCheckBox" name="double_dir">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="Line" name="line_2_0">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="6">
+       <widget class="ScientificQLineEdit" name="start_rev"/>
+      </item>
+      <item row="6" column="4">
+       <widget class="Line" name="line_1_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="6">
+       <widget class="ScientificQLineEdit" name="compliance_rev"/>
       </item>
       <item row="10" column="4">
        <widget class="ScientificQLineEdit" name="pulse_period_dir"/>
       </item>
-      <item row="6" column="2">
-       <widget class="Line" name="line_1_1">
+      <item row="11" column="4">
+       <widget class="Line" name="line_3_2">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="6">
+       <widget class="Line" name="line_2_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="4">
+       <widget class="ScientificQLineEdit" name="start_dir"/>
+      </item>
+      <item row="9" column="0" rowspan="2">
+       <widget class="QLabel" name="label_time">
+        <property name="text">
+         <string>Время</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QLabel" name="label_stop">
+        <property name="text">
+         <string>Стоп</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -368,70 +331,134 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="6">
-       <widget class="ScientificQLineEdit" name="start_rev"/>
-      </item>
-      <item row="8" column="0">
-       <widget class="Line" name="line_2_0">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="11" column="6">
-       <widget class="Line" name="line_3_3">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-       </widget>
-      </item>
-      <item row="10" column="2">
-       <widget class="QLabel" name="label_pulse_period">
+      <item row="13" column="2">
+       <widget class="QLabel" name="label_double">
         <property name="text">
-         <string>Период импульсов</string>
+         <string>Обратный ход</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
-      <item row="3" column="4">
-       <widget class="ScientificQLineEdit" name="start_dir"/>
-      </item>
-      <item row="12" column="4">
-       <widget class="QSpinBox" name="amount_dir">
-        <property name="maximum">
-         <number>99999</number>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0" rowspan="3">
-       <widget class="QLabel" name="label_sweep_val">
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_compliance_val">
         <property name="text">
-         <string>Напряжение</string>
+         <string>Ток</string>
         </property>
        </widget>
       </item>
-      <item row="11" column="4">
-       <widget class="Line" name="line_3_2">
+      <item row="13" column="6">
+       <widget class="QCheckBox" name="double_rev">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="6">
+       <widget class="ScientificQLineEdit" name="step_rev"/>
+      </item>
+      <item row="1" column="6">
+       <widget class="QLabel" name="label_rev">
+        <property name="text">
+         <string>Обратно</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QLabel" name="label_step">
+        <property name="text">
+         <string>Шаг</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="12" column="2">
+       <widget class="QLabel" name="label_amount">
+        <property name="text">
+         <string>Количество</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="4">
+       <widget class="Line" name="line_0_2">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="Line" name="line_0_0">
+      <item row="6" column="2">
+       <widget class="Line" name="line_1_1">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
-      <item row="9" column="0" rowspan="2">
-       <widget class="QLabel" name="label_time">
-        <property name="text">
-         <string>Время</string>
+      <item row="11" column="0">
+       <widget class="Line" name="line_3_0">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
+      </item>
+      <item row="6" column="6">
+       <widget class="Line" name="line_1_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="6">
+       <widget class="Line" name="line_0_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="6">
+       <widget class="ScientificQLineEdit" name="pulse_width_rev"/>
+      </item>
+      <item row="16" column="2">
+       <widget class="QLabel" name="label_united_2">
+        <property name="text">
+         <string>Объединенный_2</string>
+        </property>
+       </widget>
+      </item>
+      <item row="15" column="0" rowspan="2">
+       <widget class="QLabel" name="label_united_val">
+        <property name="text">
+         <string>Объед.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3" rowspan="16">
+       <widget class="Line" name="line_v_1">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" rowspan="16">
+       <widget class="Line" name="line_v_0">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="15" column="4" colspan="3">
+       <widget class="ScientificQLineEdit" name="united_1"/>
+      </item>
+      <item row="16" column="4" colspan="3">
+       <widget class="ScientificQLineEdit" name="united_2"/>
       </item>
      </layout>
     </widget>

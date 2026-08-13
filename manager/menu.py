@@ -81,7 +81,7 @@ class Menu:
                 'prog_sync': 'volt_sweep, +amp_read, +batch_pulses',  # Standard volt_sweep + read voltage
                 'smu_iv_dc': 'volt_sweep, pw_to_int',  # Replace pulse width with trigger interval
                 'smu_pulsed_retention': 'retention, +amp_read, +pw, +period, +comp, +batch_pulses',  # Standard retention (nothing) + read voltage + pulse width + pulse period + compliance
-                'smu_endurance': 'endurance, +period, +amp_read, +batch_cycles_4',  # Add period, add read amplitude, batch_size: 1 cycle is 4 pulses
+                'smu_endurance': 'endurance, +period, +amp_read, -amount, time_unite, +batch_cycles_4',  # Add period, add read amplitude, remove amount, unite time fields, batch_size: 1 cycle is 4 pulses
                 'smu_pot_dep': 'endurance, +period, +batch_pulses',  # Add period
                 'smu_cc-cv': 'volt_sweep, dir_to_curr',  # Dir sweep value is current
                 'smu_cv-cc': 'volt_sweep, rev_to_curr',  # Rev sweep value is current

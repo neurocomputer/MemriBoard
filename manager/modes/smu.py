@@ -19,9 +19,12 @@ _signs = {'dir': 0,  # Режимы прямо и обратно
 
 DIR_REV = 'dir'  # Global variable
  
+ 
 def dr(key: str) -> str:
     """Helper function that appends 'dir' or 'rev' to the end of the key"""
     return f'{key}_{DIR_REV}'
+
+
 
 class SMUGen:
     def __init__(self, parent, logger: Logger) -> None:
@@ -88,23 +91,23 @@ class SMUGen:
     def _generate_measure_ticket(self, params: dict) -> Generator[list, None, None]:
         """Generate a measure ticket to measure resistance with one pulse"""
         measure_ticket = self.parent.get_measure_ticket()
-        config_task = {  # FIXME
-            'mode_flag': 'config_smu_pulsed_retention',
-            'current_compliance': measure_ticket['params']['compliance'],
+        config_task = {  # Config
+            'mode_flag': 'config_pulsed_retention',
+            'count': 1,
+            'compliance': measure_ticket['params']['compliance'],
             'pulse_width': measure_ticket['params']['pulse_width'],
             'pulse_period': measure_ticket['params']['pulse_period'],
             'read_voltage': measure_ticket['params']['read_voltage'],
             'sign': _signs[measure_ticket['params']['read_direction']],
-            'count': 1,
             'id': params['id']
         }
-        yield [config_task, self.terminator]  # Config measure
-        sense_task = {
+        sense_task = {  # Sense
             'mode_flag': 'sense',
+            'vol': measure_ticket['params']['read_voltage'],
             'id': params['id'],
-            'sign': 'dir'
+            'sign': _signs[measure_ticket['params']['read_direction']],
         }
-        sense_task['sign'] = _signs[measure_ticket['params']['read_direction']]
+        yield [config_task, self.terminator]  # Config measure
         yield [sense_task, self.terminator]  # Read measure
     
     
@@ -136,27 +139,26 @@ class SMUGen:
                     DIR_REV = dir_rev
                     for _ in range(params[dr('amount')]):
                         if len(arrays[dir_rev]) == 0:
-                            self._generate_measure_ticket()
-                        else:
-                            # Splitting array to chunks if it's to long to be sent to the driver
-                            # Dividing by 2 because of additional read pulses
-                            for chunk in self._chunk_generator(arrays[dir_rev], int(params['batch_size']/2)):
-                                config_task = {
-                                    'mode_flag': 'config_std',
-                                    'volt_array': chunk,
-                                    'compliance': params[dr('compliance')],
-                                    'pulse_width': params[dr('pulse_width')],
-                                    'read_voltage': params['read_voltage'],
-                                    'read_direction': _signs[params['read_direction']],
-                                    'sign': _signs[dir_rev],
-                                    'id': params['id']
-                                }
-                                yield [config_task, self.terminator]
-                                
-                                sense_task['sign'] = _signs[dir_rev]
-                                for vol in chunk:
-                                    sense_task['vol'] = vol
-                                    yield [sense_task, self.terminator]
+                            arrays[dir_rev] = np.array([0])
+                        # Splitting array to chunks if it's to long to be sent to the driver
+                        # Dividing by 2 because of additional read pulses
+                        for chunk in self._chunk_generator(arrays[dir_rev], int(params['batch_size']/2)):
+                            config_task = {
+                                'mode_flag': 'config_std',
+                                'volt_array': chunk,
+                                'compliance': params[dr('compliance')],
+                                'pulse_width': params[dr('pulse_width')],
+                                'read_voltage': params['read_voltage'],
+                                'read_direction': _signs[params['read_direction']],
+                                'sign': _signs[dir_rev],
+                                'id': params['id']
+                            }
+                            yield [config_task, self.terminator]
+                            
+                            sense_task['sign'] = _signs[dir_rev]
+                            for vol in chunk:
+                                sense_task['vol'] = vol
+                                yield [sense_task, self.terminator]
                                 
             yield from self._disconnect_cell()
         except Exception as e:
@@ -229,486 +231,668 @@ class SMUGen:
             
 
     def smu_pulsed_retention(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        """Generator for pulsed retention mode"""
         # Preparing
         self._prepare(terminate)
-        # config_data = 
+        # Generating
+        try:
+            assert params['batch_size'] > 0
+            config_task = {  # Config
+                'mode_flag': 'config_pulsed_retention',
+                'count': 0,
+                'compliance': params['compliance'],
+                'pulse_width': params['pulse_width'],
+                'pulse_period': params['pulse_period'],
+                'read_voltage': params['read_voltage'],
+                'sign': _signs[params['read_direction']],
+                'id': params['id']
+            }
+            sense_task = {  # Sense
+                'mode_flag': 'sense',
+                'vol': params['read_voltage'],
+                'id': params['id'],
+                'sign': _signs[params['read_direction']],
+            }
+            
+            yield from self._connect_cell(params)
+            
+            # Splitting into batches
+            count = params['count']
+            while count > 0:
+                if count > params['batch_size']:
+                    batch_count = params['batch_size']
+                else:
+                    batch_count = count
+                count -= params['batch_size']
+                
+                config_task['count'] = batch_count
+                yield [config_task, self.terminator]  # Config
+                
+                for _ in range(batch_count):
+                    yield [sense_task, self.terminator]  # Sense
+                
+            yield from self._disconnect_cell()
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
     
 
     def smu_endurance(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        """Generator for endurance mode"""
+        # Preparing
+        self._prepare(terminate)
+        # Generating
+        try:
+            assert params['batch_size'] > 0
+            config_task = {  # Config
+                'mode_flag': 'config_endurance',
+                'v_dir': params['amplitude_dir'],
+                'v_rev': params['amplitude_rev'],
+                'compliance_dir': params['compliance_dir'],
+                'compliance_rev': params['compliance_rev'],
+                'pulse_width': params['pulse_width'],
+                'pulse_period': params['pulse_period'],
+                'read_voltage': params['read_voltage'],
+                'read_direction': _signs[params['read_direction']],
+                'reverse': params['reverse'],
+                'count': 0,
+                'id': params['id']
+            }
+            sense_task_dir = {  # Sense dir
+                'mode_flag': 'sense',
+                'vol': params['amplitude_dir'],
+                'id': params['id'],
+                'sign': _signs['dir']
+            }
+            sense_task_rev = {  # Sense rev
+                'mode_flag': 'sense',
+                'vol': params['amplitude_rev'],
+                'id': params['id'],
+                'sign': _signs['rev']
+            }
+            if params['reverse']:
+                sense_sequence = [sense_task_rev, sense_task_dir]
+            else:
+                sense_sequence = [sense_task_dir, sense_task_rev]
+            
+            yield from self._connect_cell(params)
+            
+            # Splitting into batches
+            count = params['count']
+            while count > 0:
+                if count > params['batch_size']:
+                    batch_count = params['batch_size']
+                else:
+                    batch_count = count
+                count -= params['batch_size']
+                
+                config_task['count'] = batch_count            
+                yield [config_task, self.terminator]
+                
+                for _ in range(batch_count):
+                    for sense_task in sense_sequence:
+                        yield [sense_task, self.terminator]
+            
+            yield from self._disconnect_cell()
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
     
 
     def smu_pot_dep(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        """Generator for potentiation-depression mode"""
+        global DIR_REV
+        # Preparing
+        self._prepare(terminate)
+        # dir-rev sequence
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        sense_task = {  # Sense task template
+            'mode_flag': 'sense',
+            'vol': 0,
+            'id': params['id'],
+            'sign': 0
+        }
+        # Generating
+        try:
+            yield from self._connect_cell(params)
+            
+            for _ in range(params['count']):  # Outer cycle
+                for dir_rev in sequence:  # dir and rev
+                    DIR_REV = dir_rev
+                    config_task = {  # Config
+                        'mode_flag': 'config_pot_dep',
+                        'voltage': params[dr('amplitude')],
+                        'compliance': params[dr('compliance')],
+                        'pulse_width': params[dr('pulse_width')],
+                        'pulse_period': params[dr('pulse_period')],
+                        'count': 0,
+                        'sign': _signs[dir_rev],
+                        'id': params['id']
+                    }
+                    # Splitting into batches
+                    count = params[dr('amount')]  # Amount dir or rev
+                    while count > 0:
+                        if count > params['batch_size']:
+                            batch_count = params['batch_size']
+                        else:
+                            batch_count = count
+                        count -= params['batch_size']
+                        
+                        config_task['count'] = batch_count
+                        yield [config_task, self.terminator]  # Config
+
+                        sense_task['sign'] = _signs[dir_rev]
+                        sense_task['vol'] = params[dr('amplitude')]
+                        for _ in range(batch_count):
+                            yield [sense_task, self.terminator]  # Sense            
+                
+            yield from self._disconnect_cell()
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
 
 
     def crossbar_scan(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
-
-
-def get_smu_iv_dc(
-    params: dict,
-    terminate: dict,
-    blank_type:str,
-    logger=None
-) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_iv_dc.
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-
-    Yields:
-        Generator[list, None, None]: Task generator
-    """
-    yield from smu_generator(params, terminate, blank_type, _smu_iv_dc_gen, logger=logger)
-    
-    
-def get_smu_std(
-    params: dict,
-    terminate: dict,
-    blank_type: str,
-    logger=None
-) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_std (режимы 7 и 9).
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-
-    Yields:
-        Generator[list, None, None]: Task generator
-    """
-    yield from smu_generator(params, terminate, blank_type, _smu_std_gen, logger=logger)
-    
-    
-def get_smu_pulsed_retention(
-    params: dict,
-    terminate: dict,
-    blank_type: str,
-    logger=None
-) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_pulsed_retention.
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-
-    Yields:
-        Generator[list, None, None]: Task generator
-    """
-    yield from smu_generator(params, terminate, blank_type, _smu_pulsed_retention_gen, logger=logger)
-    
-    
-def get_smu_endurance(
-    params: dict, 
-    terminate: dict,
-    blank_type: str,
-    logger=None
-) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_endurance.
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-
-    Yields:
-        Generator[list, None, None]: Task generator
-    """
-    yield from smu_generator(params, terminate, blank_type, _smu_endurance_gen, logger=logger)
-    
-    
-def get_smu_pot_dep(
-    params: dict, 
-    terminate: dict,
-    blank_type: str,
-    logger=None
-) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_pot_dep.
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-
-    Yields:
-        Generator[list, None, None]: Task generator
-    """
-    yield from smu_generator(params, terminate, blank_type, _smu_pot_dep_gen, logger=logger)
-    
-    
-def get_visa_crossbar_scan(
-    params: dict, 
-    terminate: dict,
-    blank_type: str,
-    logger=None
-) -> Generator[list, None, None]:
-    """Генератор тасков для режима smu_endurance.
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-
-    Yields:
-        Generator[list, None, None]: Task generator
-    """
-    yield from smu_generator(params, terminate, blank_type, _visa_crossbar_scan_gen, 
-                             connect_cell_before_main_gen=False, logger=logger)
-
-
-def smu_generator(
-    params: dict,
-    terminate: dict,
-    blank_type: str,
-    main_task_generator: Generator,
-    connect_cell_before_main_gen: bool = True,
-    logger = None
-) -> Generator[list, None, None]:
-    """Глобальный генератор тасков для инструметов с SMU.
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-        main_task_generator (Generator[list, None, None]): Main task generator.
-        connect_cell_before_main_gen (bool, optional): If True, connects cell specified in `params`
-            before executing `main_task_generator`.
-
-    Yields:
-        Generator[list, None, None]: Task generator
-    """
-    interrupt_flag = False
-    terminator = terminators[terminate['type']](terminate['value'])
-
-    # Рассчитываем параметры
-    n_points = {}
-    v_arrays = {}
-    double = {}
-    for dir in ['dir', 'rev']:
-        try:
-            v_arrays[dir] = np.arange(
-                params[f'v_{dir}_strt_inc'],
-                params[f'v_{dir}_stop_inc'] + params[f'v_{dir}_step_inc'],
-                params[f'v_{dir}_step_inc']
-            )
-            n_points[dir] = len(v_arrays[dir])
-            double[dir] = True if params[f'v_{dir}_strt_dec'] != 0 else False
-        except ZeroDivisionError:
-            n_points[dir] = 0
-    
-    try:
-        # Подключаем нужную ячейку
-        if connect_cell_before_main_gen:
-            bl = params['bl']
-            wl = params['wl']
-            task = {'mode_flag': 'connect_cell',
-                    'wl': wl, 'bl': bl, 'id': 0}
-            yield [task, terminator]
-        
-        # Генерация основных тасков
-        yield from main_task_generator(params, n_points, v_arrays, double, terminator, blank_type)
-        
-        # Отключаем все ячейки в кроссбаре от источника
-        task = {'mode_flag': 'standby', 'id': 0}
-        yield [task, terminator]
-    except Exception as ex: # для корректного завершения работы плат
-        if logger is not None:
-            logger.info(f'Task_generator: {type(ex).__name__}: {ex}')
-        interrupt_flag = True
-        exception = ex
-        yield
-    if interrupt_flag:
-        if exception == 'interrupt':
-            task = {'mode_flag': 'interrupt', 'id': 0}
-            yield [task, terminator]
-        else:
-            task = {'mode_flag': 'panic', 'id': 0}
-            yield [task, terminator]
-        
-        
-def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
-    # Генерация основных тасков
-    for _ in range(params['count']):
-        # порядок dir-rev
-        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
-        for dir in sequence:
-            for _ in range(params[f'{dir}_inc_countr']):
-                if n_points[dir] != 0:
-                    config_data = {'mode_flag': 'config_iv_dc',
-                                    'vol': 0,
-                                    't_ms': params[f't_{dir}_msec_inc'],
-                                    't_us': params[f't_{dir}_usec_inc'],
-                                    'id': params['id'],
-                                    # 'sign': _modes[dir],
-                                    'v_start': v_arrays[dir][0],
-                                    'v_stop': v_arrays[dir][-1],
-                                    'n_points': n_points[dir],
-                                    'double': double[dir],
-                                    'current_compliance': params[f'{dir}_cc']}
-                    yield [config_data, terminator]  # Config task
-                    sense_data = {'mode_flag': 'sense',
-                                    'vol': 0,
-                                    't_ms': params[f't_{dir}_msec_inc'],
-                                    't_us': params[f't_{dir}_usec_inc'],
-                                    'id': params['id']}
-                                    # 'sign': _modes[dir]}
-                    for vol in v_arrays[dir]:
-                        sense_data['vol'] = abs(int(vol))
-                        yield [sense_data, terminator]  # Sense task
-                    if double[dir]:
-                        for vol in v_arrays[dir][::-1]:
-                            sense_data['vol'] = abs(int(vol))
-                            yield [sense_data, terminator]  # Sense task
-    # Reading after the experiment
-    read_config = {'mode_flag': 'read',
-                    'vol': 0,
-                    't_ms': params['t_rev_msec_inc'],
-                    't_us': params['t_rev_usec_inc'],
-                    'id': params['id'],
-                    'sign': 1,
-                    'current_compliance': params['rev_cc']}  # Reset
-    yield [read_config, terminator]  # Read after experiment task
-    sense_data = {'mode_flag': 'sense',
-                  'read': True,
-                  'vol': 0,
-                  't_ms': params['t_rev_msec_inc'],
-                  't_us': params['t_rev_usec_inc'],
-                  'id': params['id'],
-                  'sign': 1,
-                  'triggered': True}
-    yield [sense_data, terminator]
-        
-        
-def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
-    """Генератор для режима std (режимы 7 и 9).
-
-    Args:
-        params (dict): Experiment params.
-        terminate (dict): Terminator type and value.
-        blank_type (str): Blank type (blanks.py).
-
-    Yields:
-        Generator[list]: Task generator for smu_iv_dc mode
-    """
-    # Генерация основных тасков
-    for _ in range(params['count']):
-        # порядок dir-rev
-        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
-        for dir in sequence:
-            config_data = {'mode_flag': 'config_std',
-                            'vol': 0,
-                            't_ms': params[f't_{dir}_msec_inc'],
-                            't_us': params[f't_{dir}_usec_inc'],
-                            'id': params['id'],
-                            # 'sign': _modes[dir],
-                            'current_compliance': params[f'{dir}_cc']}
-            pulse_sequence = []
-            for _ in range(params[f'{dir}_inc_countr']):  # One config per direction
-                if n_points[dir] == 0:
-                    pulse_sequence.append('read')
-                else:
-                    for v in v_arrays[dir]:
-                        if v != 0:
-                            pulse_sequence.append(v)    
-                        pulse_sequence.append('read')
-                    if double[dir]:
-                        for v in v_arrays[dir][::-1]:
-                            if v != 0:
-                                pulse_sequence.append(v)
-                            pulse_sequence.append('read')
-            if len(pulse_sequence) != 0:
-                config_data['pulse_sequence'] = pulse_sequence
-                yield [config_data, terminator]  # Config task
-                sense_data = {'mode_flag': 'sense',
-                              'read': False,
-                            'vol': 0,
-                            't_ms': params[f't_{dir}_msec_inc'],
-                            't_us': params[f't_{dir}_usec_inc'],
-                            'id': params['id'],
-                            # 'sign': _modes[dir],
-                            'triggered': True}
-                for pulse in pulse_sequence:
-                    if pulse == 'read':
-                        sense_data['mode_flag'] = 'sense'  # Read pulse by trigger
-                        sense_data['vol'] = 0
-                        sense_data['read'] = True
-                        yield [sense_data, terminator]
-                    else:
-                        sense_data['mode_flag'] = 'trigger'  # Apply pulse by trigger
-                        sense_data['vol'] = abs(int(pulse))
-                        sense_data['read'] = False
-                        yield [sense_data, terminator]
-                            
-                            
-def _smu_pulsed_retention_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
-    """Генератор для режима pulsed_retention: Игнорируются все напряжения, которые тикет пытается подать, 
-    подаются только импульсы чтения. Очистка буффера устройства проводится на каждый Set-Reset цикл.
-
-    Yields:
-        Generator[list, None, None]: Task generator for smu_pulsed_retention mode.
-    """
-    # Генерация основных тасков
-    n_pulses = params['dir_inc_countr'] + params['dir_dec_countr'] + \
-               params['rev_inc_countr'] + params['rev_dec_countr']
-    for _ in range(params['count']):
-        data = {'mode_flag': 'config_pulsed_retention',
-                'vol': 0,
-                't_ms': params['t_dir_msec_inc'],
-                't_us': params['t_dir_usec_inc'],
-                'id': params['id'],
-                'sign': 1,
-                'n_pulses': n_pulses,
-                'current_compliance': params['dir_cc']}
-        if 'wl' in params and 'bl' in params:
-            data['wl'] = params['wl']
-            data['bl'] = params['bl']
-        if 'dir_interval' in params and 'rev_interval' in params:
-            data['dir_interval'] = params['dir_interval']
-            data['rev_interval'] = params['rev_interval']
-        yield [data, terminator]  # Config task
-        sense_data = {'mode_flag': 'sense',
-                      'read': True,
-                      'vol': 0,
-                      't_ms': params['t_dir_msec_inc'],
-                      't_us': params['t_dir_usec_inc'],
-                      'id': params['id'],
-                      'sign': 1}
-        for _ in range(n_pulses):
-            yield [sense_data, terminator]  # Sense task
-            
-            
-def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
-    """Endurance generator (async).
-
-    Yields:
-        Generator[list, None, None]: Main task generator.
-    """
-    data = {'mode_flag': 'config_endurance',
-            'v_dir': params['v_dir_stop_inc'],
-            'v_rev': params['v_rev_stop_inc'],
-            't_ms': params['t_dir_msec_inc'],
-            't_us': params['t_dir_usec_inc'],
+        """Crossbar resistance scan generator (async)"""
+        # Preparing
+        self._prepare(terminate)
+        config_task = {
+            'mode_flag': 'config_std',
+            'volt_array': np.array([0 for _ in range(params['col_num'] * params['row_num'])]),
+            'compliance': params['compliance'],
+            'pulse_width': params['pulse_width'],
+            'read_voltage': params['read_voltage'],
+            'read_direction': _signs[params['read_direction']],
+            'sign': _signs['rev'],  # Not needed
+            'id': params['id']
+        }
+        sense_task = {
+            'mode_flag': 'sense',
+            'vol': 0,
             'id': params['id'],
-            'n_cycles': params['count'],
-            'dir_cc': params['dir_cc'],
-            'rev_cc': params['rev_cc']}
-    if 'wl' in params and 'bl' in params:
-        data['wl'] = params['wl']
-        data['bl'] = params['bl']
-    if 'dir_interval' in params:
-        data['trigger_interval'] = params['dir_interval']
-    yield [data, terminator]  # Config task
-    sense_data_dir = {'mode_flag': 'sense',  # Sensing dir pulse
-                      'read': True,
-                      'vol': params['v_dir_stop_inc'],
-                      't_ms': params['t_dir_msec_inc'],
-                      't_us': params['t_dir_usec_inc'],
-                      'id': params['id'],
-                      'sign': 1,
-                      'skip_one': True}
-    sense_data_rev = {'mode_flag': 'sense',  # Sensing rev pulse
-                      'read': True,
-                      'vol': params['v_rev_stop_inc'],
-                      't_ms': params['t_dir_msec_inc'],
-                      't_us': params['t_dir_usec_inc'],
-                      'id': params['id'],
-                      'sign': 1,
-                      'skip_one': True}
-    for _ in range(params['count']):
-        yield [sense_data_dir, terminator]
-        yield [sense_data_rev, terminator]  # Two sense tasks for each cycle
+            'sign': _signs['rev'],
+            'wl': 0,
+            'bl': 0
+        }
+        try:
+            yield [config_task, self.terminator]
+            
+            for wl in range(params['col_num']):
+                for bl in range(params['row_num']):
+                    yield from self._connect_cell({'wl': wl, 'bl': bl})  # Connecting cell
+                    sense_task['wl'] = wl
+                    sense_task['bl'] = bl
+                    yield [sense_task, self.terminator]
+            
+            yield from self._disconnect_cell()
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
         
-        
-def _smu_pot_dep_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
-    """Const pulse generator (async): potentiation/depression.
 
-    Yields:
-        Generator[list, None, None]: Main task generator.
-    """
-    if params['dir_inc_countr'] == 1:  # Potentiation
-        vol = params['v_dir_stop_inc']
-        sign = 0
-        t_ms = params['t_dir_msec_inc']
-        t_us = params['t_dir_usec_inc']
-        data = {'mode_flag': 'config_pot_dep',
-                'vol': vol,
-                't_ms': t_ms,
-                't_us': t_us,
-                'id': params['id'],
-                'n_pulses': params['count'],
-                'compliance': params['dir_cc'],
-                'sign': sign}
-        if 'dir_interval' in params:
-            data['trigger_interval'] = params['dir_interval']
-    elif params['rev_inc_countr'] == 1:
-        vol = params['v_rev_stop_inc']
-        sign = 1
-        t_ms = params['t_rev_msec_inc']
-        t_us = params['t_rev_usec_inc']
-        data = {'mode_flag': 'config_pot_dep',
-                'vol': vol,
-                't_ms': t_ms,
-                't_us': t_us,
-                'id': params['id'],
-                'n_pulses': params['count'],
-                'compliance': params['rev_cc'],
-                'sign': sign}
-        if 'rev_interval' in params:
-            data['trigger_interval'] = params['rev_interval']
-    else:
-        raise ChildProcessError('Bad config for pot/dep: dir or rev amount must be equal to 1')
-    if 'wl' in params and 'bl' in params:
-        data['wl'] = params['wl']
-        data['bl'] = params['bl']
-    yield [data, terminator]  # Config task
-    sense_data = {'mode_flag': 'sense',
-                  'vol': vol,
-                  't_ms': t_ms,
-                  't_us': t_us,
-                  'id': params['id'],
-                  'sign': sign}
-    for _ in range(params['count']):
-        yield [sense_data, terminator]
-        
-        
-def _visa_crossbar_scan_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
-    """Crossbar resistance scan generator (async).
+# def get_smu_iv_dc(
+#     params: dict,
+#     terminate: dict,
+#     blank_type:str,
+#     logger=None
+# ) -> Generator[list, None, None]:
+#     """Генератор тасков для режима smu_iv_dc.
 
-    Yields:
-        Generator[list, None, None]: Main task generator.
-    """
-    if params['dir_inc_countr'] != 0:
-        dir = 'dir'
-    else:
-        dir = 'rev'
-    config_task = {'mode_flag': 'config_std',
-                   'vol': 0,
-                   't_ms': params[f't_{dir}_msec_inc'],
-                   't_us': params[f't_{dir}_usec_inc'],
-                   'id': params['id'],
-                #    'sign': _modes[dir],
-                   'current_compliance': params[f'{dir}_cc'],
-                   'pulse_sequence': ['read' for _ in range(params['col_num'] * params['row_num'])]}
-    yield [config_task, terminator]
-    sense_data = {'mode_flag': 'sense',
-                  'vol': 0,
-                  'read': True,
-                  't_ms': params['t_dir_msec_inc'],
-                  't_us': params['t_dir_usec_inc'],
-                  'id': params['id'],
-                  'sign': 1,
-                  'triggered': True,
-                  'crossbar_scan': True}
-    for wl in range(params['col_num']):
-        for bl in range(params['row_num']):
-            task = {'mode_flag': 'connect_cell',
-                    'wl': wl, 'bl': bl, 'id': 0}
-            yield [task, terminator]  # Connecting
-            sense_data['wl'] = wl
-            sense_data['bl'] = bl
-            yield [sense_data, terminator]  # Reading
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+
+#     Yields:
+#         Generator[list, None, None]: Task generator
+#     """
+#     yield from smu_generator(params, terminate, blank_type, _smu_iv_dc_gen, logger=logger)
+    
+    
+# def get_smu_std(
+#     params: dict,
+#     terminate: dict,
+#     blank_type: str,
+#     logger=None
+# ) -> Generator[list, None, None]:
+#     """Генератор тасков для режима smu_std (режимы 7 и 9).
+
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+
+#     Yields:
+#         Generator[list, None, None]: Task generator
+#     """
+#     yield from smu_generator(params, terminate, blank_type, _smu_std_gen, logger=logger)
+    
+    
+# def get_smu_pulsed_retention(
+#     params: dict,
+#     terminate: dict,
+#     blank_type: str,
+#     logger=None
+# ) -> Generator[list, None, None]:
+#     """Генератор тасков для режима smu_pulsed_retention.
+
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+
+#     Yields:
+#         Generator[list, None, None]: Task generator
+#     """
+#     yield from smu_generator(params, terminate, blank_type, _smu_pulsed_retention_gen, logger=logger)
+    
+    
+# def get_smu_endurance(
+#     params: dict, 
+#     terminate: dict,
+#     blank_type: str,
+#     logger=None
+# ) -> Generator[list, None, None]:
+#     """Генератор тасков для режима smu_endurance.
+
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+
+#     Yields:
+#         Generator[list, None, None]: Task generator
+#     """
+#     yield from smu_generator(params, terminate, blank_type, _smu_endurance_gen, logger=logger)
+    
+    
+# def get_smu_pot_dep(
+#     params: dict, 
+#     terminate: dict,
+#     blank_type: str,
+#     logger=None
+# ) -> Generator[list, None, None]:
+#     """Генератор тасков для режима smu_pot_dep.
+
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+
+#     Yields:
+#         Generator[list, None, None]: Task generator
+#     """
+#     yield from smu_generator(params, terminate, blank_type, _smu_pot_dep_gen, logger=logger)
+    
+    
+# def get_visa_crossbar_scan(
+#     params: dict, 
+#     terminate: dict,
+#     blank_type: str,
+#     logger=None
+# ) -> Generator[list, None, None]:
+#     """Генератор тасков для режима smu_endurance.
+
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+
+#     Yields:
+#         Generator[list, None, None]: Task generator
+#     """
+#     yield from smu_generator(params, terminate, blank_type, _visa_crossbar_scan_gen, 
+#                              connect_cell_before_main_gen=False, logger=logger)
+
+
+# def smu_generator(
+#     params: dict,
+#     terminate: dict,
+#     blank_type: str,
+#     main_task_generator: Generator,
+#     connect_cell_before_main_gen: bool = True,
+#     logger = None
+# ) -> Generator[list, None, None]:
+#     """Глобальный генератор тасков для инструметов с SMU.
+
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+#         main_task_generator (Generator[list, None, None]): Main task generator.
+#         connect_cell_before_main_gen (bool, optional): If True, connects cell specified in `params`
+#             before executing `main_task_generator`.
+
+#     Yields:
+#         Generator[list, None, None]: Task generator
+#     """
+#     interrupt_flag = False
+#     terminator = terminators[terminate['type']](terminate['value'])
+
+#     # Рассчитываем параметры
+#     n_points = {}
+#     v_arrays = {}
+#     double = {}
+#     for dir in ['dir', 'rev']:
+#         try:
+#             v_arrays[dir] = np.arange(
+#                 params[f'v_{dir}_strt_inc'],
+#                 params[f'v_{dir}_stop_inc'] + params[f'v_{dir}_step_inc'],
+#                 params[f'v_{dir}_step_inc']
+#             )
+#             n_points[dir] = len(v_arrays[dir])
+#             double[dir] = True if params[f'v_{dir}_strt_dec'] != 0 else False
+#         except ZeroDivisionError:
+#             n_points[dir] = 0
+    
+#     try:
+#         # Подключаем нужную ячейку
+#         if connect_cell_before_main_gen:
+#             bl = params['bl']
+#             wl = params['wl']
+#             task = {'mode_flag': 'connect_cell',
+#                     'wl': wl, 'bl': bl, 'id': 0}
+#             yield [task, terminator]
+        
+#         # Генерация основных тасков
+#         yield from main_task_generator(params, n_points, v_arrays, double, terminator, blank_type)
+        
+#         # Отключаем все ячейки в кроссбаре от источника
+#         task = {'mode_flag': 'standby', 'id': 0}
+#         yield [task, terminator]
+#     except Exception as ex: # для корректного завершения работы плат
+#         if logger is not None:
+#             logger.info(f'Task_generator: {type(ex).__name__}: {ex}')
+#         interrupt_flag = True
+#         exception = ex
+#         yield
+#     if interrupt_flag:
+#         if exception == 'interrupt':
+#             task = {'mode_flag': 'interrupt', 'id': 0}
+#             yield [task, terminator]
+#         else:
+#             task = {'mode_flag': 'panic', 'id': 0}
+#             yield [task, terminator]
+        
+        
+# def _smu_iv_dc_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+#     # Генерация основных тасков
+#     for _ in range(params['count']):
+#         # порядок dir-rev
+#         sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+#         for dir in sequence:
+#             for _ in range(params[f'{dir}_inc_countr']):
+#                 if n_points[dir] != 0:
+#                     config_data = {'mode_flag': 'config_iv_dc',
+#                                     'vol': 0,
+#                                     't_ms': params[f't_{dir}_msec_inc'],
+#                                     't_us': params[f't_{dir}_usec_inc'],
+#                                     'id': params['id'],
+#                                     # 'sign': _modes[dir],
+#                                     'v_start': v_arrays[dir][0],
+#                                     'v_stop': v_arrays[dir][-1],
+#                                     'n_points': n_points[dir],
+#                                     'double': double[dir],
+#                                     'current_compliance': params[f'{dir}_cc']}
+#                     yield [config_data, terminator]  # Config task
+#                     sense_data = {'mode_flag': 'sense',
+#                                     'vol': 0,
+#                                     't_ms': params[f't_{dir}_msec_inc'],
+#                                     't_us': params[f't_{dir}_usec_inc'],
+#                                     'id': params['id']}
+#                                     # 'sign': _modes[dir]}
+#                     for vol in v_arrays[dir]:
+#                         sense_data['vol'] = abs(int(vol))
+#                         yield [sense_data, terminator]  # Sense task
+#                     if double[dir]:
+#                         for vol in v_arrays[dir][::-1]:
+#                             sense_data['vol'] = abs(int(vol))
+#                             yield [sense_data, terminator]  # Sense task
+#     # Reading after the experiment
+#     read_config = {'mode_flag': 'read',
+#                     'vol': 0,
+#                     't_ms': params['t_rev_msec_inc'],
+#                     't_us': params['t_rev_usec_inc'],
+#                     'id': params['id'],
+#                     'sign': 1,
+#                     'current_compliance': params['rev_cc']}  # Reset
+#     yield [read_config, terminator]  # Read after experiment task
+#     sense_data = {'mode_flag': 'sense',
+#                   'read': True,
+#                   'vol': 0,
+#                   't_ms': params['t_rev_msec_inc'],
+#                   't_us': params['t_rev_usec_inc'],
+#                   'id': params['id'],
+#                   'sign': 1,
+#                   'triggered': True}
+#     yield [sense_data, terminator]
+        
+        
+# def _smu_std_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+#     """Генератор для режима std (режимы 7 и 9).
+
+#     Args:
+#         params (dict): Experiment params.
+#         terminate (dict): Terminator type and value.
+#         blank_type (str): Blank type (blanks.py).
+
+#     Yields:
+#         Generator[list]: Task generator for smu_iv_dc mode
+#     """
+#     # Генерация основных тасков
+#     for _ in range(params['count']):
+#         # порядок dir-rev
+#         sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+#         for dir in sequence:
+#             config_data = {'mode_flag': 'config_std',
+#                             'vol': 0,
+#                             't_ms': params[f't_{dir}_msec_inc'],
+#                             't_us': params[f't_{dir}_usec_inc'],
+#                             'id': params['id'],
+#                             # 'sign': _modes[dir],
+#                             'current_compliance': params[f'{dir}_cc']}
+#             pulse_sequence = []
+#             for _ in range(params[f'{dir}_inc_countr']):  # One config per direction
+#                 if n_points[dir] == 0:
+#                     pulse_sequence.append('read')
+#                 else:
+#                     for v in v_arrays[dir]:
+#                         if v != 0:
+#                             pulse_sequence.append(v)    
+#                         pulse_sequence.append('read')
+#                     if double[dir]:
+#                         for v in v_arrays[dir][::-1]:
+#                             if v != 0:
+#                                 pulse_sequence.append(v)
+#                             pulse_sequence.append('read')
+#             if len(pulse_sequence) != 0:
+#                 config_data['pulse_sequence'] = pulse_sequence
+#                 yield [config_data, terminator]  # Config task
+#                 sense_data = {'mode_flag': 'sense',
+#                               'read': False,
+#                             'vol': 0,
+#                             't_ms': params[f't_{dir}_msec_inc'],
+#                             't_us': params[f't_{dir}_usec_inc'],
+#                             'id': params['id'],
+#                             # 'sign': _modes[dir],
+#                             'triggered': True}
+#                 for pulse in pulse_sequence:
+#                     if pulse == 'read':
+#                         sense_data['mode_flag'] = 'sense'  # Read pulse by trigger
+#                         sense_data['vol'] = 0
+#                         sense_data['read'] = True
+#                         yield [sense_data, terminator]
+#                     else:
+#                         sense_data['mode_flag'] = 'trigger'  # Apply pulse by trigger
+#                         sense_data['vol'] = abs(int(pulse))
+#                         sense_data['read'] = False
+#                         yield [sense_data, terminator]
+                            
+                            
+# def _smu_pulsed_retention_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+#     """Генератор для режима pulsed_retention: Игнорируются все напряжения, которые тикет пытается подать, 
+#     подаются только импульсы чтения. Очистка буффера устройства проводится на каждый Set-Reset цикл.
+
+#     Yields:
+#         Generator[list, None, None]: Task generator for smu_pulsed_retention mode.
+#     """
+#     # Генерация основных тасков
+#     n_pulses = params['dir_inc_countr'] + params['dir_dec_countr'] + \
+#                params['rev_inc_countr'] + params['rev_dec_countr']
+#     for _ in range(params['count']):
+#         data = {'mode_flag': 'config_pulsed_retention',
+#                 'vol': 0,
+#                 't_ms': params['t_dir_msec_inc'],
+#                 't_us': params['t_dir_usec_inc'],
+#                 'id': params['id'],
+#                 'sign': 1,
+#                 'n_pulses': n_pulses,
+#                 'current_compliance': params['dir_cc']}
+#         if 'wl' in params and 'bl' in params:
+#             data['wl'] = params['wl']
+#             data['bl'] = params['bl']
+#         if 'dir_interval' in params and 'rev_interval' in params:
+#             data['dir_interval'] = params['dir_interval']
+#             data['rev_interval'] = params['rev_interval']
+#         yield [data, terminator]  # Config task
+#         sense_data = {'mode_flag': 'sense',
+#                       'read': True,
+#                       'vol': 0,
+#                       't_ms': params['t_dir_msec_inc'],
+#                       't_us': params['t_dir_usec_inc'],
+#                       'id': params['id'],
+#                       'sign': 1}
+#         for _ in range(n_pulses):
+#             yield [sense_data, terminator]  # Sense task
+            
+            
+# def _smu_endurance_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+#     """Endurance generator (async).
+
+#     Yields:
+#         Generator[list, None, None]: Main task generator.
+#     """
+#     data = {'mode_flag': 'config_endurance',
+#             'v_dir': params['v_dir_stop_inc'],
+#             'v_rev': params['v_rev_stop_inc'],
+#             't_ms': params['t_dir_msec_inc'],
+#             't_us': params['t_dir_usec_inc'],
+#             'id': params['id'],
+#             'n_cycles': params['count'],
+#             'dir_cc': params['dir_cc'],
+#             'rev_cc': params['rev_cc']}
+#     if 'wl' in params and 'bl' in params:
+#         data['wl'] = params['wl']
+#         data['bl'] = params['bl']
+#     if 'dir_interval' in params:
+#         data['trigger_interval'] = params['dir_interval']
+#     yield [data, terminator]  # Config task
+#     sense_data_dir = {'mode_flag': 'sense',  # Sensing dir pulse
+#                       'read': True,
+#                       'vol': params['v_dir_stop_inc'],
+#                       't_ms': params['t_dir_msec_inc'],
+#                       't_us': params['t_dir_usec_inc'],
+#                       'id': params['id'],
+#                       'sign': 1,
+#                       'skip_one': True}
+#     sense_data_rev = {'mode_flag': 'sense',  # Sensing rev pulse
+#                       'read': True,
+#                       'vol': params['v_rev_stop_inc'],
+#                       't_ms': params['t_dir_msec_inc'],
+#                       't_us': params['t_dir_usec_inc'],
+#                       'id': params['id'],
+#                       'sign': 1,
+#                       'skip_one': True}
+#     for _ in range(params['count']):
+#         yield [sense_data_dir, terminator]
+#         yield [sense_data_rev, terminator]  # Two sense tasks for each cycle
+        
+        
+# def _smu_pot_dep_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+#     """Const pulse generator (async): potentiation/depression.
+
+#     Yields:
+#         Generator[list, None, None]: Main task generator.
+#     """
+#     if params['dir_inc_countr'] == 1:  # Potentiation
+#         vol = params['v_dir_stop_inc']
+#         sign = 0
+#         t_ms = params['t_dir_msec_inc']
+#         t_us = params['t_dir_usec_inc']
+#         data = {'mode_flag': 'config_pot_dep',
+#                 'vol': vol,
+#                 't_ms': t_ms,
+#                 't_us': t_us,
+#                 'id': params['id'],
+#                 'n_pulses': params['count'],
+#                 'compliance': params['dir_cc'],
+#                 'sign': sign}
+#         if 'dir_interval' in params:
+#             data['trigger_interval'] = params['dir_interval']
+#     elif params['rev_inc_countr'] == 1:
+#         vol = params['v_rev_stop_inc']
+#         sign = 1
+#         t_ms = params['t_rev_msec_inc']
+#         t_us = params['t_rev_usec_inc']
+#         data = {'mode_flag': 'config_pot_dep',
+#                 'vol': vol,
+#                 't_ms': t_ms,
+#                 't_us': t_us,
+#                 'id': params['id'],
+#                 'n_pulses': params['count'],
+#                 'compliance': params['rev_cc'],
+#                 'sign': sign}
+#         if 'rev_interval' in params:
+#             data['trigger_interval'] = params['rev_interval']
+#     else:
+#         raise ChildProcessError('Bad config for pot/dep: dir or rev amount must be equal to 1')
+#     if 'wl' in params and 'bl' in params:
+#         data['wl'] = params['wl']
+#         data['bl'] = params['bl']
+#     yield [data, terminator]  # Config task
+#     sense_data = {'mode_flag': 'sense',
+#                   'vol': vol,
+#                   't_ms': t_ms,
+#                   't_us': t_us,
+#                   'id': params['id'],
+#                   'sign': sign}
+#     for _ in range(params['count']):
+#         yield [sense_data, terminator]
+        
+        
+# def _visa_crossbar_scan_gen(params, n_points, v_arrays, double, terminator, blank_type) -> Generator[list, None, None]:
+#     """Crossbar resistance scan generator (async).
+
+#     Yields:
+#         Generator[list, None, None]: Main task generator.
+#     """
+#     if params['dir_inc_countr'] != 0:
+#         dir = 'dir'
+#     else:
+#         dir = 'rev'
+#     config_task = {'mode_flag': 'config_std',
+#                    'vol': 0,
+#                    't_ms': params[f't_{dir}_msec_inc'],
+#                    't_us': params[f't_{dir}_usec_inc'],
+#                    'id': params['id'],
+#                 #    'sign': _modes[dir],
+#                    'current_compliance': params[f'{dir}_cc'],
+#                    'pulse_sequence': ['read' for _ in range(params['col_num'] * params['row_num'])]}
+#     yield [config_task, terminator]
+#     sense_data = {'mode_flag': 'sense',
+#                   'vol': 0,
+#                   'read': True,
+#                   't_ms': params['t_dir_msec_inc'],
+#                   't_us': params['t_dir_usec_inc'],
+#                   'id': params['id'],
+#                   'sign': 1,
+#                   'triggered': True,
+#                   'crossbar_scan': True}
+#     for wl in range(params['col_num']):
+#         for bl in range(params['row_num']):
+#             task = {'mode_flag': 'connect_cell',
+#                     'wl': wl, 'bl': bl, 'id': 0}
+#             yield [task, terminator]  # Connecting
+#             sense_data['wl'] = wl
+#             sense_data['bl'] = bl
+#             yield [sense_data, terminator]  # Reading

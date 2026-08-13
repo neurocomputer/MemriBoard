@@ -818,12 +818,12 @@ class SendTicketAll(QThread):
                     self.need_stop = False
                     continue
                 if task[0]['mode_flag'] in [7, 9, 'sense']:
-                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id, wl, bl)
+                    result = self.parent.man.conn.impact(task[0])
                     try:
                         last_resistance = result[0]
                     except IndexError:
                         last_resistance = 0
-                    _, memristor_id = self.parent.man.db.get_memristor_id(result[2], result[3], self.parent.man.crossbar_id)
+                    _, memristor_id = self.parent.man.db.get_memristor_id(task[0]['wl'], task[0]['bl'], self.parent.man.crossbar_id)
                     _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)
                     counter += 1
                     self.count_changed.emit(counter)

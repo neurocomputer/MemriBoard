@@ -51,6 +51,9 @@ class SignalParameters(QWidget):
         self.label_compliance: QLabel
         self.label_pulse_period: QLabel
         self.label_sweep_params: QLabel
+        self.label_united_1: QLabel  # Объединенные dir и rev виджеты (дополнительно)
+        self.label_united_2: QLabel
+        self.label_united_val: QLabel
         # ScientificQLineEdits
         self.start_dir: ScientificQLineEdit
         self.stop_dir: ScientificQLineEdit
@@ -65,6 +68,8 @@ class SignalParameters(QWidget):
         self.pulse_period_rev: ScientificQLineEdit
         self.compliance_dir: ScientificQLineEdit
         self.compliance_rev: ScientificQLineEdit
+        self.united_1: ScientificQLineEdit  # Объединенные dir и rev виджеты (дополнительно)
+        self.united_2: ScientificQLineEdit
         # Other
         self.amount_dir: QSpinBox
         self.amount_rev: QSpinBox
@@ -130,7 +135,9 @@ class SignalParameters(QWidget):
             self.pulse_width_dir,
             self.pulse_width_rev,
             self.pulse_period_dir,
-            self.pulse_period_rev
+            self.pulse_period_rev,
+            self.united_1,
+            self.united_2
         ]
         # Widget groups: label + 2 ScientificLineEdits
         self.start_group = WidgetGroup(self, self.label_start, self.start_dir, self.start_rev)
@@ -141,6 +148,8 @@ class SignalParameters(QWidget):
         self.pulse_period_group = WidgetGroup(self, self.label_pulse_period, self.pulse_period_dir, self.pulse_period_rev)
         self.amount_group = WidgetGroup(self, self.label_amount, self.amount_dir, self.amount_rev)
         self.double_group = WidgetGroup(self, self.label_double, self.double_dir, self.double_rev)
+        self.united_1_group = WidgetGroup(self, self.label_united_1, self.united_1, None)
+        self.united_2_group = WidgetGroup(self, self.label_united_2, self.united_2, None)
         # Horizontal lines
         self.lines_h_0 = HorizontalLines(self.line_0_0, self.line_0_1, self.line_0_2, self.line_0_3)
         self.lines_h_1 = HorizontalLines(self.line_1_0, self.line_1_1, self.line_1_2, self.line_1_3)
@@ -265,11 +274,14 @@ class SignalParameters(QWidget):
             self.used_scientific_widgets.append(self.read_voltage)
         else:
             self.read_voltage_group.hide()
+        self.united_1_group.hide()
+        self.united_2_group.hide()
         # Left widgets
         self.label_sweep_val.show()
         self.label_compliance_val.show()
         self.label_time.show()
         self.label_sweep_params.show()
+        self.label_united_val.hide()
         # Gray lines
         self.set_horizontal_lines_visible([True, True, True, True, '+amp_read' in self.ui_fields])
         self.set_vertical_lines_visible([True, True, True])
@@ -294,9 +306,19 @@ class SignalParameters(QWidget):
         self.stop_group.hide()
         self.step_group.hide()
         self.compliance_group.show()
-        self.pulse_width_group.show()
-        self.pulse_period_group.setVisible('+period' in self.ui_fields)
-        self.amount_group.show()
+        if 'time_unite' in self.ui_fields:
+            self.pulse_width_group.hide()
+            self.pulse_period_group.hide()
+            self.united_1_group.show()
+            self.united_2_group.show()
+            self.united_1.set_unit(self.lang_pack.get("second"))
+            self.united_2.set_unit(self.lang_pack.get("second"))
+        else:
+            self.pulse_width_group.show()
+            self.pulse_period_group.setVisible('+period' in self.ui_fields)
+            self.united_1_group.hide()
+            self.united_2_group.hide()
+        self.amount_group.setVisible('-amount' not in self.ui_fields)
         self.double_group.hide()
         if '+amp_read' in self.ui_fields:
             self.read_voltage_group.show()
@@ -306,17 +328,24 @@ class SignalParameters(QWidget):
         # Left widgets
         self.label_sweep_val.show()
         self.label_compliance_val.show()
-        self.label_time.show()
-        self.label_sweep_params.show()
+        self.label_time.setVisible('time_unite' not in self.ui_fields)
+        self.label_sweep_params.setVisible('-amount' not in self.ui_fields)
+        self.label_united_val.setVisible('time_unite' in self.ui_fields)
         # Gray lines
-        self.set_horizontal_lines_visible([True, True, True, True, '+amp_read' in self.ui_fields])
+        show_last_line = '+amp_read' in self.ui_fields and 'time_unite' not in self.ui_fields
+        self.set_horizontal_lines_visible([True, True, True, '-amount' not in self.ui_fields, show_last_line])
         self.set_vertical_lines_visible([True, True, True])
         # Labels
         self.set_sweep_units()  # All units will be dropped to voltage
         self.label_start.setText(self.lang_pack.get("amplitude"))
         self.label_compliance_val.setText(self.lang_pack.get("current"))
-        self.label_sweep_params.setText(self.lang_pack.get("pulse"))
+        if '-amount' not in self.ui_fields:
+            self.label_sweep_params.setText(self.lang_pack.get("pulse"))
         self.label_pulse_width.setText(self.lang_pack.get("pulse_width"))
+        if 'time_unite' in self.ui_fields:
+            self.label_united_1.setText(self.lang_pack.get("pulse_width"))
+            self.label_united_2.setText(self.lang_pack.get("pulse_period"))
+            self.label_united_val.setText(self.lang_pack.get("time"))
                 
         
     def show_retention(self) -> None:
@@ -336,6 +365,8 @@ class SignalParameters(QWidget):
         self.pulse_period_group.setVisible_dir('+period' in self.ui_fields)
         self.amount_group.hide()
         self.double_group.hide()
+        self.united_1_group.hide()
+        self.united_2_group.hide()
         if '+amp_read' in self.ui_fields:
             self.read_voltage_group.show()
             self.used_scientific_widgets.append(self.read_voltage)
@@ -352,6 +383,7 @@ class SignalParameters(QWidget):
             self.set_vertical_lines_visible([False, False, False])
             # Labels
             self.label_sweep_val.setText(self.lang_pack.get("voltage_in_settings"))
+            self.label_united_val.hide()
         else:  # Showing table with one column
             show_time_flag = '+pw' in self.ui_fields or '+period' in self.ui_fields
             # Left widgets
@@ -370,6 +402,7 @@ class SignalParameters(QWidget):
             # Labels
             self.set_sweep_units()  # All units will be dropped to voltage
             self.label_pulse_width.setText(self.lang_pack.get("pulse_width"))
+            self.label_united_val.hide()
             
             
     def fill_params_to_ticket(self, ticket: dict) -> tuple[bool, dict]:
@@ -435,14 +468,20 @@ class SignalParameters(QWidget):
         ticket['params']['compliance_dir'] = self.compliance_dir.get_value()
         ticket['params']['compliance_rev'] = self.compliance_rev.get_value()
         # Time
-        ticket['params']['pulse_width_dir'] = self.pulse_width_dir.get_value()
-        ticket['params']['pulse_width_rev'] = self.pulse_width_rev.get_value()
-        if '+period' in self.ui_fields:  # Add period
-            ticket['params']['pulse_period_dir'] = self.pulse_period_dir.get_value()
-            ticket['params']['pulse_period_rev'] = self.pulse_period_rev.get_value()
+        if 'time_unite' in self.ui_fields:
+            ticket['params']['pulse_width'] = self.united_1.get_value()
+            if '+period' in self.ui_fields:
+                ticket['params']['pulse_period'] = self.united_2.get_value()
+        else:
+            ticket['params']['pulse_width_dir'] = self.pulse_width_dir.get_value()
+            ticket['params']['pulse_width_rev'] = self.pulse_width_rev.get_value()
+            if '+period' in self.ui_fields:  # Add period
+                ticket['params']['pulse_period_dir'] = self.pulse_period_dir.get_value()
+                ticket['params']['pulse_period_rev'] = self.pulse_period_rev.get_value()
         # Amount params
-        ticket['params']['amount_dir'] = self.amount_dir.value()
-        ticket['params']['amount_rev'] = self.amount_rev.value()
+        if '-amount' not in self.ui_fields:
+            ticket['params']['amount_dir'] = self.amount_dir.value()
+            ticket['params']['amount_rev'] = self.amount_rev.value()
         # Read
         if '+amp_read' in self.ui_fields:  # Add read voltage
             ticket['params']['read_voltage'] = self.read_voltage.get_value()
@@ -522,14 +561,20 @@ class SignalParameters(QWidget):
         self.compliance_dir.set_value(ticket['params']['compliance_dir'])
         self.compliance_rev.set_value(ticket['params']['compliance_rev'])
         # Time
-        self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
-        self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
-        if '+period' in self.ui_fields:  # Add period
-            self.pulse_period_dir.set_value(ticket['params']['pulse_period_dir'])
-            self.pulse_period_rev.set_value(ticket['params']['pulse_period_rev'])
+        if 'time_unite' in self.ui_fields:
+            self.united_1.set_value(ticket['params']['pulse_width'])
+            if '+period' in self.ui_fields:
+                self.united_2.set_value(ticket['params']['pulse_period'])
+        else:
+            self.pulse_width_dir.set_value(ticket['params']['pulse_width_dir'])
+            self.pulse_width_rev.set_value(ticket['params']['pulse_width_rev'])
+            if '+period' in self.ui_fields:  # Add period
+                self.pulse_period_dir.set_value(ticket['params']['pulse_period_dir'])
+                self.pulse_period_rev.set_value(ticket['params']['pulse_period_rev'])
         # Amount params
-        self.amount_dir.setValue(ticket['params']['amount_dir'])
-        self.amount_rev.setValue(ticket['params']['amount_rev'])
+        if '-amount' not in self.ui_fields:
+            self.amount_dir.setValue(ticket['params']['amount_dir'])
+            self.amount_rev.setValue(ticket['params']['amount_rev'])
         # Read
         if '+amp_read' in self.ui_fields:  # Add read voltage
             self.read_voltage.set_value(ticket['params']['read_voltage'])
@@ -561,22 +606,25 @@ class WidgetGroup:
         self.parent = parent
         self.label = label
         self.dir_widget = dir_widget
-        self.rev_widget = rev_widget
+        self.rev_widget = rev_widget  # Can be None
         
     def show(self) -> None:
         """Show widget group"""
         self.label.show()
         self.dir_widget.show()
-        self.rev_widget.show()
+        if self.rev_widget is not None:
+            self.rev_widget.show()
         if isinstance(self.dir_widget, ScientificQLineEdit):
             self.parent.used_scientific_widgets.append(self.dir_widget)
-            self.parent.used_scientific_widgets.append(self.rev_widget)
+            if self.rev_widget is not None:
+                self.parent.used_scientific_widgets.append(self.rev_widget)
             
     def show_dir(self) -> None:
         """Show label and dir widget only, hide rev widget"""
         self.label.show()
         self.dir_widget.show()
-        self.rev_widget.hide()
+        if self.rev_widget is not None:
+            self.rev_widget.hide()
         if isinstance(self.dir_widget, ScientificQLineEdit):
             self.parent.used_scientific_widgets.append(self.dir_widget)
         
@@ -584,7 +632,8 @@ class WidgetGroup:
         """Hide widget group"""
         self.label.hide()
         self.dir_widget.hide()
-        self.rev_widget.hide()
+        if self.rev_widget is not None:
+            self.rev_widget.hide()
             
     def setVisible(self, visible_flag: bool) -> None:
         """Change visibility by a flag"""
