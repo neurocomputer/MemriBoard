@@ -22,13 +22,17 @@ MULTI_GENERATOR_FUNCTIONS = [  # Functions that generate multiple tickets
 VALUE_FUNCTIONS = [  # Function that return or set values (do not yield a ticket)
     'last_resistance',
     'set_last_resistance',
-    'get_ticket_dict'
+    'get_ticket_dict',
+    'wl',
+    'bl'
 ]
 
 
 
 class Algorithm:
     """Algorithm class that contains methods used in user algorithms"""
+    _wl: int = 0
+    _bl: int = 0
     def __init__(
         self, parent=None, 
         initial_resistance: float = 0, 
@@ -52,6 +56,16 @@ class Algorithm:
             self.measure_ticket_name = measure_ticket_name
         self.validate = validate
         self.executed_tickets = []  # Tickets executed during a single algorithm
+        
+        
+    def wl(self):
+        """Return word line of the measured cell"""
+        return self._wl
+    
+    
+    def bl(self):
+        """Return word line of the measured cell"""
+        return self._bl
         
         
     def last_resistance(self) -> float:

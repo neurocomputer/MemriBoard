@@ -483,6 +483,8 @@ class ApplyExp(QThread):
                 # вбиваем координаты
                 ticket['params']['wl'] = item[0]
                 ticket['params']['bl'] = item[1]
+                self.algorithm._wl = item[0]
+                self.algorithm._bl = item[1]
                 # получаем id с генератора. Генератор теперь сам создает запись в бд
                 ticket_id = ticket_gen.get_ticket_id()
                 # временный файл для результата
