@@ -83,9 +83,9 @@ class Menu:
                 'smu_pulsed_retention': 'retention, +amp_read, +pw, +period, +comp, +batch_pulses',  # Standard retention (nothing) + read voltage + pulse width + pulse period + compliance
                 'smu_endurance': 'endurance, +period, +amp_read, -amount, time_unite, +batch_cycles_4',  # Add period, add read amplitude, remove amount, unite time fields, batch_size: 1 cycle is 4 pulses
                 'smu_pot_dep': 'endurance, +period, +batch_pulses',  # Add period
-                'smu_cc-cv': 'volt_sweep, dir_to_curr',  # Dir sweep value is current
-                'smu_cv-cc': 'volt_sweep, rev_to_curr',  # Rev sweep value is current
-                'smu_iv_current': 'volt_sweep, dir_to_curr, rev_to_curr'  # Both dir and rev sweeps are for current
+                'smu_cc-cv': 'volt_sweep, dir_to_curr, pw_to_int',  # Dir sweep value is current
+                'smu_cv-cc': 'volt_sweep, rev_to_curr, pw_to_int',  # Rev sweep value is current
+                'smu_iv_current': 'volt_sweep, dir_to_curr, rev_to_curr, pw_to_int'  # Both dir and rev sweeps are for current
             }
             # Setting crossbar scan generator (This group of drivers uses single ticket scanning) for crossbar window
             self.crossbar_scan_gen = self._smu_gen.crossbar_scan  # Single-ticket

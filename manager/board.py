@@ -10,7 +10,8 @@ from logging import Logger
 from configparser import ConfigParser
 from manager.blanks import gather
 from manager.service.drivers import get_driver_attr
-from manager.service import v2d, a2r, d2v, r2a
+from manager.service import v2d, a2r
+from manager.visa_impact import VisaImpact
 
 class Connector:
     """
@@ -315,6 +316,15 @@ class Connector:
                     pass
                 except ConnectionError:
                     open_flag = False
+        # Creating visa impact instance
+        if self.driver_attr['impact'] == 'visa':
+            self.impact_handler = VisaImpact(
+                parent=self,
+                interface=self.interface,
+                logger=self.logger,
+                driver_attr=self.driver_attr,
+                board_type=self.board_type
+            )
         return open_flag, simulation_fallback
 
     def close_port(self) -> bool:
@@ -538,223 +548,7 @@ class Connector:
                                                     task["id"])
                     res = (self.a2r(adc[0]), int(adc[1]), int(adc[0]))  # Resistance(Ohm), id, adc
             elif self.driver_attr['impact'] == 'visa':  # Работа с VISA-инструментами
-                self.interface.logger.info(f'Task: {task}')
-                if not isinstance(task['mode_flag'], str) and task['mode_flag'] not in [7]:
-                    self.logger.critical('Wrong task for VISA-driver!')
-                    res = 0
-                elif task['mode_flag'] == 'panic':
-                    # Что-то пошло не так, пытаемся всё выключить
-                    self.logger.critical('VISA instruments: Panic!')
-                    flag, response = self.interface.panic()
-                    if flag:
-                        self.logger.critical('Panic resolved')
-                    else:
-                        self.logger.critical(f'Panic was not resolved!: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 'interrupt':  
-                    # Сброс SMU в конце тикета или при срабатывании терминатора
-                    flag = self.interface.clear_instruments()  
-                    if not flag:
-                        self.logger.critical('Could not clear instruments!')
-                    res = int(flag)
-                elif task['mode_flag'] == 'sense':
-                    if 'triggered' in task:
-                        trig_flag = task['triggered']
-                    else:
-                        trig_flag = False
-                    if task.get('skip_one'):  # Skip one value for endurance
-                        self.interface.sense(trigger=trig_flag)
-                    if 'vol' in task:
-                        if task.get('read'):
-                            vol = float(self.config['board']['vol_read'])
-                        else:
-                            vol = -task['vol'] if task['sign'] else task['vol']
-                    else:
-                        vol = None
-                    sense_data = self.interface.sense(trigger=trig_flag, vol=vol)  # (R, timestamp)
-                    if isinstance(sense_data, str):
-                        self.logger.critical(f'Sense error: {sense_data}')
-                        res = 0 
-                    else:
-                        # Читаем данные в процессе эксперимента
-                        adc = r2a(
-                            gain = float(self.config['board']['gain']),
-                            res_load = float(self.config['board']['res_load']),
-                            vol_read = float(self.config['board']['vol_read']),
-                            adc_bit = int(self.config['board']['adc_bit']),
-                            vol_ref_adc = float(self.config['board']['vol_ref_adc']),
-                            res_switches = float(self.config['board']['res_switches']),
-                            res = sense_data[0]
-                        )
-                        if 'crossbar_scan' in task and task['crossbar_scan']:
-                            res = (sense_data[0], task['id'], task['wl'], task['bl'])
-                        else:    
-                            res = (sense_data[0], task['id'], adc, *sense_data[1:])
-                elif task['mode_flag'] == 'trigger':
-                    flag, response = self.interface.trigger()
-                    if flag:
-                        self.logger.debug(response)
-                    else:
-                        self.logger.critical(f'Could not send trigger: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 'config_iv_dc':
-                    # Отправка конфигурации на инструменты
-                    flag, response = self.interface.config_iv_dc(
-                        trigger_interval = task['pulse_width'], 
-                        v_start = task['v_start'],
-                        v_stop = task['v_stop'],
-                        n_points = task['n_points'],
-                        double = task['double'],
-                        current_compliance = task['current_compliance'],
-                        sign = task['sign']
-                    )
-                    if flag:
-                        self.logger.info(response)
-                    else:
-                        # Останавливаем эксперимент
-                        self.logger.critical(f'Could not configure instruments: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 'read':
-                    flag, response = self.interface.config_std(
-                        pulse_width = task['pulse_width'],
-                        pulse_sequence = [self.config['board']['vol_read']],
-                        read_flags = [True],
-                        current_compliance = task['current_compliance'],
-                        sign = task['sign']
-                    )
-                    if flag:
-                        self.logger.info(response)
-                    else:
-                        # Останавливаем эксперимент
-                        self.logger.critical(f'Could not configure instruments: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 'config_std':
-                    pulse_sequence, read_flags = [], []
-                    for pulse in task['pulse_sequence']:
-                        if pulse == 'read':
-                            pulse_sequence.append(self.config['board']['vol_read'])
-                            read_flags.append(True)
-                        else:
-                            pulse_sequence.append(float(pulse))
-                            read_flags.append(False)
-                    self.interface.logger.debug(f'config_std: pulse_sequence:\n{pulse_sequence}')
-                    flag, response = self.interface.config_std(
-                        pulse_width = task['pulse_width'],
-                        pulse_sequence = pulse_sequence,
-                        read_flags = read_flags,
-                        current_compliance = task['current_compliance'],
-                        sign = task['sign']
-                    )
-                    if flag:
-                        self.logger.info(response)
-                    else:
-                        # Останавливаем эксперимент
-                        self.logger.critical(f'Could not configure instruments: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 'config_pulsed_retention':
-                    # TODO: remove trig interval check (?)
-                    if 'dir_interval' in task:
-                        trigger_interval = task['dir_interval']
-                    else:
-                        trigger_interval = 5 * (task['pulse_width'])
-                    flag, response = self.interface.config_pulsed_retention(
-                        pulse_width = task['pulse_width'], 
-                        current_compliance = task['current_compliance'],
-                        n_pulses = task['n_pulses'],
-                        read_voltage = self.config['board']['vol_read'],
-                        sign = 1,  # Reset
-                        trigger_interval = trigger_interval
-                    )
-                    if flag:
-                        self.logger.info(response)
-                    else:
-                        # Останавливаем эксперимент
-                        self.logger.critical(f'Could not configure instruments: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 'config_endurance':
-                    # TODO remove interval check (?)
-                    if 'trigger_interval' in task:
-                        trigger_interval = task['trigger_interval']
-                    else:
-                        trigger_interval = 5 * (task['pulse_width'])
-                    flag, response = self.interface.config_endurance(
-                        v_dir = task['v_dir'],
-                        v_rev = task['v_rev'],
-                        read_voltage = self.config['board']['vol_read'],
-                        pulse_width = task['pulse_width'], 
-                        trigger_interval = trigger_interval,
-                        n_cycles = task['n_cycles'],
-                        dir_cc = task['dir_cc'],  # TODO change?
-                        rev_cc = task['rev_cc']
-                    )
-                    if flag:
-                        self.logger.info(response)
-                    else:
-                        # Останавливаем эксперимент
-                        self.logger.critical(f'Could not configure instruments: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 'config_pot_dep':
-                    # TODO remove interval check (?)
-                    if 'trigger_interval' in task:
-                        trigger_interval = task['trigger_interval']
-                    else:
-                        trigger_interval = 5 * (task['pulse_width'])
-                    flag, response = self.interface.config_pot_dep(
-                        voltage = task['vol'],
-                        pulse_width = task['pulse_width'], 
-                        trigger_interval = trigger_interval,
-                        n_pulses = task['n_pulses'],
-                        compliance = task['compliance'],
-                        sign = task['sign']
-                    )
-                    if flag:
-                        self.logger.info(response)
-                    else:
-                        # Останавливаем эксперимент
-                        self.logger.critical(f'Could not configure instruments: {response}')
-                    res = int(flag)
-                elif task['mode_flag'] == 7:
-                    flag, response, sense_data = self.interface.mode_7(
-                        pulse_width = task['pulse_width'], 
-                        apply_voltage = task['vol'],
-                        read_voltage = self.config['board']['vol_read'],
-                        current_compliance = task['current_compliance'],
-                        sign = task['sign']
-                    )
-                    if flag:
-                        adc = r2a(
-                            gain = float(self.config['board']['gain']),
-                            res_load = float(self.config['board']['res_load']),
-                            vol_read = float(self.config['board']['vol_read']),
-                            adc_bit = int(self.config['board']['adc_bit']),
-                            vol_ref_adc = float(self.config['board']['vol_ref_adc']),
-                            res_switches = float(self.config['board']['res_switches']),
-                            res = sense_data[0]
-                        )
-                        res = (sense_data[0], task['id'], int(adc))
-                    else:
-                        self.logger.critical(f'Mode_7 error: {response}')
-                        res = 0
-                elif task['mode_flag'] == 'connect_cell':
-                    # Подлкючение ячейки кроссбара, нумерация wl и bl начинается с 0
-                    flag, response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
-                    if flag:
-                        self.logger.info(response)
-                    else:
-                        self.logger.critical('Could not connect the cell!')
-                    res = int(flag)
-                elif task['mode_flag'] == 'standby':
-                    # Переход в режим ожидания эксперимента
-                    flag, response = self.interface.standby()
-                    if flag:
-                        self.logger.info(response)
-                    res = int(flag)
-                elif task['mode_flag'] == 'need_stop':
-                    # Посылаем флаг need_stop драйверу, если он завис
-                    self.interface.stop_experiment()
-                    self.logger.info('Need stop sent to driver')
-                    res = 1
-                self.interface.logger.info(f'Impact: res = {res}')
+                res = self.impact_handler(task)
             # можно добавить работу с другими платами
             elif self.driver_attr['impact'] == 'pico':
                 task = self.task_volt_to_dac(task.copy())  # TODO remove on driver change

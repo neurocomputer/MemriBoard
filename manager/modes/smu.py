@@ -115,6 +115,42 @@ class SMUGen:
         """Split an array into chunks if it's too long"""
         for i in range(0, len(array), chunk_len):
             yield array[i:i + chunk_len]
+            
+            
+    def _generate_iv_dc(self, params: dict, sequence: list, arrays: dict, dir_rev_modes: dict, sense_task: dict) -> Generator[list, None, None]:
+        """Generate iv-dc tasks (for voltage or current sweep)"""
+        global DIR_REV
+        yield from self._connect_cell(params)
+        for _ in range(params['count']):  # Outer cycle
+            for dir_rev in sequence:  # dir and rev
+                DIR_REV = dir_rev
+                for _ in range(params[dr('amount')]):
+                    if len(arrays[dir_rev]) != 0:
+                        config_task = {
+                            'mode_flag': dir_rev_modes[dir_rev],
+                            'start': params[dr('start')],
+                            'stop': params[dr('stop')],
+                            'n_points': len(arrays[dir_rev]),
+                            'compliance': params[dr('compliance')],
+                            'time_interval': params[dr('interval')],
+                            'double': params[dr('double')],
+                            'sign': _signs[dir_rev],
+                            'id': params['id'],
+                        }
+                        yield [config_task, self.terminator]  # Config task
+                        
+                        sense_task['sign'] = _signs[dir_rev]
+                        for vol in arrays[dir_rev]:
+                            sense_task['vol'] = vol
+                            yield [sense_task, self.terminator]  # Sense tasks
+                        if params[dr('double')]:
+                            for vol in arrays[dir_rev][::-1]:
+                                sense_task['vol'] = vol
+                                yield [sense_task, self.terminator]  # Sense tasks
+        # Reading after sweep
+        yield from self._generate_measure_ticket(params)
+        
+        yield from self._disconnect_cell()
 
     
     def smu_prog_sync(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
@@ -168,7 +204,6 @@ class SMUGen:
 
     def smu_iv_dc(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
         """Generator for IV DC mode"""
-        global DIR_REV
         # Preparing
         self._prepare(terminate)
         # dir-rev sequence
@@ -182,52 +217,89 @@ class SMUGen:
         }
         # Generating
         try:
-            yield from self._connect_cell(params)
-            for _ in range(params['count']):  # Outer cycle
-                for dir_rev in sequence:  # dir and rev
-                    DIR_REV = dir_rev
-                    for _ in range(params[dr('amount')]):
-                        if len(arrays[dir_rev]) != 0:
-                            config_task = {
-                                'mode_flag': 'config_iv_dc',
-                                'v_start': params[dr('start')],
-                                'v_stop': params[dr('stop')],
-                                'n_points': len(arrays[dir_rev]),
-                                'compliance': params[dr('compliance')],
-                                'time_interval': params[dr('interval')],
-                                'double': params[dr('double')],
-                                'sign': _signs[dir_rev],
-                                'id': params['id'],
-                            }
-                            yield [config_task, self.terminator]  # Config task
-                            
-                            sense_task['sign'] = _signs[dir_rev]
-                            for vol in arrays[dir_rev]:
-                                sense_task['vol'] = vol
-                                yield [sense_task, self.terminator]  # Sense tasks
-                            if params[dr('double')]:
-                                for vol in arrays[dir_rev][::-1]:
-                                    sense_task['vol'] = vol
-                                    yield [sense_task, self.terminator]  # Sense tasks
-            # Reading after sweep
-            yield from self._generate_measure_ticket(params)
-            
-            yield from self._disconnect_cell()
+            yield from self._generate_iv_dc(params,
+                                            sequence,
+                                            arrays,
+                                            dir_rev_modes={'dir': 'config_iv_dc', 'rev': 'config_iv_dc'},
+                                            sense_task=sense_task)
         except Exception as e:
             yield from self._handle_exception(e)
         yield from self._check_interruption()
         
         
     def smu_cc_cv(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        """Generator for cc-cv mode (dir - current sweep, rev - voltage sweep)"""
+        # Preparing
+        self._prepare(terminate)
+        # dir-rev sequence
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        arrays = self._create_sweep_array(params, include_double=False)
+        sense_task = {  # Sense task template
+            'mode_flag': 'sense',
+            'vol': 0,
+            'id': params['id'],
+            'sign': 0
+        }
+        # Generating
+        try:
+            yield from self._generate_iv_dc(params,
+                                            sequence,
+                                            arrays,
+                                            dir_rev_modes={'dir': 'config_iv_current_dc', 'rev': 'config_iv_dc'},
+                                            sense_task=sense_task)
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
     
     
     def smu_cv_cc(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        """Generator for cv-cc mode (dir - voltage sweep, rev - current sweep)"""
+        # Preparing
+        self._prepare(terminate)
+        # dir-rev sequence
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        arrays = self._create_sweep_array(params, include_double=False)
+        sense_task = {  # Sense task template
+            'mode_flag': 'sense',
+            'vol': 0,
+            'id': params['id'],
+            'sign': 0
+        }
+        # Generating
+        try:
+            yield from self._generate_iv_dc(params,
+                                            sequence,
+                                            arrays,
+                                            dir_rev_modes={'dir': 'config_iv_dc', 'rev': 'config_iv_current_dc'},
+                                            sense_task=sense_task)
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
     
     
     def smu_iv_current(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
-        pass
+        """Generator for current sweep mode (dir - current sweep, rev - current sweep)"""
+        # Preparing
+        self._prepare(terminate)
+        # dir-rev sequence
+        sequence = ['rev', 'dir'] if params['reverse'] else ['dir', 'rev']
+        arrays = self._create_sweep_array(params, include_double=False)
+        sense_task = {  # Sense task template
+            'mode_flag': 'sense',
+            'vol': 0,
+            'id': params['id'],
+            'sign': 0
+        }
+        # Generating
+        try:
+            yield from self._generate_iv_dc(params,
+                                            sequence,
+                                            arrays,
+                                            dir_rev_modes={'dir': 'config_iv_current_dc', 'rev': 'config_iv_current_dc'},
+                                            sense_task=sense_task)
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
             
 
     def smu_pulsed_retention(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
