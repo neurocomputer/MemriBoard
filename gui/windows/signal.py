@@ -191,7 +191,7 @@ class SignalMod(QDialog):
         plot_type = self.ui.json_plot_type.currentText()
         plot_limits = {  # Maximum number of pulses (tasks) on the plot
             'stem': 10000,
-            'plot': 1000
+            'plot': 10000
         }
         if self._make_json(): # если json сделан
             json_for_plot = self.base_json.copy()

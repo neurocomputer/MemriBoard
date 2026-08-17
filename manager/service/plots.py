@@ -48,7 +48,8 @@ def plot_standard(manager, ticket, plot_type: str, ax: Axes, plot_limits: dict):
     READ_TIME = int(manager.ap_config['board']['read_time'])
     BLANK_TIME = int(manager.ap_config['board']['blank_time'])
     result_stem = [] # отсчеты сигнала
-    result_plot = []
+    result_plot_v = [0]
+    result_plot_t = [0]
     plot_limit_hit = False 
     count = 0
     # генерируем отсчеты сигнала и заполняем
@@ -67,21 +68,38 @@ def plot_standard(manager, ticket, plot_type: str, ax: Axes, plot_limits: dict):
                     result_stem.append(vol)
                 result_stem.append(READ_VOLTAGE)
             else:
-                for _ in range(BLANK_TIME):
-                    result_plot.append(0)
-                for _ in range(t):
-                    result_plot.append(vol)
-                for _ in range(BLANK_TIME):
-                    result_plot.append(0)
-                for _ in range(READ_TIME):
-                    result_plot.append(READ_VOLTAGE)
-    if plot_type == 'plot':
-        for _ in range(BLANK_TIME):
-            result_plot.append(0)
+                # Plot signal
+                # Blank point
+                result_plot_t.append(result_plot_t[-1] + BLANK_TIME)
+                result_plot_v.append(0)
+                # Voltage rise
+                result_plot_t.append(result_plot_t[-1])
+                result_plot_v.append(vol)
+                # Voltage pulse
+                result_plot_t.append(result_plot_t[-1] + t)
+                result_plot_v.append(vol)
+                # Voltage descend
+                result_plot_t.append(result_plot_t[-1])
+                result_plot_v.append(0)
+                # Blank point
+                result_plot_t.append(result_plot_t[-1] + BLANK_TIME)
+                result_plot_v.append(0)
+                # Read voltage rise
+                result_plot_t.append(result_plot_t[-1])
+                result_plot_v.append(READ_VOLTAGE)
+                # Read voltage pulse
+                result_plot_t.append(result_plot_t[-1] + READ_TIME)
+                result_plot_v.append(READ_VOLTAGE)
+                # Read voltage descend
+                result_plot_t.append(result_plot_t[-1])
+                result_plot_v.append(0)
+    if plot_type == 'plot':  # Adding blank point
+        result_plot_t.append(result_plot_t[-1] + BLANK_TIME)
+        result_plot_v.append(0)
     if plot_type == 'stem':
         ax.stem(result_stem)
     else:
-        ax.plot(result_plot)
+        ax.plot(result_plot_t, result_plot_v)
     ax.grid(ls='--', color='grey')
     return count, plot_limit_hit
 
