@@ -81,6 +81,11 @@ class SignalMod(QDialog):
         shortcut.activated.connect(self._plot_ticket)
         shortcut = QShortcut(QKeySequence(Qt.Key_Enter), self)
         shortcut.activated.connect(self._plot_ticket)
+        # Default plot type
+        if self.parent.man.driver_attr['modes'] == 'standard':
+            self.ui.json_plot_type.setCurrentText('stem')
+        else:
+            self.ui.json_plot_type.setCurrentText('plot')
         # начальные значения
         self.set_up_init_values()
         # режим
@@ -196,19 +201,15 @@ class SignalMod(QDialog):
         if self._make_json(): # если json сделан
             json_for_plot = self.base_json.copy()
             # Plotting
+            self.graph.clear()
             self.total_task_count, limit_hit = plot_for_signal_graph(
                 manager=self.parent.man,
                 ticket=json_for_plot,
                 plot_type=plot_type,
                 ax=self.graph.ax,
-                plot_limits=plot_limits
+                plot_limits=plot_limits,
+                lang_pack=self.lang_pack
             )
-            # Labels
-            self.graph.ax.set_ylabel(self.lang_pack.get("plot_voltage"))
-            if plot_type == 'stem':
-                self.graph.ax.set_xlabel(self.lang_pack.get("plot_pulse_count"))
-            else:
-                self.graph.ax.set_xlabel(self.lang_pack.get("plot_time"))
             self.graph.canvas.draw_idle()
             # Label with plot limit
             if limit_hit:
@@ -455,4 +456,5 @@ class SignalMod(QDialog):
             # обновляем список
             self.parent.exp_settings_dialog.refresh_list()
         self.set_up_init_values()
+        self.graph.close()
         event.accept()

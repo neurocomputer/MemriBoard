@@ -1,6 +1,5 @@
 SIGNAL UI
-    integrate current compliance
-    integrate VISA-modes
+    Add positive-only scientific QLineEdit (voltages, read_voltage, etc.)
 
 CHECKINGS
     check file saving in apply and testing

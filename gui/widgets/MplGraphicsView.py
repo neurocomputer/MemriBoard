@@ -2,6 +2,7 @@
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 
 
@@ -16,11 +17,22 @@ class MplGraphicsView(QGraphicsView):
         self.figure = Figure(layout='constrained')
         self.canvas = FigureCanvas(self.figure)
         self.plot_scene.addWidget(self.canvas)
-        self.ax = self.figure.add_subplot(111)
-        
+        self.ax = self.figure.add_subplot(111) 
         
         
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.canvas.resize(self.viewport().size())
         self.plot_scene.setSceneRect(0, 0, self.viewport().width(), self.viewport().height())
+        
+        
+    def clear(self):
+        """Clear the figure"""
+        self.figure.clear()
+        self.ax = self.figure.add_subplot(111)
+        
+        
+    def close(self):
+        """On closing the window"""
+        plt.close(self.figure)
+        super().close()
