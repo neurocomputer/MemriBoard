@@ -1,6 +1,6 @@
 """Class the implements Connector.impact() for visa drivers"""
-from logging import Logger
 from typing import Union
+import numpy as np
 
 from manager.service import r2a
 
@@ -16,19 +16,11 @@ class VisaImpact:
     """Class the implements Connector.impact() for visa drivers"""
     
     interface: Union[ITC_probe_station, ITC_1T1R_probe_station, ITC_1T1R_32x8_switched]
-    logger: Logger
-    config: dict
-    driver_attr: dict
-    board_type: str
     
     def __init__(
         self,
         parent,
         interface: Union[ITC_probe_station, ITC_1T1R_probe_station, ITC_1T1R_32x8_switched],
-        logger: Logger,
-        config: dict,
-        driver_attr: dict,
-        board_type: str
     ):
         """Class the implements Connector.impact() for visa drivers"""
         if not drivers_available:
@@ -36,10 +28,6 @@ class VisaImpact:
         # TODO: remove what's not needed
         self.parent = parent  # board.py/Connector
         self.interface = interface
-        self.logger = logger
-        self.config = config
-        self.driver_attr = driver_attr
-        self.board_type = board_type
         # Available task modes
         self.task_modes = {
             'connect_cell': self.connect_cell,
@@ -58,15 +46,16 @@ class VisaImpact:
         
     def __call__(self, task: dict) -> tuple:
         """Calling impact"""
-        res = self.task_modes[task['mode']](task)
+        res = self.task_modes[task['mode_flag']](task)
         self.interface.logger.info(f'Impact: res = {res}')
+        self.parent.logger.info(f'Impact: task: {task}\nres:{res}')
         return res
     
     
-    def log(self, flag: bool, response: str, add_error_info: str) -> None:
+    def log(self, flag: bool, response: str, add_error_info: str = '') -> None:
         """Log a message as error or info based on the flag"""
         if flag:
-            self.logger.info(str(response))
+            self.parent.logger.info(str(response))
         else:
             self.logger.critical(add_error_info + str(response))
         
@@ -87,19 +76,19 @@ class VisaImpact:
     
     def panic(self, task: dict) -> tuple:
         """Stop the ongoing experiment"""
-        self.logger.info('Panic started for VISA-instruments')
+        self.parent.logger.info('Panic started for VISA-instruments')
         flag, response = self.interface.panic()
         if flag:
-            self.logger.info('Panic resolved')
+            self.parent.logger.info('Panic resolved')
         else:
-            self.logger.critical(f'Panic was not resolved!: {response}')
+            self.parent.logger.critical(f'Panic was not resolved!: {response}')
         return int(flag)
     
     
     def send_need_stop(self, task) -> tuple:
         """Send need stop flag to the driver if it's stuck"""
         self.interface.stop_experiment()
-        self.logger.info('Need stop sent to the driver')
+        self.parent.logger.info('Need stop sent to the driver')
         return 1
     
     
@@ -107,17 +96,20 @@ class VisaImpact:
         """Get measurement data"""
         sense_data = self.interface.sense(vol=task.get('vol'))
         if isinstance(sense_data, str):
-            self.logger.critical(f'Sense error: {sense_data}')
+            self.parent.logger.critical(f'Sense error: {sense_data}')
             return 0
-        adc = r2a(  # TODO remove when output format changed
-            gain = float(self.config['board']['gain']),
-            res_load = float(self.config['board']['res_load']),
-            vol_read = float(self.config['board']['vol_read']),
-            adc_bit = int(self.config['board']['adc_bit']),
-            vol_ref_adc = float(self.config['board']['vol_ref_adc']),
-            res_switches = float(self.config['board']['res_switches']),
-            res = sense_data[0]
-        )
+        if np.isnan(sense_data[0]):
+            adc = 0
+        else:
+            adc = r2a(  # TODO remove when output format changed
+                gain = float(self.parent.config['board']['gain']),
+                res_load = float(self.parent.config['board']['res_load']),
+                vol_read = float(self.parent.config['board']['vol_read']),
+                adc_bit = int(self.parent.config['board']['adc_bit']),
+                vol_ref_adc = float(self.parent.config['board']['vol_ref_adc']),
+                res_switches = float(self.parent.config['board']['res_switches']),
+                res = sense_data[0]
+            )
         return (sense_data[0], task['id'], adc, *sense_data[1:])
     
     
@@ -125,7 +117,7 @@ class VisaImpact:
         """Configure std mode"""
         flag, response = self.interface.config_std(  # TODO reimplement driver
             volt_array = task['volt_array'],
-            compliance = task['compliance'],
+            current_compliance = task['compliance'],
             pulse_width = task['pulse_width'],
             read_voltage = task['read_voltage'],
             read_direction = task['read_direction'],
@@ -166,7 +158,7 @@ class VisaImpact:
         flag, response = self.interface.config_pulsed_retention(
             pulse_width = task['pulse_width'], 
             trigger_interval = task['pulse_period'],
-            compliance = task['compliance'],
+            current_compliance = task['compliance'],
             count = task['count'],
             read_voltage = task['read_voltage'],
             sign = task['sign']
@@ -178,8 +170,8 @@ class VisaImpact:
     def config_endurance(self, task: dict) -> tuple:
         """Configure endurance mode"""
         flag, response = self.interface.config_endurance(
-            v_dir = task['amplitude_dir'],
-            v_rev = task['amplitude_rev'],
+            v_dir = task['v_dir'],
+            v_rev = task['v_rev'],
             dir_cc = task['compliance_dir'],
             rev_cc = task['compliance_rev'],
             pulse_width = task['pulse_width'], 
@@ -196,7 +188,7 @@ class VisaImpact:
     def config_pot_dep(self, task: dict) -> tuple:
         """Configure potentiation-depression mode"""
         flag, response = self.interface.config_pot_dep(
-            voltage = task['volage'],
+            voltage = task['voltage'],
             compliance = task['compliance'],
             pulse_width = task['pulse_width'], 
             trigger_interval = task['pulse_period'],

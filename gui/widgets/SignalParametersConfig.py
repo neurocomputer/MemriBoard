@@ -82,6 +82,7 @@ class SignalParameters(QWidget):
         # Scientific widget warnings
         for widget in self.scientific_widgets:
             widget.bad_value.connect(partial(self.parent.warn_scientific_widget, widget))
+            widget.set_positive_only(True)
         
     
     def change_language(self, lang_pack: dict, scientific_lang_pack: dict) -> None:

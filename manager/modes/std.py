@@ -20,56 +20,59 @@ def get_std(signal_mode: str, params: dict, terminate: dict, blank_type: str) ->
     terminator = terminators[terminate['type']](terminate['value'])
     
     # Preparing based on the mode
-    if signal_mode == 'volt_sweep':
-        # инкремент dir
-        try:
-            dir_inc = np.arange(params['start_dir'],
-                                params['stop_dir'] + params['step_dir'],
-                                params['step_dir'])
-        except ZeroDivisionError:
-            dir_inc = [0]
-        # декремент dir
-        if params['double_dir']:
-            dir_dec = dir_inc[::-1]
-        else:
+    try:
+        if signal_mode == 'volt_sweep':
+            # инкремент dir
+            try:
+                dir_inc = np.arange(params['start_dir'],
+                                    params['stop_dir'] + params['step_dir'],
+                                    params['step_dir'])
+            except ZeroDivisionError:
+                dir_inc = [0]
+            # декремент dir
+            if params['double_dir']:
+                dir_dec = dir_inc[::-1]
+            else:
+                dir_dec = []
+            # инкремент rev
+            try:
+                rev_inc = np.arange(params['start_rev'],
+                                    params['stop_rev'] + params['step_rev'],
+                                    params['step_rev'])
+            except ZeroDivisionError:
+                rev_inc = [0]
+            # декремент rev
+            if params['double_rev']:
+                rev_dec = rev_inc[::-1]
+            else:
+                rev_dec = []
+            # Other parameters
+            pulse_width_dir = params['pulse_width_dir']
+            pulse_width_rev = params['pulse_width_rev']
+            amount_dir = params['amount_dir']
+            amount_rev = params['amount_rev']
+        elif signal_mode == 'endurance':
+            dir_inc = [params['amplitude_dir']]
             dir_dec = []
-        # инкремент rev
-        try:
-            rev_inc = np.arange(params['start_rev'],
-                                params['stop_rev'] + params['step_rev'],
-                                params['step_rev'])
-        except ZeroDivisionError:
-            rev_inc = [0]
-        # декремент rev
-        if params['double_rev']:
-            rev_dec = rev_inc[::-1]
-        else:
+            rev_inc = [params['amplitude_rev']]
             rev_dec = []
-        # Other parameters
-        pulse_width_dir = params['pulse_width_dir']
-        pulse_width_rev = params['pulse_width_rev']
-        amount_dir = params['amount_dir']
-        amount_rev = params['amount_rev']
-    elif signal_mode == 'endurance':
-        dir_inc = [params['amplitude_dir']]
-        dir_dec = []
-        rev_inc = [params['amplitude_rev']]
-        rev_dec = []
-        pulse_width_dir = params['pulse_width_dir']
-        pulse_width_rev = params['pulse_width_rev']
-        amount_dir = params['amount_dir']
-        amount_rev = params['amount_rev']
-    elif signal_mode == 'retention':
-        dir_inc = [0]
-        dir_dec = []
-        rev_inc = []
-        rev_dec = []
-        pulse_width_dir = 0
-        pulse_width_rev = 0
-        amount_dir = 1
-        amount_rev = 0
-    else:
-        raise RuntimeError(f'std Generator: unknown signal mode {signal_mode}')
+            pulse_width_dir = params['pulse_width_dir']
+            pulse_width_rev = params['pulse_width_rev']
+            amount_dir = params['amount_dir']
+            amount_rev = params['amount_rev']
+        elif signal_mode == 'retention':
+            dir_inc = [0]
+            dir_dec = []
+            rev_inc = []
+            rev_dec = []
+            pulse_width_dir = 0
+            pulse_width_rev = 0
+            amount_dir = 1
+            amount_rev = 0
+        else:
+            raise RuntimeError(f'std Generator: unknown signal mode {signal_mode}')
+    except KeyError as e:
+        raise KeyError(f'Could not parse ticket as standard! Wrong key: {e}')
         
     # Generating
     

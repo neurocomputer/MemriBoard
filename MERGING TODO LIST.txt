@@ -1,20 +1,9 @@
-SIGNAL UI
-    Add positive-only scientific QLineEdit (voltages, read_voltage, etc.)
-
 CHECKINGS
-    check file saving in apply and testing
     check if soft compliance works
 
-MENU 
-    Implement in plots.py
-
 VISA_DRIVERS
-    board.py: check if voltage in `sense` is passed correctly
-    board.py: get visa impact to a separate file; reduce everything
 
-BOARD 
-    Почистить аргументы инициализации VISA Connector
+    implement trigger_needed and skip_one_sense
 
-
-TODO IN BOTH BRANCHES
-    std.py: Check for key errors when parsing the ticket
+UI
+    Add max and min values based on the driver

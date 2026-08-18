@@ -536,7 +536,8 @@ class ApplyExp(QThread):
                             result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id, adc, timestamp)
                             # учет выполнения
                             if result:
-                                self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{result[2]},{term_left},{term_right},{task[0]['pulse_width']},{ticket['name']},{ticket['terminate']},{ticket['mode']},{result[3]},{result[4]},{result[5]}")
+                                # TODO 0 here is pulse width, which is not in sense task now
+                                self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{result[2]},{term_left},{term_right},{0},{ticket['name']},{ticket['terminate']},{ticket['mode']},{result[3]},{result[4]},{result[5]}")
                                 save_list_to_bytearray_float(result_file, task[0]['sign'], task[0]['vol'], result[0], result[2])  # sign, vol, resistance, adc
                                 # TODO remove: saving to csv -------------------
                                 if self.parent.parent.man.apply_save_csv:
@@ -554,7 +555,7 @@ class ApplyExp(QThread):
                                             crossbar_serial,  # crossbar_id
                                             item[0],  # wl
                                             item[1],  # bl
-                                            task[0]['pulse_width'],
+                                            0,
                                             name,  # exp_name
                                             ticket['name'],  # ticket_name
                                             ticket['mode'],  # ticket_mode

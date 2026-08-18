@@ -62,7 +62,7 @@ class Application:
             ap_log_path = self.ap_log_path
         else:
             ap_log_path = self.new_log_path(self.ap_log_path)
-        handler = logging.FileHandler(ap_log_path, mode='w')
+        handler = logging.FileHandler(ap_log_path, mode='w', encoding='utf-8')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.ap_logger.addHandler(handler)
         # настраиваем логгер базы данных
@@ -75,7 +75,7 @@ class Application:
             db_log_path = self.db_log_path    
         else:
             db_log_path = self.new_log_path(self.db_log_path)
-        handler = logging.FileHandler(db_log_path, mode='w')
+        handler = logging.FileHandler(db_log_path, mode='w', encoding='utf-8')
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки

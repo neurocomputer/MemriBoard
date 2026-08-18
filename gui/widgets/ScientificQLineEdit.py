@@ -43,6 +43,7 @@ class ScientificQLineEdit(QLineEdit):
     bad_value = pyqtSignal(str)
     unit = ''
     value = None
+    positive_only: bool = False
     def __init__(self, *args, **kwargs) -> None:
         """Custom QLineEdit class with SI prefixes
         """
@@ -104,6 +105,8 @@ class ScientificQLineEdit(QLineEdit):
             else:
                 order = -int(np.log10(self.prefixes[prefix]))
                 self.value = round(number * self.prefixes[prefix], order+7)  # Fixing rounding error for small values
+        if self.positive_only:  # Positive only flag
+            self.value = abs(self.value)
         self.setText(self._convert_value_to_text())
 
 
@@ -135,4 +138,15 @@ class ScientificQLineEdit(QLineEdit):
         """
         self.value = value
         self.setText(self._convert_value_to_text())
+        
+    
+    def set_positive_only(self, positive: bool) -> None:
+        """Set positive only flag for the QLineEdit. If True, only positive values permitted (`-` sign is omitted).
+
+        Args:
+            positive (bool): Positive only flag.
+        """
+        self.positive_only = positive
+        if self.value is not None:
+            self.update_value()
         

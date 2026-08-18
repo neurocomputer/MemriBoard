@@ -321,10 +321,6 @@ class Connector:
             self.impact_handler = VisaImpact(
                 parent=self,
                 interface=self.interface,
-                logger=self.logger,
-                config=self.config,
-                driver_attr=self.driver_attr,
-                board_type=self.board_type
             )
         return open_flag, simulation_fallback
 

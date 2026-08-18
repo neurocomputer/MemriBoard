@@ -65,6 +65,8 @@ class SignalMod(QDialog):
         self.terminator_combobox.activated.connect(self._choose_terminator)
         self.terminate_left.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_left, text))
         self.terminate_right.bad_value.connect(lambda text: self.warn_scientific_widget(self.terminate_right, text))
+        self.terminate_left.set_positive_only(True)
+        self.terminate_right.set_positive_only(True)
         # Filling signal modes
         self.signal_mode.addItems(list(self.menu.alias_to_mode().keys()))
         self.signal_mode.currentTextChanged.connect(self._change_signal_mode)
