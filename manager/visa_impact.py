@@ -68,7 +68,7 @@ class VisaImpact:
     
     
     def standby(self, task: dict) -> tuple:
-        """Set insrtuments to standby mode"""
+        """Set instruments to standby mode"""
         flag, response = self.interface.standby()
         self.log(flag, response)
         return int(flag)
