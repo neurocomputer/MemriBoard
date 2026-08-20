@@ -427,6 +427,7 @@ class ApplyExp(QThread):
         self.need_stop_rised = False # необходимость остановки возникала
         self.image_saved = False # рисунок создан и сохранен на диск
         _, self.lang_pack = self.parent.parent.read_language_json("apply")
+        self.current_control = False  # FIXME Костыль для источника тока
         self.algorithm = Algorithm(  # For algorithms
             parent=self, 
             measure_ticket_name=self.parent.parent.man.ap_config['gui']['measure_ticket']
@@ -536,17 +537,25 @@ class ApplyExp(QThread):
                             result = self.parent.parent.man.conn.impact(task[0]) # result = (resistance, id, adc, timestamp)
                             # учет выполнения
                             if result:
+                                # TODO Костыль, чтобы режим с источником тока работал
+                                if self.current_control:
+                                    current = task[0]['vol']
+                                    res = result[0]
+                                    vol = current * res
+                                else:
+                                    vol = task[0]['vol']
+                                    res = result[0]
                                 # TODO 0 here is pulse width, which is not in sense task now
-                                self.value_got.emit(f"{counter},{result[0]},{task[0]['vol']},{task[0]['sign']},{result[2]},{term_left},{term_right},{0},{ticket['name']},{ticket['terminate']},{ticket['mode']},{result[3]},{result[4]},{result[5]}")
-                                save_list_to_bytearray_float(result_file, task[0]['sign'], task[0]['vol'], result[0], result[2])  # sign, vol, resistance, adc
+                                self.value_got.emit(f"{counter},{res},{vol},{task[0]['sign']},{result[2]},{term_left},{term_right},{0},{ticket['name']},{ticket['terminate']},{ticket['mode']},{result[3]},{result[4]},{result[5]}")
+                                save_list_to_bytearray_float(result_file, task[0]['sign'], vol, res, result[2])  # sign, vol, resistance, adc
                                 # TODO remove: saving to csv -------------------
                                 if self.parent.parent.man.apply_save_csv:
                                     with open(csv_path, 'a', newline='', encoding='utf-8') as file:
                                         file_wr = csv.writer(file, delimiter=';')
                                         file_wr.writerow([
                                             task[0]['sign'],
-                                            task[0]['vol'],
-                                            result[0],  # res
+                                            vol,
+                                            res,  # res
                                             result[3],  # timestamp
                                             result[6],  # temperature(C)
                                             result[7],  # V_temp
@@ -564,7 +573,7 @@ class ApplyExp(QThread):
                                             term_right  # terminate_2
                                         ])
                                 # ----------------------------------------------
-                                resistance_previous = result[0]
+                                resistance_previous = res
                                 # проверка прерывания тикета
                                 interrupt = task[1](result)
                                 if interrupt:
@@ -576,6 +585,11 @@ class ApplyExp(QThread):
                         counter += 1
                     # иначе задача не связана с подачей сигнала
                     else:
+                        # FIXME Костыль для работы в режиме источника тока
+                        if task[0]['mode_flag'] == 'config_iv_current_dc':
+                            self.current_control = True
+                        else:
+                            self.current_control = False
                         request_status = self.parent.parent.man.conn.impact(task[0]) # result = (adc, id)
                         if request_status == 0: # запрос не выполнен, прерываем эксперимент
                             task_generator.throw(Exception("bad request"))
@@ -587,7 +601,7 @@ class ApplyExp(QThread):
                 result_file.close()  
                 # сохраняем в БД статус завершения
                 if result:
-                    self.last_resistance = result[0]
+                    self.last_resistance = res
                     status = self.parent.parent.man.db.update_last_resistance(memristor_id, self.last_resistance)
                     if not status:
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_info"))

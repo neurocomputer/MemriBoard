@@ -25,7 +25,6 @@ class VisaImpact:
         """Class the implements Connector.impact() for visa drivers"""
         if not drivers_available:
             raise ModuleNotFoundError('Visa drivers are not available! Install them to the MemriBoard folder.')
-        # TODO: remove what's not needed
         self.parent = parent  # board.py/Connector
         self.interface = interface
         # Available task modes
@@ -115,7 +114,7 @@ class VisaImpact:
     
     def config_std(self, task: dict) -> tuple:
         """Configure std mode"""
-        flag, response = self.interface.config_std(  # TODO reimplement driver
+        flag, response = self.interface.config_std(
             volt_array = task['volt_array'],
             current_compliance = task['compliance'],
             pulse_width = task['pulse_width'],
@@ -130,7 +129,7 @@ class VisaImpact:
     def config_iv_dc(self, task: dict, sweep_val: str) -> tuple:
         """Configure iv_dc mode"""
         if sweep_val == 'voltage':
-            flag, response = self.interface.config_iv_dc(  # TODO reimplement driver
+            flag, response = self.interface.config_iv_dc(
                 v_start = task['start'],
                 v_stop = task['stop'],
                 n_points = task['n_points'],
@@ -140,7 +139,7 @@ class VisaImpact:
                 sign = task['sign']
             )
         else:
-            flag, response = self.interface.config_current_sweep(  # TODO reimplement driver
+            flag, response = self.interface.config_current_sweep(
                 i_start = task['start'],
                 i_stop = task['stop'],
                 n_points = task['n_points'],
