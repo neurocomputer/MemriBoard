@@ -415,6 +415,7 @@ class ApplyExp(QThread):
     flag_soft_cc = 0
     PAUSE_TIME = 0.2
     lang_pack: dict
+    last_voltage: float = 0
 
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
@@ -517,6 +518,7 @@ class ApplyExp(QThread):
                             resistance_previous = result[0]
                             # проверка прерывания тикета
                             interrupt = task[1](result)
+                            self.last_voltage = task['vol']
                             if interrupt:
                                 break
                     else:
@@ -538,6 +540,7 @@ class ApplyExp(QThread):
                         self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_res"))
                     # Changing values in the algorithm
                     self.algorithm.set_last_resistance(self.last_resistance)
+                    self.algorithm.set_last_voltage(self.last_voltage)
                 if self.need_stop:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:

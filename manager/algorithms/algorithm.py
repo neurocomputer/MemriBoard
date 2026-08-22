@@ -23,6 +23,8 @@ VALUE_FUNCTIONS = [  # Function that return or set values (do not yield a ticket
     'last_resistance',
     'set_last_resistance',
     'get_ticket_dict',
+    'last_voltage',
+    'set_last_voltage',
     'wl',
     'bl'
 ]
@@ -33,6 +35,7 @@ class Algorithm:
     """Algorithm class that contains methods used in user algorithms"""
     _wl: int = 0
     _bl: int = 0
+    last_vol: float = 0
     def __init__(
         self, parent=None, 
         initial_resistance: float = 0, 
@@ -58,12 +61,12 @@ class Algorithm:
         self.executed_tickets = []  # Tickets executed during a single algorithm
         
         
-    def wl(self):
+    def wl(self) -> int:
         """Return word line of the measured cell"""
         return self._wl
     
     
-    def bl(self):
+    def bl(self) -> int:
         """Return word line of the measured cell"""
         return self._bl
         
@@ -78,12 +81,30 @@ class Algorithm:
     
     
     def set_last_resistance(self, resistance: float) -> None:
-        """Set last measured resistance
+        """Set last measured resistance.
 
         Args:
             resistance (float): resistance value.
         """
         self.last_res = resistance
+        
+        
+    def last_voltage(self) -> Union[float, None]:
+        """Get the last applied voltage.
+
+        Returns:
+            float | None: Last voltage applied to the cell.
+        """
+        return self.last_vol
+    
+    
+    def set_last_voltage(self, voltage: float) -> None:
+        """St the last applied voltage variable.
+
+        Args:
+            voltage (float): Voltage value.
+        """
+        self.last_vol = voltage
         
         
     def send_ticket(self, ticket_name: str, folder_path: Union[str, None] = None) -> None:
