@@ -518,7 +518,7 @@ class ApplyExp(QThread):
                             resistance_previous = result[0]
                             # проверка прерывания тикета
                             interrupt = task[1](result)
-                            self.last_voltage = task['vol']
+                            self.last_voltage = task[0]['vol']
                             if interrupt:
                                 break
                     else:
