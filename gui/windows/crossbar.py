@@ -62,6 +62,7 @@ class Window(QMainWindow):
     close_modal_flag: bool = False # главное окно закрывает модальное окно
     lang_pack: dict
     theme: str = None  # Real theme of the application: 'light' or 'dark'
+    system_theme: str = None  # System theme: 'light' or 'dark'
 
     all_results_progressed = 0
     number_results_wait = 0
@@ -219,18 +220,27 @@ class Window(QMainWindow):
             
     def setup_theme(self) -> None:
         """Check the system theme and setup theme based on settings"""
-        if self.theme is not None and self.theme == self.man.ap_config['gui']['theme']:
+        if self.system_theme is None:  # On first launch
+            if self.is_system_theme_dark():
+                self.system_theme = 'dark'
+            else:
+                self.system_theme = 'light'
+        if self.theme is not None and self.theme == self.man.ap_config['gui']['theme']:  # Theme is already set
             return
         if self.man.ap_config['gui']['theme'] == 'system':  # System theme: light or dark
-            if self.is_system_theme_dark():
+            if self.system_theme == 'dark' and self.theme != 'dark':
                 self.theme = 'dark'
-            else:
+                palette = dark_theme_palette()
+                self.application.setPalette(palette)
+            elif self.system_theme == 'light' and self.theme != 'light':
                 self.theme = 'light'
+                palette = light_theme_palette()
+                self.application.setPalette(palette)
         elif self.man.ap_config['gui']['theme'] == 'dark':  # Force dark theme
             self.theme = 'dark'
             palette = dark_theme_palette()
             self.application.setPalette(palette)
-        elif self.man.ap_config['gui']['theme'] == 'light':  # Force light theme via qdarktheme package
+        elif self.man.ap_config['gui']['theme'] == 'light':  # Force light theme
             self.theme = 'light'
             palette = light_theme_palette()
             self.application.setPalette(palette)
