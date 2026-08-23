@@ -159,6 +159,8 @@ class Application:
             self.ap_config['logging']['database_log_rewrite_on_start'] = kwargs['db_log_rewrite_on_start']
         if "database_mode" in kwargs:
             self.ap_config['database']['database_mode'] = kwargs["database_mode"]
+        if 'theme' in kwargs:
+            self.ap_config['gui']['theme'] = kwargs['theme']
         if 'visa_addresses' in kwargs:
             for i in range(5):
                 self.ap_config['connector'][f'visa_address_{i}'] = kwargs['visa_addresses'][i] 
@@ -219,6 +221,7 @@ class Application:
         meta_info['app_log_rewrite_on_start'] = self.ap_config['logging']['app_log_rewrite_on_start']
         meta_info['db_log_rewrite_on_start'] = self.ap_config['logging']['database_log_rewrite_on_start']
         meta_info['database_mode'] = self.database_mode
+        meta_info['theme'] = self.ap_config['gui']['theme']
         return deepcopy(meta_info)
     
     def new_log_path(self, log_path: str) -> str:

@@ -51,14 +51,15 @@ class QCodeEditor(QPlainTextEdit):
     class NumberBar(QWidget):
         '''class that deifnes textEditor numberBar'''
 
-        def __init__(self, editor):
+        def __init__(self, editor, colors: dict):
             QWidget.__init__(self, editor)
             
             self.editor = editor
+            self.colors = colors
             self.editor.blockCountChanged.connect(self.updateWidth)
             self.editor.updateRequest.connect(self.updateContents)
             self.font = QFont()
-            self.numberBarColor = QColor("#e8e8e8")
+            self.numberBarColor = QColor(colors['background'])
                      
         def paintEvent(self, event):
             
@@ -79,10 +80,10 @@ class QCodeEditor(QPlainTextEdit):
                 # We want the line number for the selected line to be bold.
                 if blockNumber == self.editor.textCursor().blockNumber():
                     self.font.setBold(True)
-                    painter.setPen(QColor("#000000"))
+                    painter.setPen(QColor(self.colors['bold_text']))
                 else:
                     self.font.setBold(False)
-                    painter.setPen(QColor("#717171"))
+                    painter.setPen(QColor(self.colors['text']))
                 painter.setFont(self.font)
                 
                 # Draw the line number right justified at the position of the line.
@@ -119,11 +120,13 @@ class QCodeEditor(QPlainTextEdit):
                 self.updateWidth()
                 
         
-    def __init__(self, DISPLAY_LINE_NUMBERS=True, HIGHLIGHT_CURRENT_LINE=True,
+    def __init__(self, colors: dict, DISPLAY_LINE_NUMBERS=True, HIGHLIGHT_CURRENT_LINE=True,
                  SyntaxHighlighter=None, *args):        
         '''
         Parameters
         ----------
+        colors : dict
+            Colors for the number line
         DISPLAY_LINE_NUMBERS : bool 
             switch on/off the presence of the lines number bar
         HIGHLIGHT_CURRENT_LINE : bool
@@ -140,7 +143,7 @@ class QCodeEditor(QPlainTextEdit):
         self.DISPLAY_LINE_NUMBERS = DISPLAY_LINE_NUMBERS
 
         if DISPLAY_LINE_NUMBERS:
-            self.number_bar = self.NumberBar(self)
+            self.number_bar = self.NumberBar(self, colors=colors)
             
         if HIGHLIGHT_CURRENT_LINE:
             self.currentLineNumber = None

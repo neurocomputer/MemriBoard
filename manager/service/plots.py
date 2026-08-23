@@ -7,6 +7,7 @@ from manager.algorithms import execute_algorithm
 import numpy as np
 
 # pylint: disable=C0103,W0212
+# TODO dark theme for plots?
 
 
 def calculate_counts_for_ticket(parent, ticket: dict):

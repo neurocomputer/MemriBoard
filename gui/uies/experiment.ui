@@ -59,10 +59,6 @@
                 <property name="text">
                  <string/>
                 </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
-                </property>
                </widget>
               </item>
              </layout>
@@ -119,10 +115,6 @@
                 <property name="text">
                  <string/>
                 </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/arrow-up-line.svg</normaloff>../icons/arrow-up-line.svg</iconset>
-                </property>
                </widget>
               </item>
               <item row="0" column="3">
@@ -147,10 +139,6 @@
                 </property>
                 <property name="text">
                  <string/>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/arrow-down-line.svg</normaloff>../icons/arrow-down-line.svg</iconset>
                 </property>
                </widget>
               </item>
@@ -192,10 +180,6 @@
                 </property>
                 <property name="text">
                  <string/>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
                 </property>
                </widget>
               </item>
@@ -244,10 +228,6 @@
               </property>
               <property name="text">
                <string/>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
               </property>
              </widget>
             </item>

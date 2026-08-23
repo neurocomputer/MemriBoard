@@ -17,8 +17,8 @@ from numpy import inf
 from typing import Union
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu, QInputDialog, QFileDialog
-from PyQt5.QtGui import QColor, QKeySequence
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu, QInputDialog, QFileDialog, QApplication
+from PyQt5.QtGui import QColor, QKeySequence, QPalette
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
 matplotlib.use('QtAgg')
@@ -47,18 +47,21 @@ from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
 from gui.windows.help import Help
 from gui.src import show_choose_window, show_warning_messagebox, change_src_language, convert_ticket_to_reduced_format
+from gui.themes import dark_theme_palette, light_theme_palette
 
 class Window(QMainWindow):
     """
     Основное окно
     """
 
+    app: QApplication  # Application instance
     man: Manager # менеджер работы с платой
     GUI_PATH = os.path.join("gui","uies","crossbar.ui")
     all_resistances: list # все сопротивления для раскраски
     snapshot_dialog = None # для кнопки снимок
     close_modal_flag: bool = False # главное окно закрывает модальное окно
     lang_pack: dict
+    theme: str = None  # Real theme of the application: 'light' or 'dark'
 
     all_results_progressed = 0
     number_results_wait = 0
@@ -115,12 +118,14 @@ class Window(QMainWindow):
     protected_algorithms: list = ['example_for_cycle',
                                   'example_if']
 
-    def __init__(self) -> None:
+    def __init__(self, application: QApplication) -> None:
         super().__init__() # инит QMainWindow
+        self.application = application
         # менеджер работы с платой
         self.man = Manager()
         self.man.blank_type = 'mode_7'
         # загрузка ui
+        self.setup_theme()
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # Меню с действиями и шорткатами
         self.set_shortcuts()
@@ -211,6 +216,32 @@ class Window(QMainWindow):
             # Set language for Messages in src.py
             _, src_lang_pack = self.read_language_json('src')
             change_src_language(src_lang_pack)
+            
+    def setup_theme(self) -> None:
+        """Check the system theme and setup theme based on settings"""
+        if self.theme is not None and self.theme == self.man.ap_config['gui']['theme']:
+            return
+        if self.man.ap_config['gui']['theme'] == 'system':  # System theme: light or dark
+            if self.is_system_theme_dark():
+                self.theme = 'dark'
+            else:
+                self.theme = 'light'
+        elif self.man.ap_config['gui']['theme'] == 'dark':  # Force dark theme
+            self.theme = 'dark'
+            palette = dark_theme_palette()
+            self.application.setPalette(palette)
+        elif self.man.ap_config['gui']['theme'] == 'light':  # Force light theme via qdarktheme package
+            self.theme = 'light'
+            palette = light_theme_palette()
+            self.application.setPalette(palette)
+        else:
+            raise RuntimeError(f"Unknown application theme: {self.man.ap_config['gui']['theme']}")
+    
+    def is_system_theme_dark(self) -> bool:
+        """Check the system theme, return True if it's dark"""
+        palette = self.application.palette()
+        color = palette.color(QPalette.Window)
+        return color.lightness() < 128  # Boolean   
             
 
     # методы открытия диалоговых окон

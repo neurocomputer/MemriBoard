@@ -35,20 +35,6 @@ def format(color, style=''):
     return _format
 
 
-# Syntax styles that can be shared by all languages
-STYLES = {
-    'keyword': format('blue'),
-    'algorithm_functions': format('darkBlue'),
-    'operator': format('red'),
-    'brace': format('blue'),
-    'defclass': format('black', 'bold'),
-    'string': format('magenta'),
-    'string2': format('darkMagenta'),
-    'comment': format('darkGreen', 'italic'),
-    'self': format('black', 'italic'),
-    'numbers': format('brown'),
-}
-
 
 class PythonHighlighter (QtGui.QSyntaxHighlighter):
     """Syntax highlighter for the Python language.
@@ -84,47 +70,60 @@ class PythonHighlighter (QtGui.QSyntaxHighlighter):
     # Algorithm functions
     algorithm_functions = [*VALUE_FUNCTIONS, *GENERATOR_FUNCTIONS, *MULTI_GENERATOR_FUNCTIONS]
 
-    def __init__(self, parent: QtGui.QTextDocument) -> None:
+    def __init__(self, parent: QtGui.QTextDocument, styles: dict) -> None:
         super().__init__(parent)
-
+        # Syntax styles
+        self.styles = {
+            'keyword': format(styles['keyword']),
+            'algorithm_functions': format(styles['algorithm_functions']),
+            'operator': format(styles['operator']),
+            'brace': format(styles['brace']),
+            'defclass': format(styles['defclass'], 'bold'),
+            'string': format(styles['string']),
+            'string2': format(styles['string2']),
+            'comment': format(styles['comment'], 'italic'),
+            'self': format(styles['self'], 'italic'),
+            'numbers': format(styles['numbers']),
+        }
+        
         # Multi-line strings (expression, flag, style)
-        self.tri_single = (QtCore.QRegExp("'''"), 1, STYLES['string2'])
-        self.tri_double = (QtCore.QRegExp('"""'), 2, STYLES['string2'])
+        self.tri_single = (QtCore.QRegExp("'''"), 1, self.styles['string2'])
+        self.tri_double = (QtCore.QRegExp('"""'), 2, self.styles['string2'])
 
         rules = []
 
         # Keyword, operator, and brace rules
-        rules += [(r'\b%s\b' % w, 0, STYLES['keyword'])  # noqa: UP031
+        rules += [(r'\b%s\b' % w, 0, self.styles['keyword'])  # noqa: UP031
             for w in PythonHighlighter.keywords]
-        rules += [(r'%s' % o, 0, STYLES['operator'])  # noqa: UP031
+        rules += [(r'%s' % o, 0, self.styles['operator'])  # noqa: UP031
             for o in PythonHighlighter.operators]
-        rules += [(r'%s' % b, 0, STYLES['brace'])  # noqa: UP031
+        rules += [(r'%s' % b, 0, self.styles['brace'])  # noqa: UP031
             for b in PythonHighlighter.braces]
-        rules += [(r'%s' % a, 0, STYLES['algorithm_functions'])  # noqa: UP031
+        rules += [(r'%s' % a, 0, self.styles['algorithm_functions'])  # noqa: UP031
             for a in PythonHighlighter.algorithm_functions]
 
         # All other rules
         rules += [
             # 'self'
-            (r'\bself\b', 0, STYLES['self']),
+            (r'\bself\b', 0, self.styles['self']),
 
             # 'def' followed by an identifier
-            (r'\bdef\b\s*(\w+)', 1, STYLES['defclass']),
+            (r'\bdef\b\s*(\w+)', 1, self.styles['defclass']),
             # 'class' followed by an identifier
-            (r'\bclass\b\s*(\w+)', 1, STYLES['defclass']),
+            (r'\bclass\b\s*(\w+)', 1, self.styles['defclass']),
 
             # Numeric literals
-            (r'\b[+-]?[0-9]+[lL]?\b', 0, STYLES['numbers']),
-            (r'\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b', 0, STYLES['numbers']),
-            (r'\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b', 0, STYLES['numbers']),
+            (r'\b[+-]?[0-9]+[lL]?\b', 0, self.styles['numbers']),
+            (r'\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b', 0, self.styles['numbers']),
+            (r'\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b', 0, self.styles['numbers']),
 
             # Double-quoted string, possibly containing escape sequences
-            (r'"[^"\\]*(\\.[^"\\]*)*"', 0, STYLES['string']),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', 0, self.styles['string']),
             # Single-quoted string, possibly containing escape sequences
-            (r"'[^'\\]*(\\.[^'\\]*)*'", 0, STYLES['string']),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", 0, self.styles['string']),
 
             # From '#' until a newline
-            (r'#[^\n]*', 0, STYLES['comment']),
+            (r'#[^\n]*', 0, self.styles['comment']),
         ]
 
         # Build a QRegExp for each pattern

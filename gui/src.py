@@ -159,6 +159,8 @@ def save_matrix_xlsx(filename: str, data: list) -> None:
                  worksheet.write(i + 1, j + 1, col, centered_format)
     writer.close()
     
+    
+# Ticket converting
 
 def convert_ticket_to_reduced_format(manager, ticket: dict, mode_to_convert: str = 'volt_sweep') -> dict:
     """Convert ticket from old (full) format to reduced format (for backwards compatibility)"""
@@ -224,5 +226,4 @@ def convert_ticket_to_reduced_format(manager, ticket: dict, mode_to_convert: str
                            manager.res_switches,
                            ticket['terminate']['value']))
     new_ticket['terminate']['value'] = new_term
-    return new_ticket        
-    
+    return new_ticket
