@@ -6,6 +6,7 @@ from matplotlib.axes import Axes
 from manager.algorithms import execute_algorithm
 
 # pylint: disable=C0103,W0212
+# TODO dark theme for plots?
 
 
 def calculate_counts_for_ticket(parent, ticket: dict):

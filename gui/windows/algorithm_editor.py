@@ -11,6 +11,7 @@ from PyQt5.QtGui import QFontDatabase, QFontMetricsF, QTextCursor, QKeySequence
 from gui.widgets.QCodeEditor import QCodeEditor
 from gui.widgets.syntax_highlighter import PythonHighlighter
 from gui.src import show_warning_messagebox, show_choose_window
+from gui.themes import code_editor_colors
 from manager.service.global_settings import ALGORITHM_PATH, TICKET_PATH
 from manager.algorithms import Algorithm, check_algorithm_code, execute_algorithm
 from manager.algorithms.algorithm import VALUE_FUNCTIONS, GENERATOR_FUNCTIONS, MULTI_GENERATOR_FUNCTIONS
@@ -84,7 +85,8 @@ class AlgorithmEditor(QDialog):
         
     def setup_code_editor(self, ticket: Union[str, None]) -> None:
         """Set the code editor parameters"""
-        self.code_editor = QCodeEditor()
+        theme_dict = code_editor_colors(self.parent.parent.theme)
+        self.code_editor = QCodeEditor(theme_dict['line_numbers'])
         self.groupBox_code_editor.layout().addWidget(self.code_editor)
         self.set_font_and_highlight(self.code_editor)
         # Tabulation
@@ -102,7 +104,7 @@ class AlgorithmEditor(QDialog):
                 self.code_editor.setPlainText(BASE_ALGORITHM)
         # Displaying algorithm
         self.code_editor.setFocus()
-        self.code_editor.moveCursor(QTextCursor.End)
+        self.code_editor.moveCursor(QTextCursor.Start)
         
     
     def setup_function_lists(self) -> None:
@@ -145,7 +147,10 @@ class AlgorithmEditor(QDialog):
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         plainTextEdit.setFont(font)
         # Highlighting
-        highlight = PythonHighlighter(plainTextEdit.document())
+        highlight = PythonHighlighter(
+            plainTextEdit.document(), 
+            styles=code_editor_colors(self.parent.parent.theme)['syntax_highlight']
+        )
         plainTextEdit.textChanged.connect(lambda: highlight.highlightBlock(None))
         
         
@@ -274,6 +279,4 @@ class AlgorithmEditor(QDialog):
             else:
                 event.accept()
         self.parent.refresh_alg_list()
-        
-# TODO: dark theme?
         

@@ -19,7 +19,11 @@
         "app_log":"Board manager (app.log)",
         "db_log":"Database (db.log)",
         "level":"Level",
-        "rewrite_file":"Rewrite file"
+        "rewrite_file":"Rewrite file",
+        "theme":"Theme",
+        "dark":"Dark",
+        "light":"Light",
+        "system":"System"
     },
     "connect":{
         "name":"Connect",

@@ -14,7 +14,7 @@ class Settings(QDialog):
     """
 
     GUI_PATH = os.path.join("gui","uies","settings.ui")
-    lang_pack = {}
+    lang_pack: dict
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -64,6 +64,14 @@ class Settings(QDialog):
             self.ui.label_db_log_level.setText(self.lang_pack.get("level"))
             self.ui.checkBox_app_log.setText(self.lang_pack.get("rewrite_file"))
             self.ui.checkBox_db_log.setText(self.lang_pack.get("rewrite_file"))
+            self.ui.label_theme.setText(self.lang_pack.get("theme"))
+            self.ui.theme_combobox.clear()
+            self.ui.theme_combobox.addItems([
+                self.lang_pack.get("system"),
+                self.lang_pack.get("light"),
+                self.lang_pack.get("dark")
+            ])
+            self.ui.theme_combobox.setCurrentText(self.lang_pack.get(self.parent.man.get_meta_info()['theme']))
 
     def fill_settings(self) -> None:
         """
@@ -81,6 +89,7 @@ class Settings(QDialog):
         self.ui.comboBox_db_log.setCurrentText(app_meta_info["db_logging_level"])
         self.ui.checkBox_app_log.setChecked(bool(int(app_meta_info["app_log_rewrite_on_start"])))
         self.ui.checkBox_app_log.setChecked(bool(int(app_meta_info["db_log_rewrite_on_start"])))
+        self.ui.theme_combobox.setCurrentText(self.lang_pack.get(app_meta_info["theme"]))
 
     def save_settings(self) -> None:
         """
@@ -88,6 +97,8 @@ class Settings(QDialog):
         """
         writable_cells = self.ui.lineedit_writable_cells.text()
         language = self.ui.choose_language.currentText()
+        themes = ['system', 'light', 'dark']
+        current_theme = themes[self.theme_combobox.currentIndex()]
         if len(writable_cells) != 0:
             if not os.path.isfile(writable_cells):
                 writable_cells = ''
@@ -100,10 +111,12 @@ class Settings(QDialog):
                                       app_logging_level=self.ui.comboBox_app_log.currentText(),
                                       db_logging_level=self.ui.comboBox_db_log.currentText(),
                                       app_log_rewrite_on_start=str(int(self.ui.checkBox_app_log.isChecked())),
-                                      db_log_rewrite_on_start=str(int(self.ui.checkBox_db_log.isChecked())))                          
+                                      db_log_rewrite_on_start=str(int(self.ui.checkBox_db_log.isChecked())),
+                                      theme=current_theme)                          
         if self.parent.connect_dialog:
             self.parent.connect_dialog.change_language()
         self.parent.change_language()
+        self.parent.setup_theme()
         self.close()
 
     def add_path(self) -> None:
