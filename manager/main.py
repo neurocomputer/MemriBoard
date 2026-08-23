@@ -531,12 +531,12 @@ class Manager(Application):
         term_left = None
         term_right = None
         term_type = terminate['type']
-        term_value = terminate['value'] # adc
+        term_value = terminate['value'] # float or int
         if term_type == 'pass':
             term_left = 0
             term_right = 0
         else:
-            if isinstance(term_value, int):
+            if isinstance(term_value, (float, int)):
                 term_left = term_value
                 term_right = 0
             elif isinstance(term_value, list):

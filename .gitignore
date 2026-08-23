@@ -205,4 +205,5 @@ math_symbols.py
 master_class.ipynb
 main_gui.py
 MemriNPU/
+algorithms/*.py
 *.log.*
