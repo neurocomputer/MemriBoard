@@ -7,6 +7,7 @@
 import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
+import numpy as np
 
 from gui.src import show_warning_messagebox
 
@@ -74,8 +75,11 @@ class CellInfo(QDialog):
         Прочитать одну
         """
         self.ui.button_read_one_cells.setEnabled(False)
-        self.parent.current_last_resistance = int(self.parent.read_cell(self.parent.current_wl,
-                                                                        self.parent.current_bl))
+        try:
+            self.parent.current_last_resistance = int(self.parent.read_cell(self.parent.current_wl,
+                                                                            self.parent.current_bl))
+        except OverflowError:
+            self.parent.current_last_resistance = np.inf                                                        
         self.fill_info()
         self.ui.button_read_one_cells.setEnabled(True)
 

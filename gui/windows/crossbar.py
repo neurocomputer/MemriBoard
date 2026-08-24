@@ -513,7 +513,11 @@ class Window(QMainWindow):
             bl, wl, res = range(3)
             # раскрашиваем
             for item in resistances:
-                self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(int(item[res]))))
+                try:
+                    table_item = QTableWidgetItem(str(int(item[res])))
+                except OverflowError:
+                    table_item = QTableWidgetItem('inf')
+                self.ui.table_crossbar.setItem(item[bl], item[wl], table_item)
                 self.all_resistances[item[bl]][item[wl]] = item[res]
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
