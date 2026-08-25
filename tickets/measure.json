@@ -3,8 +3,8 @@
     "mode": "smu_pulsed_retention",
     "params": {
         "compliance": 0.1,
-        "pulse_width": 0.0001,
-        "pulse_period": 0.0002,
+        "pulse_width": 0.0002,
+        "pulse_period": 0.0005,
         "read_voltage": 0.2,
         "read_direction": "rev",
         "batch_size": 10000,

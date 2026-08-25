@@ -11,7 +11,7 @@
         "compliance_dir": 0.0,
         "compliance_rev": 0.01,
         "interval_dir": 0.0,
-        "interval_rev": 0.0001,
+        "interval_rev": 0.0005,
         "amount_dir": 0,
         "amount_rev": 1,
         "double_dir": false,

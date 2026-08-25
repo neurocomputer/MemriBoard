@@ -13,7 +13,6 @@ import time
 import json
 import csv
 import numpy as np
-from numpy import inf
 from typing import Union
 from PyQt5 import uic
 from PyQt5 import QtWidgets
@@ -566,7 +565,9 @@ class Window(QMainWindow):
         """
         try:
             sum_values = np.sum(self.all_resistances)
-            log_resistances = np.log10(self.all_resistances)
+            resistances = np.array(self.all_resistances)
+            resistances[resistances < 1] = 1  # Removing all resistances < 1 Ohm for logarithm
+            log_resistances = np.log10(resistances)
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
@@ -580,19 +581,15 @@ class Window(QMainWindow):
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
-                max_resistance = np.max(log_resistances)
+                max_resistance = np.max(log_resistances[np.isfinite(log_resistances)])  # Ingore infinity
                 min_resistance = np.min(log_resistances)
-                if min_resistance == -inf:
-                    min_resistance = 0
+                log_resistances[log_resistances == np.inf] = max_resistance  # Replace np.inf with maximum resistance
                 for i in range(self.man.row_num):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
-                        resistance = np.log10(int(self.ui.table_crossbar.item(i, j).text()))
-                        if resistance == -inf:
-                            color_value = 0
-                        else:
-                            color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
-                            color_value = int(color_value*255)
+                        resistance = log_resistances[i, j]
+                        color_value = (resistance - min_resistance)/(max_resistance - min_resistance)
+                        color_value = int(color_value*255)
                         if (self.filter_rmin is not None) and (self.filter_rmax is not None):
                             if self.filter_rmin < int(self.ui.table_crossbar.item(i, j).text()) < self.filter_rmax:
                                 colors[i][j] = QColor(204, 255, 229)
@@ -605,8 +602,8 @@ class Window(QMainWindow):
                                 colors[i][j] = QColor(0, 0, 0)
                         else:
                             colors[i][j] = QColor(color_value, color_value, color_value)
-        except ValueError:
-            pass
+        except ValueError as e:
+            print(f'{type(e).__name__}: {e}')
         else:
             if sum_values != 0:
                 # раскрашиваем

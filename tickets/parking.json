@@ -11,7 +11,7 @@
         "compliance_dir": 0.0,
         "compliance_rev": 0.1,
         "pulse_width_dir": 0.0,
-        "pulse_width_rev": 0.0001,
+        "pulse_width_rev": 0.0002,
         "amount_dir": 0,
         "amount_rev": 1,
         "double_dir": false,
