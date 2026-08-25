@@ -238,8 +238,7 @@ class ExpSettings(QDialog):
             if not self.parent.man.menu.check_mode_compatibility(ticket['mode']):
                 show_warning_messagebox(self, self.lang_pack.get("mode_incompatible"))
                 return False
-            # count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
-            count = 0
+            count = calculate_counts_for_ticket(self.parent.man, ticket.copy())
             self.parent.exp_list_params['total_tickets'] += 1
             self.parent.exp_list_params['total_tasks'] += count
             # 5 отображаем название тикета в списке
