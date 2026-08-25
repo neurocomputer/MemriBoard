@@ -639,6 +639,7 @@ class ApplyExp(QThread):
                     result_data = result_file.read()
                     # записываем в базу
                     self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)
+                    self.algorithm.update_result(result_data)
                 os.remove(result_file_path)
                 # вызываем событие завершения тикета
                 self.ticket_finished.emit(f"{ticket_id},{result_file_path}")

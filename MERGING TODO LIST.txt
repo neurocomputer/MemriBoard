@@ -1,9 +1,5 @@
 CHECKINGS
     check if soft compliance works
 
-VISA_DRIVERS
-
-    implement trigger_needed and skip_one_sense
-
 UI
     Add max and min values based on the driver
