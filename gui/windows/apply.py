@@ -166,6 +166,11 @@ class Apply(QWidget):
         # задание функции для отрисовки осей
         sign_term = {0: 1,  # Умножаем на это значение в зависимости от знака
                      1: -1}
+        def current(y, vol, sign):  # Current in amperes
+            try: 
+                return sign_term[sign] * vol / y
+            except ZeroDivisionError:
+                return 0
         if self.ylabel_text == self.lang_pack.get("res_k"):  # Resistance, kOhm
             self.y_value_process = lambda y, vol, sign, adc: y/1000
         elif self.ylabel_text == self.lang_pack.get("res"):  # Resistance, Ohm
@@ -173,9 +178,9 @@ class Apply(QWidget):
         elif self.ylabel_text == self.lang_pack.get("adc_c"):  # ADC value
             self.y_value_process = lambda y, vol, sign, adc: adc
         elif self.ylabel_text == self.lang_pack.get("amp_mc"):  # Current, uA
-            self.y_value_process = lambda y, vol, sign, adc: sign_term[sign] * vol / y * 1e6
+            self.y_value_process = lambda y, vol, sign, adc: current(y, vol, sign) * 1e6
         elif self.ylabel_text == self.lang_pack.get("amp_m"):  # Current, mA
-            self.y_value_process = lambda y, vol, sign, adc: sign_term[sign] * vol / y * 1e3
+            self.y_value_process = lambda y, vol, sign, adc: current(y, vol, sign) * 1e3
         if self.xlabel_text == self.lang_pack.get("voltage"):
             self.x_value_process = lambda vol, sign, count: sign_term[sign] * vol
         elif self.xlabel_text == self.lang_pack.get("counting"):

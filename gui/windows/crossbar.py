@@ -495,7 +495,10 @@ class Window(QMainWindow):
         _, mem_id = self.man.db.get_memristor_id(self.current_wl, self.current_bl, self.man.crossbar_id)
         status, res = self.man.db.get_last_resistance(mem_id)
         if status:
-            self.current_last_resistance = int(res)
+            try:
+                self.current_last_resistance = int(res)
+            except OverflowError:  # Resistance is infinity
+                self.current_last_resistance = np.inf
 
     def fill_table(self) -> None:
         """

@@ -732,12 +732,15 @@ class Math(QWidget):
         try:
             wl = self.parent.current_wl
             bl = self.parent.current_bl
-            res = self.parent.current_last_resistance
+            try:
+                res = int(self.parent.current_last_resistance)
+            except OverflowError:
+                res = np.inf
             weight = 0
             if self.ui.combo_preprocess.currentText() == 'scaling':
-                weight = round(r2w(self.parent.man.res_load, int(self.parent.current_last_resistance))*float(self.ui.spinbox_max_weight.value()), 4)
+                weight = round(r2w(self.parent.man.res_load, res)*float(self.ui.spinbox_max_weight.value()), 4)
             elif self.ui.combo_preprocess.currentText() == self.lang_pack.get("no"):
-                weight = round(r2w(self.parent.man.res_load, int(self.parent.current_last_resistance)), 4)
+                weight = round(r2w(self.parent.man.res_load, res), 4)
             self.ui.label_cell_info.setText(f"WL={wl}, BL={bl}, R={res}," + self.lang_pack.get("cur_val") + str(weight))
         except ZeroDivisionError:
             pass
