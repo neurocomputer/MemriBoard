@@ -178,6 +178,26 @@ class Manager(Application):
             # другое подключение
             self.connected_flag, self.simulation_fallback = self.conn.open_port()
         return self.connected_flag
+    
+    def connect_cell(self, wl: int, bl: int) -> bool:
+        """Connect cell (only if needed)"""
+        connect_task = self.menu.connect_cell(wl=wl, bl=bl)
+        if connect_task is not None:
+            status = self.conn.impact(connect_task[0])
+            if not status:
+                self.ap_logger.critical(f'Could not connect the cell {wl}-{bl}!')
+            return status
+        return True
+    
+    def disconnect_cell(self) -> bool:
+        """Disconnect cell (only if needed)"""
+        disconnect_task = self.menu.disconnect_cell()
+        if disconnect_task is not None:
+            status = self.conn.impact(disconnect_task[0])
+            if not status:
+                self.ap_logger.critical('Could not connect the cell!')
+            return status
+        return True
 
     def _admin(self) -> None:  # TODO remove all unused methods and unite this class with App
         """

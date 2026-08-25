@@ -333,7 +333,6 @@ class Testing(QWidget):
                                   raw_data_extended[item_index][3],
                                   raw_data_extended[item_index][6],
                                   raw_data_extended[item_index][7],
-                                  raw_data_extended[item_index][8],
                 ])
             # file_wr.writerow(['sign','dac','adc','vol','res', 'timestamp', "crossbar_id", "dac_bit", "vol_ref_dac", "res_load", "vol_read", "adc_bit", "vol_ref_adc", "res_switches", "gain", "wl", "bl", "t_ms", "t_us", "exp_name", "ticket_name", "terminate_type", "terminate_1", "terminate_2"])
             # for item_index, item in enumerate(raw_data):

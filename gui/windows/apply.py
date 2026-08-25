@@ -301,6 +301,8 @@ class Apply(QWidget):
         value = value.split(",")
         exp_status = int(value[0])
         flag_soft_cc = int(value[1])
+        # Progress bar finish
+        self.ui.exp_progress.setValue(self.ui.exp_progress.maximum())
         # блочим запуск
         if exp_status == 1:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("done"))
@@ -478,6 +480,12 @@ class ApplyExp(QThread):
                 self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
             _, self.last_resistance = self.parent.parent.man.db.get_last_resistance(memristor_id)
             self.algorithm.set_last_resistance(self.last_resistance)
+            # Connecting the cell, if needed
+            connected = self.parent.parent.man.connect_cell(wl=item[0], bl=item[1])
+            if not connected: 
+                self.parent.stop_exp()
+            else:
+                self.parent.parent.man.menu.set_connect_cell_need(False) # Don't connect cells in task generators
             # TODO remove: Initializing .csv save file -----------------
             if self.parent.parent.man.apply_save_csv:
                 _, crossbar_serial = self.parent.parent.man.db.get_crossbar_serial_from_id(self.parent.parent.man.crossbar_id)
@@ -636,6 +644,9 @@ class ApplyExp(QThread):
                 self.ticket_finished.emit(f"{ticket_id},{result_file_path}")
                 #time.sleep(self.PAUSE_TIME)
             #time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
+            # Disconnecting cell, if needed
+            self.parent.parent.man.disconnect_cell()
+            self.parent.parent.man.menu.set_connect_cell_need(True)  # Rise connect_cell_needed flag
             # сохраняем в БД статус завершения
             if self.need_stop_rised:
                 stop_reason = 2 # прерван

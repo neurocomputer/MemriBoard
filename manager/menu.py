@@ -3,7 +3,8 @@
 """
 import os
 import json
-from collections.abc import Generator
+from typing import Union
+from collections.abc import Generator, Callable
 
 from manager.service.global_settings import TICKET_PATH
 from manager.modes import get_tst, get_std, SMUGen
@@ -17,6 +18,13 @@ class Menu:
     """
     Меню связывает сущности board_type, ticket['mode'] и manager.modes
     """
+    
+    _modes: dict[str, str]  # Available modes
+    _mode_functions: dict[str, Callable]  # Functions for the modes
+    _ui_fields: dict[str, str]  # UI field for the modes
+    crossbar_scan_gen: Union[Callable, None]  # Function for single-ticket crossbar scanning
+    connect_cell_needed: bool  # If True, all task generators send connect_cell task.
+    
     def __init__(self, parent):
         """
         Меню связывает сущности board_type, ticket['mode'] и manager.modes
@@ -50,6 +58,9 @@ class Menu:
             }
             # Setting crossbar scan generator (This group of drivers uses multi-ticket generation) for crossbar window
             self.crossbar_scan_gen = None  # Multi-ticket
+            self.connect_cell_needed = False
+            self.connect_cell = lambda wl, bl: None
+            self.disconnect_cell = lambda: None
             
         # Generators for VISA-instruments
         elif self.parent.driver_attr['modes'] == 'visa':
@@ -89,6 +100,9 @@ class Menu:
             }
             # Setting crossbar scan generator (This group of drivers uses single ticket scanning) for crossbar window
             self.crossbar_scan_gen = self._smu_gen.crossbar_scan  # Single-ticket
+            self.connect_cell_needed = True
+            self.connect_cell = lambda wl, bl: next(self._smu_gen._connect_cell(params={'wl': wl, 'bl': bl}, yield_anyway=True))
+            self.disconnect_cell = lambda: next(self._smu_gen._disconnect_cell(yield_anyway=True))
             
         else:
             raise RuntimeError(f"Manager/Menu initialization: Unknown 'modes' field in driver attr: {self.parent.driver_attr['modes']}")
@@ -130,3 +144,9 @@ class Menu:
         with open(fname, encoding='utf-8') as file:
             ticket = json.load(file)
         return ticket
+    
+    
+    def set_connect_cell_need(self, connect_cell_need: bool) -> None:
+        """Set if the task generator needs to generate connect/disconnect tasks"""
+        if self.parent.driver_attr['modes'] == 'visa':
+            self.connect_cell_needed = connect_cell_need 

@@ -38,21 +38,23 @@ class SMUGen:
         self.terminator = terminators[terminate['type']](terminate['value'])
         
         
-    def _connect_cell(self, params: dict) -> Generator[list, None, None]:
+    def _connect_cell(self, params: dict, yield_anyway: bool = False) -> Generator[list, None, None]:
         """Connect cell before generating main sequence"""
-        task = {
-            'mode_flag': 'connect_cell',
-            'wl': params['wl'], 
-            'bl': params['bl'], 
-            'id': 0
-        }
-        yield [task, self.terminator]
+        if yield_anyway or self.parent.connect_cell_needed:
+            task = {
+                'mode_flag': 'connect_cell',
+                'wl': params['wl'], 
+                'bl': params['bl'], 
+                'id': 0
+            }
+            yield [task, self.terminator]
         
         
-    def _disconnect_cell(self) -> Generator[list, None, None]:
+    def _disconnect_cell(self, yield_anyway: bool = False) -> Generator[list, None, None]:
         """Closing all cells"""
-        task = {'mode_flag': 'standby', 'id': 0}
-        yield [task, self.terminator]
+        if yield_anyway or self.parent.connect_cell_needed:
+            task = {'mode_flag': 'standby', 'id': 0}
+            yield [task, self.terminator]
         
         
     def _handle_exception(self, e: Exception) -> Generator[list, None, None]:
