@@ -1,5 +1,8 @@
 CHECKINGS
     check if soft compliance works
 
+APPLY
+    Experiments do not stop!!!
+
 UI
     Add max and min values based on the driver

@@ -56,7 +56,7 @@ class VisaImpact:
         if flag:
             self.parent.logger.info(str(response))
         else:
-            self.logger.critical(add_error_info + str(response))
+            self.parent.logger.critical(add_error_info + str(response))
         
         
     def connect_cell(self, task: dict) -> tuple:
