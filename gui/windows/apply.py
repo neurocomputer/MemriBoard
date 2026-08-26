@@ -626,7 +626,7 @@ class ApplyExp(QThread):
                     # Changing values in the algorithm
                     self.algorithm.set_last_resistance(self.last_resistance)
                     self.algorithm.set_last_voltage(self.last_voltage)
-                if self.need_stop:
+                if self.need_stop_rised:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 2)
                 else:
                     status = self.parent.parent.man.db.update_ticket(ticket_id, 'status', 1)
@@ -643,6 +643,8 @@ class ApplyExp(QThread):
                 os.remove(result_file_path)
                 # вызываем событие завершения тикета
                 self.ticket_finished.emit(f"{ticket_id},{result_file_path}")
+                if self.need_stop_rised:  # Прерываем итерацию по тикетам
+                    break
                 #time.sleep(self.PAUSE_TIME)
             #time.sleep(self.PAUSE_TIME) # чтобы избежать одновременного доступа к БД из потоков
             # Disconnecting cell, if needed
@@ -667,7 +669,7 @@ class ApplyExp(QThread):
             os.remove(self.parent.ticket_image_name)
             self.setup_image_saved(False)
             # прерываем выполнение для всех
-            if self.need_stop:
+            if self.need_stop_rised:
                 break
             #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
         self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
