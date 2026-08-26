@@ -564,10 +564,13 @@ class Window(QMainWindow):
         Раскраска таблицы сопротивлений
         """
         try:
-            sum_values = np.sum(self.all_resistances)
             resistances = np.array(self.all_resistances)
             resistances[resistances < 1] = 1  # Removing all resistances < 1 Ohm for logarithm
             log_resistances = np.log10(resistances)
+            max_resistance = np.max(log_resistances[np.isfinite(log_resistances)])  # Ingore infinity
+            min_resistance = np.min(log_resistances)
+            log_resistances[log_resistances == np.inf] = max_resistance  # Replace np.inf with maximum resistance
+            sum_values = np.sum(log_resistances)
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
@@ -581,9 +584,6 @@ class Window(QMainWindow):
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
-                max_resistance = np.max(log_resistances[np.isfinite(log_resistances)])  # Ingore infinity
-                min_resistance = np.min(log_resistances)
-                log_resistances[log_resistances == np.inf] = max_resistance  # Replace np.inf with maximum resistance
                 for i in range(self.man.row_num):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
@@ -645,6 +645,8 @@ class Window(QMainWindow):
             last_resistance = result[0]
         except IndexError:
             last_resistance = 0
+        except UnboundLocalError:  # Could not get the result
+            last_resistance = np.inf
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
         # _ = self.man.db.update_ticket(ticket_id, 'status', 1)
         # _ = self.man.db.update_experiment_status(experiment_id, 1)

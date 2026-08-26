@@ -480,6 +480,8 @@ class ApplyExp(QThread):
                 self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
             _, self.last_resistance = self.parent.parent.man.db.get_last_resistance(memristor_id)
             self.algorithm.set_last_resistance(self.last_resistance)
+            self.algorithm._wl = int(item[0])
+            self.algorithm._bl = int(item[1])
             # Connecting the cell, if needed
             connected = self.parent.parent.man.connect_cell(wl=item[0], bl=item[1])
             if not connected: 
