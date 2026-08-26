@@ -134,7 +134,7 @@ class Menu:
     
     def check_mode_compatibility(self, mode: str) -> bool:
         """Check if the mode is compatible with driver in use"""
-        return mode in self._modes
+        return mode in self._modes or mode == 'algorithm'
     
     
     def get_measure_ticket(self) -> dict:

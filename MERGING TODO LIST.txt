@@ -1,12 +1,6 @@
 CHECKINGS
     check if soft compliance works
 
-DRIVERS:
-    Check_arm, check_trigger: make trigger_interval based
-
-HISTORY:
-    The mode is incompatible with the driver in use when loading experiment
-
 BASE:
     База данных не может обновить тикет/эксперимент. Посмотреть, как вызываются update_ticket и update_experiment на dev из apply
     "Ошибка в alter_memristors_table:  memristors" При создании новой базы
