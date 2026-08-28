@@ -269,11 +269,14 @@ class Testing(QWidget):
         """
         value = value.split(',')
         stop_reason = int(value[0])
+        ticket_gen_error = value[2]
         self.ui.progress_all.setValue(0)
         if stop_reason == 1:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("tested") + str(round(time.time() - self.start_time,2)) + self.lang_pack.get("sec"))
         elif stop_reason == 2:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("exp_interrupted"))
+        if ticket_gen_error != 'None':
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("alg_error") + ticket_gen_error)
         time.sleep(1) # чтобы всё успело сохраниться на диск
         self.application_status = 'stop'
         # сохраняем список результатов

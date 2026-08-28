@@ -469,12 +469,13 @@ class Rram(QWidget):
         self.counter += 1
         self.ui.bar_progress.setValue(self.counter)
 
-    def on_finished_exp(self, value: int) -> None: # +
+    def on_finished_exp(self, value: str) -> None: # +
         """
         Закончилась запись
         """
         value = value.split(',')
         stop_reason = int(value[0])
+        ticket_gen_error = value[2]
         if stop_reason == 1 and self.all_done:
             show_warning_messagebox(parent=self, message=str(len(self.coordinates)) + self.lang_pack.get("rewritten_1"))
         elif stop_reason == 1 and self.ones_done:
@@ -482,6 +483,9 @@ class Rram(QWidget):
         elif stop_reason == 2:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("recording_interrupted"))
             self.ones_writable = False
+        if ticket_gen_error != 'None':
+            self.ones_writable = False
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("alg_error") + ticket_gen_error)
         # запись единиц
         if self.ones_writable:
             self.write_ones()

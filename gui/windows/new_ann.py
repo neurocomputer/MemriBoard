@@ -704,6 +704,7 @@ class NewAnn(QDialog):
         value = value.split(",")
         exp_status = int(value[0])
         flag_soft_cc = int(value[1])
+        ticket_gen_error = value[2]
         # блочим запуск
         if exp_status == 1:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("done"))
@@ -713,6 +714,8 @@ class NewAnn(QDialog):
             show_warning_messagebox(parent=self, message=self.lang_pack.get("voltage_high"))
         if flag_soft_cc:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("prog_stop"))
+        if ticket_gen_error != 'None':
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("alg_error") + ticket_gen_error)
         self.application_status = 'stop'
         self.button_after_combination()
         self.ui.progress_bar_mapping.setValue(0)

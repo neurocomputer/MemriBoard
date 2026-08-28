@@ -128,7 +128,8 @@
         "rewritten":" cells will be rewritten. Continue?",
         "tickets_unreachable":"Tickets are unreachable!",
         "rewritten_1":" cells were rewritten!",
-        "recording_interrupted":"Writing was interrupted!"
+        "recording_interrupted":"Writing was interrupted!",
+        "alg_error":"Algorithm error!\n"
     },
     "src":{
         "confirm":"Confirm",
@@ -317,7 +318,8 @@
         "suitable_cells":"Сells that satisfy the conditions: ",
         "other":" Other cells: ",
         "tested_cells_1":" Tested cells: ",
-        "pics_done":"Plots were generated!"
+        "pics_done":"Plots were generated!",
+        "alg_error":"Algorithm error!\n"
     },
     "history":{
         "name":"History",
@@ -443,7 +445,8 @@
         "err_info":"DB error: Couldn't update resistance info!",
         "err_res":"DB error: Couldn't update experiment resistance!",
         "err_upd_tic":"DB error: Couldn't update ticket!",
-        "err_stat":"DB error: Couldn't update experiment status!"
+        "err_stat":"DB error: Couldn't update experiment status!",
+        "alg_error":"Algorithm error!\n"
     },
     "cb_info":{
         "name":"Crossbar information",
@@ -494,7 +497,8 @@
         "status":"Status",
         "not_working":"Not working",
         "not_written":"Not written",
-        "wrong_ticket":"Wrong programming ticket!\nThe programming ticket mode for this window is expected to be Voltage sweep\nYou can change it in MemriBoard/settings.ini/gui/program_ticket"
+        "wrong_ticket":"Wrong programming ticket!\nThe programming ticket mode for this window is expected to be Voltage sweep\nYou can change it in MemriBoard/settings.ini/gui/program_ticket",
+        "alg_error":"Algorithm error!\n"
     },
     "requests":{
         "name":"Requests",

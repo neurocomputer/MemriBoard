@@ -30,6 +30,7 @@ class TicketGenerator:
         self.experiment_id = experiment_id
         self.ap_logger = ap_logger
         self.ticket_id = None
+        self.error = None
         
         
     def __iter__(self):
@@ -40,12 +41,11 @@ class TicketGenerator:
                 self.algorithm.reset_executed_tickets()
                 try:
                     yield from algorithm_generator(ticket[1]['code'], algorithm=self.algorithm)
-                except Exception:
-                    self.ap_logger.critical(f'Algorithm Generator error:\n{traceback.format_exc()}')
-                    print(f'Algorithm Generator error:\n{traceback.format_exc()}')
-                    # Disconnecting cell, if needed
-                    self.parent.parent.parent.man.disconnect_cell()
-                    self.parent.parent.parent.man.menu.set_connect_cell_need(True)  # Rise connect_cell_needed flag
+                except Exception as e:
+                    err = f'Algorithm Generator error:\n{traceback.format_exc()}'
+                    self.ap_logger.critical(err)
+                    print(err)
+                    self.error = f'{type(e).__name__}: {e}'
                     return
                 self.add_executed_tickets_to_db()  # TODO: finish
             else:

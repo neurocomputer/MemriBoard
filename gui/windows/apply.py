@@ -294,13 +294,14 @@ class Apply(QWidget):
         self.start_thread.finished_exp.connect(self.on_finished_exp) # закончился прогон
         self.start_thread.start()
 
-    def on_finished_exp(self, value: int) -> None:
+    def on_finished_exp(self, value: str) -> None:
         """
         Завершили эксперимент
         """
         value = value.split(",")
         exp_status = int(value[0])
         flag_soft_cc = int(value[1])
+        ticket_gen_error = value[2]
         # Progress bar finish
         self.ui.exp_progress.setValue(self.ui.exp_progress.maximum())
         # блочим запуск
@@ -312,6 +313,8 @@ class Apply(QWidget):
             show_warning_messagebox(parent=self, message=self.lang_pack.get("voltage_high"))
         if flag_soft_cc:
             show_warning_messagebox(parent=self, message=self.lang_pack.get("prog_stop"))
+        if ticket_gen_error != 'None':
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("alg_error") + ticket_gen_error)
         self.application_status = "stop"
         self.stop_exp()
 
@@ -652,6 +655,9 @@ class ApplyExp(QThread):
             # Disconnecting cell, if needed
             self.parent.parent.man.disconnect_cell()
             self.parent.parent.man.menu.set_connect_cell_need(True)  # Rise connect_cell_needed flag
+            # Check ticket generator errors
+            if ticket_gen.error is not None:
+                self.need_stop_rised = True
             # сохраняем в БД статус завершения
             if self.need_stop_rised:
                 stop_reason = 2 # прерван
@@ -674,5 +680,5 @@ class ApplyExp(QThread):
             if self.need_stop_rised:
                 break
             #time.sleep(self.PAUSE_TIME*3) # ожидание между мемристорами чтобы успело сохранить в БД
-        self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc}') # успешно завершен
+        self.finished_exp.emit(f'{stop_reason},{self.flag_soft_cc},{ticket_gen.error}') # успешно завершен
         #time.sleep(self.PAUSE_TIME)
