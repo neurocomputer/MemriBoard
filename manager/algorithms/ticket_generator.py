@@ -1,5 +1,6 @@
 """Ticket generator that supports algorithms"""
 from logging import Logger
+import traceback
 
 from manager.algorithms import algorithm_generator, Algorithm
 from manager.model.db import DBOperate
@@ -37,7 +38,15 @@ class TicketGenerator:
             self.add_ticket_to_database(ticket[1])
             if ticket[1]['mode'] == 'algorithm':  # Algorithm: generate multiple tickets
                 self.algorithm.reset_executed_tickets()
-                yield from algorithm_generator(ticket[1]['code'], algorithm=self.algorithm)
+                try:
+                    yield from algorithm_generator(ticket[1]['code'], algorithm=self.algorithm)
+                except Exception:
+                    self.ap_logger.critical(f'Algorithm Generator error:\n{traceback.format_exc()}')
+                    print(f'Algorithm Generator error:\n{traceback.format_exc()}')
+                    # Disconnecting cell, if needed
+                    self.parent.parent.parent.man.disconnect_cell()
+                    self.parent.parent.parent.man.menu.set_connect_cell_need(True)  # Rise connect_cell_needed flag
+                    return
                 self.add_executed_tickets_to_db()  # TODO: finish
             else:
                 yield ticket[1]
