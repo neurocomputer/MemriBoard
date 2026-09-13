@@ -495,7 +495,10 @@ class Window(QMainWindow):
         _, mem_id = self.man.db.get_memristor_id(self.current_wl, self.current_bl, self.man.crossbar_id)
         status, res = self.man.db.get_last_resistance(mem_id)
         if status:
-            self.current_last_resistance = int(res)
+            try:
+                self.current_last_resistance = int(res)
+            except OverflowError:  # Resistance is infinity
+                self.current_last_resistance = np.inf
 
     def fill_table(self) -> None:
         """
@@ -513,7 +516,11 @@ class Window(QMainWindow):
             bl, wl, res = range(3)
             # раскрашиваем
             for item in resistances:
-                self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(int(item[res]))))
+                try:
+                    table_item = QTableWidgetItem(str(int(item[res])))
+                except OverflowError:
+                    table_item = QTableWidgetItem('inf')
+                self.ui.table_crossbar.setItem(item[bl], item[wl], table_item)
                 self.all_resistances[item[bl]][item[wl]] = item[res]
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
@@ -558,8 +565,13 @@ class Window(QMainWindow):
         Раскраска таблицы сопротивлений
         """
         try:
-            sum_values = np.sum(self.all_resistances)
-            log_resistances = np.log10(self.all_resistances)
+            resistances = np.array(self.all_resistances)
+            resistances[resistances < 1] = 1  # Removing all resistances < 1 Ohm for logarithm
+            log_resistances = np.log10(resistances)
+            max_resistance = np.max(log_resistances[np.isfinite(log_resistances)])  # Ignore infinity
+            min_resistance = np.min(log_resistances)
+            log_resistances[log_resistances == np.inf] = max_resistance  # Replace np.inf with maximum resistance
+            sum_values = np.sum(log_resistances)
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
@@ -573,10 +585,6 @@ class Window(QMainWindow):
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
-                max_resistance = np.max(log_resistances)
-                min_resistance = np.min(log_resistances)
-                if min_resistance == -inf:
-                    min_resistance = 0
                 for i in range(self.man.row_num):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
@@ -636,6 +644,8 @@ class Window(QMainWindow):
             last_resistance = result[0]
         except IndexError:
             last_resistance = 0
+        except UnboundLocalError:  # Could not get the result
+            last_resistance = np.inf
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
         # _ = self.man.db.update_ticket(ticket_id, 'status', 1)
         # _ = self.man.db.update_experiment_status(experiment_id, 1)

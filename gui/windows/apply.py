@@ -165,6 +165,11 @@ class Apply(QWidget):
         # задание функции для отрисовки осей
         sign_term = {0: 1,  # Умножаем на это значение в зависимости от знака
                      1: -1}
+        def current(y, vol, sign):  # Current in amperes
+            try: 
+                return sign_term[sign] * vol / y
+            except ZeroDivisionError:
+                return 0
         if self.ylabel_text == self.lang_pack.get("res_k"):  # Resistance, kOhm
             self.y_value_process = lambda y, vol, sign, adc: y/1000
         elif self.ylabel_text == self.lang_pack.get("res"):  # Resistance, Ohm
@@ -172,9 +177,9 @@ class Apply(QWidget):
         elif self.ylabel_text == self.lang_pack.get("adc_c"):  # ADC value
             self.y_value_process = lambda y, vol, sign, adc: adc
         elif self.ylabel_text == self.lang_pack.get("amp_mc"):  # Current, uA
-            self.y_value_process = lambda y, vol, sign, adc: sign_term[sign] * vol / y * 1e6
+            self.y_value_process = lambda y, vol, sign, adc: current(y, vol, sign) * 1e6
         elif self.ylabel_text == self.lang_pack.get("amp_m"):  # Current, mA
-            self.y_value_process = lambda y, vol, sign, adc: sign_term[sign] * vol / y * 1e3
+            self.y_value_process = lambda y, vol, sign, adc: current(y, vol, sign) * 1e3
         if self.xlabel_text == self.lang_pack.get("voltage"):
             self.x_value_process = lambda vol, sign, count: sign_term[sign] * vol
         elif self.xlabel_text == self.lang_pack.get("counting"):
@@ -468,6 +473,8 @@ class ApplyExp(QThread):
                 self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
             _, self.last_resistance = self.parent.parent.man.db.get_last_resistance(memristor_id)
             self.algorithm.set_last_resistance(self.last_resistance)
+            self.algorithm._wl = int(item[0])
+            self.algorithm._bl = int(item[1])
             # инициируем цикл по тикетам
             counter = 0
             ticket_gen = TicketGenerator(
@@ -554,6 +561,7 @@ class ApplyExp(QThread):
                     result_data = result_file.read()
                     # записываем в базу
                     self.parent.parent.man.db.update_ticket(ticket_id, 'result', result_data)
+                    self.algorithm.update_result(result_data)
                 os.remove(result_file_path)
                 # вызываем событие завершения тикета
                 self.ticket_finished.emit(f"{ticket_id},{result_file_path}")

@@ -137,8 +137,10 @@ def convert_weight_to_res(res_load: float, weight: float) -> int:
     """
     Конвертер веса в сопротивление
     """
-    res = round(res_load/weight - res_load, 0)
-    return int(res)
+    try:
+        return int(round(res_load/weight - res_load, 0))
+    except ZeroDivisionError:
+        return np.inf
 
 def quantization(data, **kwargs):
     """

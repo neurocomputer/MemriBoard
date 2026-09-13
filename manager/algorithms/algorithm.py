@@ -4,8 +4,10 @@ import os
 import json
 import traceback
 from copy import deepcopy
+import numpy as np
 
 from manager.service.global_settings import TICKET_PATH
+from manager.service.saves import results_from_float_bytes
 
 
 GENERATOR_FUNCTIONS = [  # Functions that generate a single ticket
@@ -25,8 +27,10 @@ VALUE_FUNCTIONS = [  # Function that return or set values (do not yield a ticket
     'get_ticket_dict',
     'last_voltage',
     'set_last_voltage',
+    'result',
+    'update_result',
     'wl',
-    'bl'
+    'bl',
 ]
 
 
@@ -36,6 +40,7 @@ class Algorithm:
     _wl: int = 0
     _bl: int = 0
     last_vol: float = 0
+    _result: Union[bytes, None] = None  # Result from last ticket
     def __init__(
         self, parent=None, 
         initial_resistance: float = 0, 
@@ -105,6 +110,40 @@ class Algorithm:
             voltage (float): Voltage value.
         """
         self.last_vol = voltage
+        
+        
+    def result(self) -> dict[np.ndarray]:
+        """Get a dict of last ticket results. Returns a dict with empy arrays if there is no result.
+
+        Returns:
+            dict[np.ndarray]: dict with last ticket result. Keys: `sign`, `vol`, `res`.
+        """
+        if self._result is None:
+            return {
+                'sign': np.array([], dtype=int),
+                'vol': np.array([], dtype=float),
+                'res': np.array([], dtype=float)
+            }
+        all_raw_data = results_from_float_bytes(self._result, additional_items_size=1)
+        raw_sign, raw_vol, raw_res, _ = [], [], [], []
+        for data in all_raw_data:
+            raw_sign.append(data[0])
+            raw_vol.append(data[1])
+            raw_res.append(data[2])
+        return {
+            'sign': np.array(raw_sign, dtype=int),
+            'vol': np.array(raw_vol, dtype=float),
+            'res': np.array(raw_res, dtype=float)
+        }
+        
+    
+    def update_result(self, result: bytes) -> None:
+        """Update last ticket result.
+
+        Args:
+            result (bytes): Byte array of the last ticket result.
+        """
+        self._result = result
         
         
     def send_ticket(self, ticket_name: str, folder_path: Union[str, None] = None) -> None:
