@@ -46,6 +46,7 @@ from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
 from gui.windows.help import Help
+from gui.windows.demonstrator import DemonstratorWindow
 from gui.src import show_choose_window, show_warning_messagebox, change_src_language, convert_ticket_to_reduced_format
 from gui.themes import dark_theme_palette, light_theme_palette
 
@@ -95,6 +96,7 @@ class Window(QMainWindow):
     wait_dialog: Wait
     math_dialog = Math
     help_dialog: Help = None
+    demonstrator_window: DemonstratorWindow = None
     opener: str = ''
     extra = []
     coordinate_error = False
@@ -158,6 +160,7 @@ class Window(QMainWindow):
         self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
         self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
         self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_menu.addAction('', self.show_demonstrator_window, QKeySequence("Ctrl+D"))
         self.tool_button_menu.addAction('', self.convert_ticket_to_new_format)
         self.tool_button_menu.addAction('', self.show_help, QKeySequence("F1"))
         self.tool_button_actions_text = ['info', 
@@ -166,6 +169,7 @@ class Window(QMainWindow):
                                          'show_weights', 
                                          'write', 
                                          'read_all_btn',
+                                         'demonstrator',
                                          'convert_ticket',
                                          'help']
         self.ui.tool_button.setMenu(self.tool_button_menu)
@@ -462,6 +466,10 @@ class Window(QMainWindow):
                     self.show_help(parent, section)
                 else:
                     self.help_dialog.activateWindow()
+                    
+    def show_demonstrator_window(self) -> None:
+        self.demonstrator_window = DemonstratorWindow(self)
+        self.demonstrator_window.showMaximized()
 
     # обработчики кнопок
 

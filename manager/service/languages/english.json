@@ -72,6 +72,7 @@
         "write":"Write Weights",
         "read_all_btn":"Read All",
         "help":"Help",
+        "demonstrator":"Demonstration",
         "convert_ticket":"Convert ticket",
         "choose_ticket_convert":"Choose a ticket/experiment file to convert it to the reduced format",
         "could_not_open":"Could not open the file:\n",
@@ -565,5 +566,22 @@
         "E": 1e18,
         "Z": 1e21,
         "Y": 1e24
+    },
+    "demonstrator_window": {
+        "title":"MemriBoard demonstration. Made in Lobachevsky State University of Nizhny Novgorod",
+        "x_axis":"X axis:",
+        "y_axis":"Y axis:",
+        "counts":"Counts",
+        "voltage":"Voltage",
+        "resistance":"Resistance",
+        "current":"Current",
+        "logarithmic_scale":"Logarithmic scale",
+        "volt": "V",
+        "ampere":"A",
+        "ohm":"Ω",
+        "pause":"Pause",
+        "continue":"Continue",
+        "pause_slideshow":"Pause Slide-Show",
+        "cont_slideshow":"Continue Slide-Show"
     }
 }

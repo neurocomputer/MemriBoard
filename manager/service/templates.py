@@ -93,4 +93,13 @@ theme=system
 backup_path=
 ; режим базы данных (sqlite/postgress)
 database_mode=sqlite
+
+; настройки окна демонстратора
+[demonstration]
+; Скорость слайд-шоу
+slide_show_time_msec=5000
+; Скорость отрисовки графика
+graph_time_msec=10
+; Окно графика, свыше которого удаляются точки
+graph_window=1000
 """
