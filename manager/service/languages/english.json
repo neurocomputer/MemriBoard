@@ -168,7 +168,17 @@
         "update":"Update",
         "history":"History",
         "new_exp":"New experiment",
-        "cancel":"Cancel"
+        "cancel":"Cancel",
+        "high_adc":"ADC voltage is too high! Check the board connection.",
+        "external_connection":"Connection to external devices",
+        "disconnected":"Disconnected",
+        "connected":"Connected",
+        "disconnect":"Disconnect",
+        "connect":"Connect",
+        "connecting":"Connecting...",
+        "disconnecting":"Disconnecting...",
+        "external_tooltip":"Connect cell to the external terminals on the board.\nOn leaving this window, cell will be disconnected.",
+        "error":"An error occurred!"
     },
     "experiment":{
         "name":"Experiment",

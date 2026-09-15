@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QDialog
 from PyQt5.QtSerialPort import QSerialPortInfo
 
 from gui.src import show_choose_window, show_warning_messagebox
+from manager.service.drivers import get_driver_list, get_driver_attr
 
 class ConnectDialog(QDialog):
     """
@@ -174,20 +175,7 @@ class ConnectDialog(QDialog):
         """
         Обновить список плат
         """
-        board_list = ['offline',
-                      'memardboard_single',
-                      'memardboard_crossbar',
-                      'rp5_python',
-                      'rp5_c',
-                      'rp5_fpga_python',
-                      'rp5_fpga_c',
-                      'elbear_nano',
-                      'elbear_multimode_WR',
-                      'elbear_multimode_MVM',
-                      'rp5_rram_elbear_nano',
-                      'rp5_rram_python',
-                      'rp5_rram_c',
-                      'pico_client']
+        board_list = ['offline', *get_driver_list()]
         try:
             last_board = self.parent.man.ap_config["board"]["board_type"]
             if last_board:
@@ -213,12 +201,15 @@ class ConnectDialog(QDialog):
         Выбор типа платы
         """
         combo_board_type = self.ui.combo_board_type.currentText()
-        if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano','rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM', 'pico_client']:
+        if combo_board_type == 'offline':
+            self.update_window_size()
+            return
+        if get_driver_attr(combo_board_type)['connect_args'] == 'com_port':
             self.show_com_settings_layout(True) # показать настройки для COM-порта
             self.update_port_list() # обновить доступные порты
             self.on_com_name_changed() # считать порт
             self.ui.label_status.setText(self.lang_pack.get("status_1"))
-            if combo_board_type in ['pico_client']:
+            if get_driver_attr(combo_board_type)['core_scan']:
                 self.show_core_settings_layout(True)
             else:
                 self.show_core_settings_layout(False)
@@ -265,7 +256,7 @@ class ConnectDialog(QDialog):
         status, _ = self.parent.man.use_chip(self.cb_serial)
         if status: # если в базе есть данные по чипу
             combo_board_type = self.ui.combo_board_type.currentText()
-            self.parent.man.board_type = combo_board_type
+            self.parent.man.init_board(combo_board_type)  # Initializing board in manager
             if self.parent.man.cb_type != 'simulator':
                 # попытка подключения
                 if combo_board_type == 'offline':
@@ -275,8 +266,8 @@ class ConnectDialog(QDialog):
                     self.parent.ui.button_math.setEnabled(False)
                     self.accept_connet()
                 else:
-                    if combo_board_type in ['memardboard_single', 'memardboard_crossbar','elbear_nano', 'rp5_rram_elbear_nano','elbear_multimode_WR','elbear_multimode_MVM', 'pico_client']:
-                        if combo_board_type == 'pico_client':
+                    if get_driver_attr(combo_board_type)['connect_args'] == 'com_port':
+                        if get_driver_attr(combo_board_type)['core_scan']:
                             if self.core_scanned:
                                 connected_flag = self.parent.man.connect(com_port=self.com_port, addr=self.addr, pico=self.pico)
                             else:
@@ -321,7 +312,7 @@ class ConnectDialog(QDialog):
         Сканирование CORE
         """
         try:
-            from MemriCORE.Pico_PC.pico_client import PicoClient
+            from MemriCORE.Pico_PC.pico_client import PicoClient  # type: ignore
             pico = PicoClient.over_serial(self.com_port, 115200)
             addrs = pico.scan()
             for addr in addrs:

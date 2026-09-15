@@ -119,7 +119,6 @@ class BoardSimulator():
         Создание симулятора
         """
         if os.path.exists(os.path.join('simulator','simulator_settings.ini')):
-            print("simulator_settings.ini существует в текущей папке")
             self.config = ConfigParser()
             self.config.read(os.path.join('simulator','simulator_settings.ini'), encoding="utf-8")  # читаем конфиг
         else:

@@ -48,7 +48,7 @@ class RequestsList(QDialog):
         """
         text = ""
         for item in self.parent.exp_list:
-            text += f"{self.lang_pack.get('ticket')}{item[0]}{self.lang_pack.get('tasks')}{item[3]}\n"
+            text += f"{self.lang_pack.get('ticket')}{item[0]}{self.lang_pack.get('tasks')}{item[2]}\n"
             for req in item[2]:
                 text += gather(req[0])
         self.text_commands.appendPlainText(text)
@@ -59,7 +59,7 @@ class RequestsList(QDialog):
         """
         request = ""
         for item in self.parent.exp_list:
-            request += f"{self.lang_pack.get('ticket')}{item[0]}{self.lang_pack.get('tasks')}{item[3]}\n"
+            request += f"{self.lang_pack.get('ticket')}{item[0]}{self.lang_pack.get('tasks')}{item[2]}\n"
             for req in item[2]:
                 request += gather(req[0])
         if 0 < len(request):

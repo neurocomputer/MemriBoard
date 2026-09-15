@@ -508,7 +508,7 @@ class ApplyExp(QThread):
                 self.parent.parent.man.ap_logger.critical(self.lang_pack.get("err_meta"))
             # инициируем цикл по тикетам
             counter = 0
-            for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, task_list, count
+            for ticket_info in self.parent.parent.exp_list: # ticket["name"], ticket, count
                 ticket = ticket_info[1]
                 # терминатор
                 term_left, term_right = self.parent.parent.man.get_term_values(ticket['terminate'])
@@ -522,8 +522,6 @@ class ApplyExp(QThread):
                 # временный файл для результата
                 result_file_path = time.strftime("%Y%m%d-%H%M%S")
                 result_file = open(result_file_path, 'wb')
-                #for task in task_list:
-                #start_time_loop = time.time()
                 # инициируем цикл по таскам
                 result = 0
                 for task in self.parent.parent.man.menu[ticket['mode']](ticket['params'], ticket['terminate'], self.parent.parent.man.blank_type):

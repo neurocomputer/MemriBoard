@@ -21,12 +21,9 @@ def calculate_counts_for_ticket(parent, ticket: dict):
                                         ticket['terminate'],
                                         parent.blank_type)
     count = 0
-    task_list = []
-    for tsk in task[0](*task[1]):
+    for _ in task[0](*task[1]):
         count += 1
-        task_list.append(tsk)
-
-    return task_list, count
+    return count
 
 def plot_input_signal(parent,
                       ticket: dict,
