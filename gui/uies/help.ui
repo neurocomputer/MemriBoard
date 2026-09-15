@@ -6,14 +6,41 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>764</width>
-    <height>535</height>
+    <width>940</width>
+    <height>658</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Справка</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_section">
+       <property name="text">
+        <string>Раздел:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox_section"/>
+     </item>
+    </layout>
+   </item>
    <item>
     <widget class="QTextBrowser" name="textBrowser"/>
    </item>

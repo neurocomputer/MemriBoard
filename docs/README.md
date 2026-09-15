@@ -114,7 +114,9 @@ Preset tickets, available by default, are:
 - *plast-dep-pot*, *plast-pot-dep* &mdash; tickets for studying potentiation and depression behaviours of the memristive cells.
 
 By double-clicking the ticket on the right side of the window (or pressing **Edit** button), you can adjust the ticket parameters (voltage applied to the cell, number of cycles, etc.): the [Signal editing window](#signal-editing-window) opens.
-**Apply to the cell** button opens [Apply window](#applying-the-experiment) where you can start the experiment.
+**Apply the experiment** button opens [Apply window](#applying-the-experiment) where you can start the experiment.
+
+The tickets can also be combined to complex algorithms that choose the ticket based memristor parameter measured during the experiment. The manual to algorithm functionality is available in the [documentation](algorithms_eng.md).
 
 ### Signal editing window
 

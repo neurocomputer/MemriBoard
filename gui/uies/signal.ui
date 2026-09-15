@@ -509,7 +509,7 @@
   <customwidget>
    <class>ScientificQLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>gui.ScientificQLineEdit</header>
+   <header>gui.widgets.ScientificQLineEdit</header>
   </customwidget>
  </customwidgets>
  <resources/>
