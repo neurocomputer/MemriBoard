@@ -18,7 +18,7 @@ def fill_blank(blank: dict, data: dict) -> dict:
     """
     task = blank.copy()
     for key in task:
-        if key in data.keys():
+        if key in data:
             task[key] = data[key]
     return task
 
@@ -42,16 +42,14 @@ blanks = {
     'mode_2': { # бланк задачи для платы MemArdBoard
     'mode_flag': 2,
     'vol': 0,
-    't_ms': 0,
-    't_us': 0,
+    'pulse_width': 0,
     'sign': 0,
     'id': 0},
 
     'mode_7': { # бланк задачи для кроссбара
     'mode_flag': 7,
     'vol': 0,
-    't_ms': 0,
-    't_us': 0,
+    'pulse_width': 0,
     'sign': 0,
     'id': 0,
     'wl': 0,
@@ -60,16 +58,14 @@ blanks = {
     'debug': { # бланк задачи для отладки
     'mode_flag': 2,
     'vol': 0,
-    't_ms': 0,
-    't_us': 0,
+    'pulse_width': 0,
     'sign': 0,
     'id': 0},
 
     'debug_crossbar': { # бланк задачи для отладки кроссбара
     'mode_flag': 7,
     'vol': 0,
-    't_ms': 0,
-    't_us': 0,
+    'pulse_width': 0,
     'sign': 0,
     'id': 0,
     'wl': 0,

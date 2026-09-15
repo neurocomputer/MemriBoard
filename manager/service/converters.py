@@ -94,8 +94,7 @@ def convert_adc_to_res(gain: float,
         res -- сопротивление мемристора
     """
     adc_value = int(adc_value)
-    if adc_value < 20:
-        adc_value = 20 # todo: это лучше вынести в настройки
+    adc_value = max(adc_value, 20) # todo: это лучше вынести в настройки
     try:
         res = (gain*res_load*vol_read*(2**adc_bit))/ \
             (adc_value*vol_ref_adc) - res_switches - res_load
@@ -138,8 +137,10 @@ def convert_weight_to_res(res_load: float, weight: float) -> int:
     """
     Конвертер веса в сопротивление
     """
-    res = round(res_load/weight - res_load, 0)
-    return int(res)
+    try:
+        return int(round(res_load/weight - res_load, 0))
+    except ZeroDivisionError:
+        return np.inf
 
 def quantization(data, **kwargs):
     """

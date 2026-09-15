@@ -50,12 +50,14 @@
               </item>
               <item>
                <widget class="QPushButton" name="button_delete">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string/>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
                 </property>
                </widget>
               </item>
@@ -99,7 +101,7 @@
               <item row="0" column="2">
                <widget class="QPushButton" name="button_up_plan">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -113,16 +115,12 @@
                 <property name="text">
                  <string/>
                 </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/arrow-up-line.svg</normaloff>../icons/arrow-up-line.svg</iconset>
-                </property>
                </widget>
               </item>
               <item row="0" column="3">
                <widget class="QPushButton" name="button_down_plan">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -141,10 +139,6 @@
                 </property>
                 <property name="text">
                  <string/>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/arrow-down-line.svg</normaloff>../icons/arrow-down-line.svg</iconset>
                 </property>
                </widget>
               </item>
@@ -178,12 +172,14 @@
               </item>
               <item row="1" column="2" colspan="2">
                <widget class="QPushButton" name="button_delete_plan">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string/>
-                </property>
-                <property name="icon">
-                 <iconset>
-                  <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
                 </property>
                </widget>
               </item>
@@ -224,12 +220,14 @@
             </item>
             <item>
              <widget class="QPushButton" name="button_delete_algorithm">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="text">
                <string/>
-              </property>
-              <property name="icon">
-               <iconset>
-                <normaloff>../icons/delete-bin-line.svg</normaloff>../icons/delete-bin-line.svg</iconset>
               </property>
              </widget>
             </item>

@@ -2,7 +2,8 @@
 import ast
 import traceback
 import inspect
-from typing import Generator, Union
+from typing import Union
+from collections.abc import Generator
 
 from manager.algorithms import Algorithm
 from manager.main import Manager
@@ -71,7 +72,7 @@ def algorithm_generator(algorithm_code: str, algorithm: Algorithm) -> Generator[
             namespace[name] = method
     # Creating generator
     compiled = compile(tree, '<algorithm>', 'exec')
-    exec(compiled, namespace)
+    exec(compiled, namespace)  # noqa: S102
     yield from namespace['algorithm']()
     
     
@@ -98,7 +99,7 @@ def execute_algorithm(algorithm_code: str, manager: Manager) -> tuple[bool, Unio
                 namespace[name] = method
         # Creating generator
         compiled = compile(new_tree, '<algorithm>', 'exec')
-        exec(compiled, namespace)
+        exec(compiled, namespace)  # noqa: S102
         count = 0
         for ticket in namespace['algorithm']():
             task_gen = manager.menu[ticket['mode']]

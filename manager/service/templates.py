@@ -84,6 +84,8 @@ writable_cells=
 lock_board_type=0
 ; локализация
 language=English
+; тема приложения
+theme=system
 
 ; бэкап датабазы
 [database]

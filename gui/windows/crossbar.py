@@ -17,15 +17,14 @@ from numpy import inf
 from typing import Union
 from PyQt5 import uic
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu
-from PyQt5.QtGui import QColor, QKeySequence
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QTableWidgetItem, QMenu, QInputDialog, QFileDialog, QApplication
+from PyQt5.QtGui import QColor, QKeySequence, QPalette
 from PyQt5.QtCore import QThread, pyqtSignal
 import matplotlib
 matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
 
 from manager import Manager
-from manager.service import a2r
 from manager.service.global_settings import TICKET_PATH
 
 from gui.windows.cell_info import CellInfo
@@ -47,19 +46,23 @@ from gui.windows.wait import Wait
 from gui.windows.math import Math
 from gui.windows.snapshot import Snapshot
 from gui.windows.help import Help
-from gui.src import show_choose_window, show_warning_messagebox, change_src_language
+from gui.src import show_choose_window, show_warning_messagebox, change_src_language, convert_ticket_to_reduced_format
+from gui.themes import dark_theme_palette, light_theme_palette
 
 class Window(QMainWindow):
     """
     Основное окно
     """
 
+    app: QApplication  # Application instance
     man: Manager # менеджер работы с платой
     GUI_PATH = os.path.join("gui","uies","crossbar.ui")
     all_resistances: list # все сопротивления для раскраски
     snapshot_dialog = None # для кнопки снимок
     close_modal_flag: bool = False # главное окно закрывает модальное окно
     lang_pack: dict
+    theme: str = None  # Real theme of the application: 'light' or 'dark'
+    system_theme: str = None  # System theme: 'light' or 'dark'
 
     all_results_progressed = 0
     number_results_wait = 0
@@ -95,7 +98,6 @@ class Window(QMainWindow):
     opener: str = ''
     extra = []
     coordinate_error = False
-    lang_pack: dict
     filter_rmin = None
     filter_rmax = None
 
@@ -114,13 +116,17 @@ class Window(QMainWindow):
                              'reset',
                              'retention',
                              'set']
+    protected_algorithms: list = ['example_for_cycle',
+                                  'example_if']
 
-    def __init__(self) -> None:
+    def __init__(self, application: QApplication) -> None:
         super().__init__() # инит QMainWindow
+        self.application = application
         # менеджер работы с платой
         self.man = Manager()
         self.man.blank_type = 'mode_7'
         # загрузка ui
+        self.setup_theme()
         self.ui = uic.loadUi(self.GUI_PATH, self)
         # Меню с действиями и шорткатами
         self.set_shortcuts()
@@ -152,6 +158,7 @@ class Window(QMainWindow):
         self.tool_button_menu.addAction('', self.show_crossbar_weights_dialog, QKeySequence("Ctrl+M"))
         self.tool_button_menu.addAction('', self.show_new_ann_dialog, QKeySequence("Ctrl+B"))
         self.tool_button_menu.addAction('', lambda: self.read_cell_all('crossbar'), QKeySequence("Ctrl+U"))
+        self.tool_button_menu.addAction('', self.convert_ticket_to_new_format)
         self.tool_button_menu.addAction('', self.show_help, QKeySequence("F1"))
         self.tool_button_actions_text = ['info', 
                                          'terminal', 
@@ -159,6 +166,7 @@ class Window(QMainWindow):
                                          'show_weights', 
                                          'write', 
                                          'read_all_btn',
+                                         'convert_ticket',
                                          'help']
         self.ui.tool_button.setMenu(self.tool_button_menu)
         self.ui.tool_button.setPopupMode(2)
@@ -209,6 +217,41 @@ class Window(QMainWindow):
             # Set language for Messages in src.py
             _, src_lang_pack = self.read_language_json('src')
             change_src_language(src_lang_pack)
+            
+    def setup_theme(self) -> None:
+        """Check the system theme and setup theme based on settings"""
+        if self.system_theme is None:  # On first launch
+            if self.is_system_theme_dark():
+                self.system_theme = 'dark'
+            else:
+                self.system_theme = 'light'
+        if self.theme is not None and self.theme == self.man.ap_config['gui']['theme']:  # Theme is already set
+            return
+        if self.man.ap_config['gui']['theme'] == 'system':  # System theme: light or dark
+            if self.system_theme == 'dark' and self.theme != 'dark':
+                self.theme = 'dark'
+                palette = dark_theme_palette()
+                self.application.setPalette(palette)
+            elif self.system_theme == 'light' and self.theme != 'light':
+                self.theme = 'light'
+                palette = light_theme_palette()
+                self.application.setPalette(palette)
+        elif self.man.ap_config['gui']['theme'] == 'dark':  # Force dark theme
+            self.theme = 'dark'
+            palette = dark_theme_palette()
+            self.application.setPalette(palette)
+        elif self.man.ap_config['gui']['theme'] == 'light':  # Force light theme
+            self.theme = 'light'
+            palette = light_theme_palette()
+            self.application.setPalette(palette)
+        else:
+            raise RuntimeError(f"Unknown application theme: {self.man.ap_config['gui']['theme']}")
+    
+    def is_system_theme_dark(self) -> bool:
+        """Check the system theme, return True if it's dark"""
+        palette = self.application.palette()
+        color = palette.color(QPalette.Window)
+        return color.lightness() < 128  # Boolean   
             
 
     # методы открытия диалоговых окон
@@ -283,7 +326,7 @@ class Window(QMainWindow):
         self.connect_dialog = ConnectDialog(parent=self)
         self.connect_dialog.show()
 
-    def show_history_dialog(self, mode: str = None) -> None:
+    def show_history_dialog(self, mode: Union[str, None] = None) -> None:
         """
         Показать окно истории
         """
@@ -422,7 +465,7 @@ class Window(QMainWindow):
 
     # обработчики кнопок
 
-    def custom_shaphop(self, data, title, save_flag=True, save_path=os.getcwd()):
+    def custom_shaphop(self, data, title, save_flag=True, save_path=None):
         """
         Картинка imshow
         """
@@ -438,6 +481,8 @@ class Window(QMainWindow):
         plt.title(title, linespacing=1.5)
         plt.tight_layout()
         if save_flag:
+            if save_path is None:
+                save_path = os.getcwd()
             plt.savefig(os.path.join(save_path,"result_map.png"))
             plt.close()
         else:
@@ -448,7 +493,12 @@ class Window(QMainWindow):
         Обновить информацию
         """
         _, mem_id = self.man.db.get_memristor_id(self.current_wl, self.current_bl, self.man.crossbar_id)
-        _, self.current_last_resistance = self.man.db.get_last_resistance(mem_id)
+        status, res = self.man.db.get_last_resistance(mem_id)
+        if status:
+            try:
+                self.current_last_resistance = int(res)
+            except OverflowError:  # Resistance is infinity
+                self.current_last_resistance = np.inf
 
     def fill_table(self) -> None:
         """
@@ -466,7 +516,11 @@ class Window(QMainWindow):
             bl, wl, res = range(3)
             # раскрашиваем
             for item in resistances:
-                self.ui.table_crossbar.setItem(item[bl], item[wl], QTableWidgetItem(str(item[res])))
+                try:
+                    table_item = QTableWidgetItem(str(int(item[res])))
+                except OverflowError:
+                    table_item = QTableWidgetItem('inf')
+                self.ui.table_crossbar.setItem(item[bl], item[wl], table_item)
                 self.all_resistances[item[bl]][item[wl]] = item[res]
         self.ui.table_crossbar.setHorizontalHeaderLabels([str(i) for i in range(self.man.col_num)])
         self.ui.table_crossbar.setVerticalHeaderLabels([str(i) for i in range(self.man.row_num)])
@@ -511,8 +565,13 @@ class Window(QMainWindow):
         Раскраска таблицы сопротивлений
         """
         try:
-            sum_values = np.sum(self.all_resistances)
-            log_resistances = np.log10(self.all_resistances)
+            resistances = np.array(self.all_resistances)
+            resistances[resistances < 1] = 1  # Removing all resistances < 1 Ohm for logarithm
+            log_resistances = np.log10(resistances)
+            max_resistance = np.max(log_resistances[np.isfinite(log_resistances)])  # Ignore infinity
+            min_resistance = np.min(log_resistances)
+            log_resistances[log_resistances == np.inf] = max_resistance  # Replace np.inf with maximum resistance
+            sum_values = np.sum(log_resistances)
             writable = []
 
             if self.man.get_meta_info()["writable_cells"] != '':
@@ -526,10 +585,6 @@ class Window(QMainWindow):
             if sum_values != 0:
                 colors = [[0 for j in range(self.man.col_num)] for i in range(self.man.row_num)]
                 # определяем цвета
-                max_resistance = np.max(log_resistances)
-                min_resistance = np.min(log_resistances)
-                if min_resistance == -inf:
-                    min_resistance = 0
                 for i in range(self.man.row_num):
                     for j in range(self.man.col_num):
                         item = self.ui.table_crossbar.item(i, j)
@@ -584,17 +639,13 @@ class Window(QMainWindow):
         for task in self.man.menu[ticket['mode']](ticket['params'],
                                                   ticket['terminate'],
                                                   self.man.blank_type):
-            result = self.man.conn.impact(task[0]) # result = (resistance, id)
+            result = self.man.conn.impact(task[0]) # result = (resistance, id, adc)
         try:
-            last_resistance = int(a2r(self.man.gain,
-                                      self.man.res_load,
-                                      self.man.vol_read,
-                                      self.man.adc_bit,
-                                      self.man.vol_ref_adc,
-                                      self.man.res_switches,
-                                      result[0]))
+            last_resistance = result[0]
         except IndexError:
             last_resistance = 0
+        except UnboundLocalError:  # Could not get the result
+            last_resistance = np.inf
         _ = self.man.db.update_last_resistance(memristor_id, last_resistance)
         # _ = self.man.db.update_ticket(ticket_id, 'status', 1)
         # _ = self.man.db.update_experiment_status(experiment_id, 1)
@@ -650,6 +701,57 @@ class Window(QMainWindow):
         with open(fname, encoding='utf-8') as file:
             ticket = json.load(file)
         return ticket
+    
+    def convert_ticket_to_new_format(self) -> None:
+        """Convert ticket to reduced format"""
+        filename, _ = QFileDialog.getOpenFileName(self, 
+                                                  caption=self.lang_pack.get("choose_ticket_convert"),
+                                                  directory=TICKET_PATH,
+                                                  filter=('JSON files (*.json)'))
+        if filename == '':
+            return
+        try:
+            with open(filename, encoding='utf-8') as file:
+                ticket = json.load(file)
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_open") + filename + f'\n{type(e).__name__}: {e}')
+            return
+        try:
+            if 'params' in ticket:  # Assuming its a ticket
+                mode, ok = QInputDialog.getItem(
+                    self,
+                    self.lang_pack.get("choose_signal_mode"),
+                    self.lang_pack.get("signal_mode"),
+                    self.man.menu.alias_to_mode().keys(),
+                    current=0,
+                    editable=False
+                )
+                if not ok:
+                    return
+                new_ticket = convert_ticket_to_reduced_format(self.man, ticket, mode_to_convert=self.man.menu.alias_to_mode()[mode])
+            else:  # Assuming its an experiment
+                new_ticket = {}
+                for i, tick in ticket.items():
+                    mode, ok = QInputDialog.getItem(
+                        self,
+                        self.lang_pack.get("choose_signal_mode"),
+                        self.lang_pack.get("signal_mode_for_tick") + f'{i} ({tick["name"]})',
+                        self.man.menu.alias_to_mode().keys(),
+                        current=0,
+                        editable=False
+                    )
+                    if not ok:
+                        return
+                    new_tick = convert_ticket_to_reduced_format(self.man, tick, mode_to_convert=self.man.menu.alias_to_mode()[mode])
+                    new_ticket[i] = new_tick
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_convert") + filename + f'\n{type(e).__name__}: {e}')
+            return
+        try:
+            with open(filename, 'w', encoding='utf-8') as file:
+                json.dump(new_ticket, file, indent=4, ensure_ascii=False)
+        except Exception as e:
+            show_warning_messagebox(self, self.lang_pack.get("could_not_save") + filename + f'\n{type(e).__name__}: {e}')
 
     def on_count_changed(self, value: int) -> None:
         """
@@ -727,15 +829,9 @@ class SendTicketAll(QThread):
                 for task in self.parent.man.menu[self.ticket['mode']](self.ticket['params'],
                                                  self.ticket['terminate'],
                                                  self.parent.man.blank_type):
-                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id)
+                    result = self.parent.man.conn.impact(task[0]) # result = (resistance, id, adc)
                 try:
-                    last_resistance = int(a2r(self.parent.man.gain,
-                                            self.parent.man.res_load,
-                                            self.parent.man.vol_read,
-                                            self.parent.man.adc_bit,
-                                            self.parent.man.vol_ref_adc,
-                                            self.parent.man.res_switches,
-                                            result[0]))
+                    last_resistance = result[0]
                 except IndexError:
                     last_resistance = 0
                 _ = self.parent.man.db.update_last_resistance(memristor_id, last_resistance)

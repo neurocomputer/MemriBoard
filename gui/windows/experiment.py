@@ -15,11 +15,13 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QDialog
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtCore import QSize
 
 from gui.windows.algorithm_editor import AlgorithmEditor
-from manager.service.global_settings import TICKET_PATH, ALGORITHM_PATH
+from manager.service.global_settings import TICKET_PATH, ALGORITHM_PATH, ICON_PATH
 from manager.service.plots import calculate_counts_for_ticket
 from gui.src import show_warning_messagebox, show_choose_window, open_file_dialog
+from gui.themes import color_icon
 
 class ExpSettings(QDialog):
     """
@@ -44,6 +46,7 @@ class ExpSettings(QDialog):
         self.parent = parent
         # загрузка ui
         self.ui = uic.loadUi(self.GUI_PATH, self)
+        self.set_icons()
         self.change_language()
         self.setModal(True)
         # список сигналов (тикетов)
@@ -90,6 +93,35 @@ class ExpSettings(QDialog):
             self.ui.button_apply_exp.clicked.connect(self.apply_exp_all)
         else:
             self.ui.button_apply_exp.clicked.connect(self.apply_exp)
+            
+    def set_icons(self):
+        """
+        Set icons used in the GUI
+        """
+        icon_size = QSize(16, 16)
+        icon_up = color_icon(
+            svg_path=os.path.join(ICON_PATH, 'arrow-up-line.svg'), 
+            theme=self.parent.theme, 
+            size=icon_size
+        )
+        icon_down = color_icon(
+            svg_path=os.path.join(ICON_PATH, 'arrow-down-line.svg'), 
+            theme=self.parent.theme, 
+            size=icon_size
+        )
+        icon_delete = color_icon(
+            svg_path=os.path.join(ICON_PATH, 'delete-bin-line.svg'), 
+            theme=self.parent.theme, 
+            size=icon_size
+        )
+        self.ui.button_up_plan.setIcon(icon_up)
+        self.ui.button_down_plan.setIcon(icon_down)
+        self.ui.button_delete.setIcon(icon_delete)
+        self.ui.button_delete_plan.setIcon(icon_delete)
+        self.ui.button_delete_algorithm.setIcon(icon_delete)
+        for button in [self.ui.button_up_plan, self.ui.button_down_plan, self.ui.button_delete,
+                       self.ui.button_delete_plan, self.ui.button_delete_algorithm]:
+            button.setIconSize(icon_size)
 
     def change_language(self):
         """
@@ -162,7 +194,7 @@ class ExpSettings(QDialog):
             path = TICKET_PATH
         elif ticket_group == 'algorithms':
             file_name = self.ui.alg_list.currentIndex().data()
-            protected = False
+            protected = file_name in self.parent.protected_algorithms
             path = ALGORITHM_PATH
         if file_name:
             if protected:
@@ -287,9 +319,6 @@ class ExpSettings(QDialog):
         """
         Применить правки тикета
         """
-        if new_ticket is None:  # Ticket is passed from Signal window via temp.json file
-            new_ticket = self.parent.read_ticket_from_disk("temp.json")
-            os.remove(os.path.join(TICKET_PATH,"temp.json"))
         #указываем ячейку
         new_ticket["params"]["wl"] = self.parent.current_wl
         new_ticket["params"]["bl"] = self.parent.current_bl
@@ -393,8 +422,8 @@ class ExpSettings(QDialog):
                 for i in range(len(tickets)):
                     self._add_exp_to_list(ticket=tickets.get(str(i)))
                 self.ui.exp_name.setText(os.path.splitext(os.path.basename(filepath))[0])
-        except Exception:
-            show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable"))
+        except Exception as e:
+            show_warning_messagebox(parent=self, message=self.lang_pack.get("ticket_unreadable") + f'\n{type(e).__name__}: {e}')
 
     def duplicate_ticket(self) -> None:
         """

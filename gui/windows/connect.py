@@ -144,9 +144,7 @@ class ConnectDialog(QDialog):
         ports = QSerialPortInfo().availablePorts()
         com_port = None
         for port in ports:
-            if platform == "linux" or platform == "linux2":
-                com_port = "/dev/" + port.portName()
-            elif platform == "darwin":
+            if platform == "linux" or platform == "linux2" or platform == "darwin":
                 com_port = "/dev/" + port.portName()
             elif platform == "win32":
                 com_port = port.portName()

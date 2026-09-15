@@ -11,13 +11,13 @@ from configparser import ConfigParser
 from logging import Logger
 from io import StringIO
 from typing import Union
-from manager.menu import menu
+from manager.menu import Menu
 from manager.model.db import DBOperate
 from manager.service.templates import TEMPLATE_INI
 from manager.service.global_settings import LOG_PATH, SETTINGS_PATH, DB_LOG_PATH
 from manager.service.prepare import prepare
 
-class Application():
+class Application:
     """
     Application
     """
@@ -35,7 +35,7 @@ class Application():
     res_switches: float # сопротивление переключателей
     gain: int # усиление
     sum_gain: int # сопротивление ОС
-    menu: dict # меню режимов
+    menu: Menu # меню режимов
     board_type: str # тип платы
     connected_port: str # com порт
     db: DBOperate
@@ -81,7 +81,7 @@ class Application():
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         self.db_logger.addHandler(handler)
         # другие нужные подготовки
-        self.menu = menu
+        self.menu = Menu()
         self.db = DBOperate(parent=self)
 
     def read_settings(self) -> None:
@@ -150,6 +150,8 @@ class Application():
             self.ap_config['logging']['database_log_rewrite_on_start'] = kwargs['db_log_rewrite_on_start']
         if "database_mode" in kwargs:
             self.ap_config['database']['database_mode'] = kwargs["database_mode"]
+        if 'theme' in kwargs:
+            self.ap_config['gui']['theme'] = kwargs['theme']
         # запись в файл
         with open(self.ap_config_path, 'w', encoding='utf-8') as configfile:
             self.ap_config.write(configfile)
@@ -206,6 +208,7 @@ class Application():
         meta_info['app_log_rewrite_on_start'] = self.ap_config['logging']['app_log_rewrite_on_start']
         meta_info['db_log_rewrite_on_start'] = self.ap_config['logging']['database_log_rewrite_on_start']
         meta_info['database_mode'] = self.database_mode
+        meta_info['theme'] = self.ap_config['gui']['theme']
         return deepcopy(meta_info)
     
     def new_log_path(self, log_path: str) -> str:
@@ -219,8 +222,7 @@ class Application():
                 name_spl = name.rsplit('.', 2)  # ['app', '2', 'log'] or ['app', 'log']
                 if len(name_spl) == 3:
                     try:
-                        if int(name_spl[1]) > last_name:
-                            last_name = int(name_spl[1])
+                        last_name = max(last_name, int(name_spl[1]))
                     except Exception:
                         pass
         return os.path.join(os.path.dirname(log_path), f'{keyword}.{last_name+1}.log')
