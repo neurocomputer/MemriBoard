@@ -187,9 +187,9 @@ class Rram(QWidget):
         for i in range(len(rram_data)):
             for j in range(len(rram_data[i])):
                 if rram_data[i][j] >= tresh:
-                    self.snapshot_binary[i][j] = 0
-                else:
                     self.snapshot_binary[i][j] = 1
+                else:
+                    self.snapshot_binary[i][j] = 0
         # вывод байтов
         binary_string = "".join(str(x) for row in self.snapshot_binary for x in row)
         model = QStandardItemModel() # todo: вынести в init
