@@ -469,7 +469,7 @@ class Window(QMainWindow):
                     
     def show_demonstrator_window(self) -> None:
         self.demonstrator_window = DemonstratorWindow(self)
-        self.demonstrator_window.showMaximized()
+        self.demonstrator_window.show()
 
     # обработчики кнопок
 

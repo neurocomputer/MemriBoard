@@ -582,6 +582,7 @@
         "pause":"Pause",
         "continue":"Continue",
         "pause_slideshow":"Pause Slide-Show",
-        "cont_slideshow":"Continue Slide-Show"
+        "cont_slideshow":"Continue Slide-Show",
+        "slide":"Slide:"
     }
 }

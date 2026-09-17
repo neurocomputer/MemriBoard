@@ -2,12 +2,15 @@
 import os
 import numpy as np
 import pyqtgraph as pg
-from pyqt_slideshow import SlideShow  # pip install pyqt-slideshow | TODO add to requirements.txt
+# from pyqt_slideshow import SlideShow  # pip install pyqt-slideshow | TODO add to requirements.txt
 
 from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget, QFrame, QLabel, QVBoxLayout, QComboBox, QPushButton, QCheckBox
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, QTimer, QSize
+from PyQt5.QtGui import QFont, QPixmap
+
+from gui.widgets.AspectRatioLabel import AspectRatioLabel
+from gui.widgets.SlideShow import SlideShow
 
 
 
@@ -25,9 +28,11 @@ class DemonstratorWindow(QWidget):
         # Window settings
         self.setWindowModality(Qt.ApplicationModal)  # Make it modal
         self.setWindowFlags(Qt.Window)
+        self.resize(QSize(1280, 720))
         # Standard variables
         self.slideshow_dir = os.path.join(os.getcwd(), 'gui', 'demonstration', 'slide_show')
         self.plot_data_path = os.path.join(os.getcwd(), 'gui', 'demonstration', '1000_IV.npz')
+        self.static_slide_path = os.path.join(os.getcwd(), 'gui', 'demonstration', 'Static_slide.png')
         self.x_values = ['counts', 'voltage']  # Values available for x axis on the plot
         self.x_units = ['', 'volt']  # Units corresponding to values
         self.y_values = ['resistance', 'current']  # Values available for y axis on the plot
@@ -42,10 +47,12 @@ class DemonstratorWindow(QWidget):
         self.log_y = False  # Logarithmic scale on Y axis
         # Initializing widgets
         self.change_language()
-        self.init_slideshow()
-        self.plot_widget = pg.PlotWidget(parent=self.frame_demo)
-        self.frame_demo.layout().addWidget(self.plot_widget)
+        # self.init_slideshow()
+        self.init_slideshow2()
         self.init_plot()
+        # Init static slides
+        self.pixmap = QPixmap(self.static_slide_path)
+        self.label_static.setPixmap(self.pixmap)
         # Binding
         self.cbox_xaxis.currentIndexChanged.connect(self.change_plot_values)
         self.cbox_yaxis.currentIndexChanged.connect(self.change_plot_values)
@@ -64,8 +71,9 @@ class DemonstratorWindow(QWidget):
         self.btn_pause_slideshow: QPushButton  # Pause slideshow button
         self.layout_slideshow: QVBoxLayout  # Layout which holds the slide show widget
         self.checkBox_log: QCheckBox
+        self.label_static: AspectRatioLabel
         # Centering splitter
-        QTimer.singleShot(0, self.center_splitter)
+        QTimer.singleShot(0, self.splitters_default)
         
         
     def change_language(self) -> None:
@@ -93,6 +101,14 @@ class DemonstratorWindow(QWidget):
         self.slideshow = SlideShow()
         self.slideshow.setFilenames([os.path.join(self.slideshow_dir, slide) for slide in self.slide_list])
         self.slideshow.setInterval(int(self.parent.man.ap_config['demonstration']['slide_show_time_msec']))
+        # Layout
+        self.layout_slideshow.addWidget(self.slideshow)
+        self.slideshow.show()
+        
+        
+    def init_slideshow2(self) -> None:
+        """Initialize the slideshow"""
+        self.slideshow = SlideShow(self, self.slideshow_dir)
         # Layout
         self.layout_slideshow.addWidget(self.slideshow)
         self.slideshow.show()
@@ -198,15 +214,19 @@ class DemonstratorWindow(QWidget):
             self.plot_timer.stop()
         
         
-    def center_splitter(self) -> None:
-        """
-        Center the QSplitter widget
-        """
+    def splitters_default(self) -> None:
+        """Center the QSplitters to default positions"""
+        # Horisontal splitter (center)
         sizes = self.splitter.sizes()
         s1 = int(sum(sizes) / 2)
         s2 = sum(sizes) - s1
         self.splitter.setSizes([s1, s2])
-        
+        # Vertical splitter on the right
+        static_ratio = 3 / 5
+        sizes = self.splitter_dynamic.sizes()
+        s1 = int(sum(sizes) * static_ratio)
+        s2 = sum(sizes) - s1
+        self.splitter_dynamic.setSizes([s1, s2])
         
     def closeEvent(self, event):
         self.parent.demonstrator_dialog = None
