@@ -2,7 +2,6 @@
 import os
 import numpy as np
 import pyqtgraph as pg
-# from pyqt_slideshow import SlideShow  # pip install pyqt-slideshow | TODO add to requirements.txt
 
 from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget, QFrame, QLabel, QVBoxLayout, QComboBox, QPushButton, QCheckBox
@@ -47,8 +46,7 @@ class DemonstratorWindow(QWidget):
         self.log_y = False  # Logarithmic scale on Y axis
         # Initializing widgets
         self.change_language()
-        # self.init_slideshow()
-        self.init_slideshow2()
+        self.init_slideshow()
         self.init_plot()
         # Init static slides
         self.pixmap = QPixmap(self.static_slide_path)
@@ -57,7 +55,6 @@ class DemonstratorWindow(QWidget):
         self.cbox_xaxis.currentIndexChanged.connect(self.change_plot_values)
         self.cbox_yaxis.currentIndexChanged.connect(self.change_plot_values)
         self.checkBox_log.stateChanged.connect(self.change_plot_values)
-        self.btn_pause_slideshow.clicked.connect(self.pause_slideshow)
         self.btn_pause.clicked.connect(self.pause_plot)
         # Annotating widget types
         self.frame_slideshow: QFrame  # Left frame with slide
@@ -68,7 +65,6 @@ class DemonstratorWindow(QWidget):
         self.cbox_yaxis: QComboBox  # Combobox for Y axis unit
         self.label_xaxis: QLabel  # Label for X axis unit
         self.label_yaxis: QLabel  # Label for Y axis unit
-        self.btn_pause_slideshow: QPushButton  # Pause slideshow button
         self.layout_slideshow: QVBoxLayout  # Layout which holds the slide show widget
         self.checkBox_log: QCheckBox
         self.label_static: AspectRatioLabel
@@ -89,7 +85,6 @@ class DemonstratorWindow(QWidget):
             self.cbox_yaxis.addItems([self.lang_pack.get(val) for val in self.y_values])
             self.checkBox_log.setText(self.lang_pack.get('logarithmic_scale'))
             self.btn_pause.setText(self.lang_pack.get(self.pause_plot_texts[self.plotting]))
-            self.btn_pause_slideshow.setText(self.lang_pack.get(self.pause_slideshow_texts[self.auto_slideshow]))
             # Default combobox values
             self.cbox_xaxis.setCurrentText(self.lang_pack.get(self.x_value))
             self.cbox_yaxis.setCurrentText(self.lang_pack.get(self.y_value))
@@ -97,28 +92,10 @@ class DemonstratorWindow(QWidget):
         
     def init_slideshow(self) -> None:
         """Initialize the slideshow"""
-        self.slide_list = os.listdir(self.slideshow_dir)
-        self.slideshow = SlideShow()
-        self.slideshow.setFilenames([os.path.join(self.slideshow_dir, slide) for slide in self.slide_list])
-        self.slideshow.setInterval(int(self.parent.man.ap_config['demonstration']['slide_show_time_msec']))
+        self.slideshow = SlideShow(self, slide_str=self.lang_pack.get('slide'), folder_path=self.slideshow_dir)
         # Layout
         self.layout_slideshow.addWidget(self.slideshow)
         self.slideshow.show()
-        
-        
-    def init_slideshow2(self) -> None:
-        """Initialize the slideshow"""
-        self.slideshow = SlideShow(self, self.slideshow_dir)
-        # Layout
-        self.layout_slideshow.addWidget(self.slideshow)
-        self.slideshow.show()
-        
-        
-    def pause_slideshow(self) -> None:
-        """Pause or unpause slideshow"""
-        self.auto_slideshow = not self.auto_slideshow
-        self.btn_pause_slideshow.setText(self.lang_pack.get(self.pause_slideshow_texts[self.auto_slideshow]))
-        self.slideshow.setTimerEnabled(self.auto_slideshow)
         
         
     def init_plot(self) -> None:
@@ -231,6 +208,6 @@ class DemonstratorWindow(QWidget):
     def closeEvent(self, event):
         self.parent.demonstrator_dialog = None
         self.plot_timer.stop()
-        self.slideshow.setTimerEnabled(False)
+        self.slideshow.enable_timer(False)
         event.accept()
         

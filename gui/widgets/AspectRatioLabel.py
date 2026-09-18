@@ -10,6 +10,7 @@ class AspectRatioLabel(QLabel):
     def __init__(self, parent=None):
         """Label with image that keeps the aspect ratio"""
         super().__init__(parent)
+        self._pixmap = None
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         
@@ -26,5 +27,6 @@ class AspectRatioLabel(QLabel):
         
         
     def resizeEvent(self, event):
-        super().setPixmap(self._scale_pixmap())
+        if self._pixmap is not None:
+            super().setPixmap(self._scale_pixmap())
         super().resizeEvent(event)

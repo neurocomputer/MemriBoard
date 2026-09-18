@@ -84,7 +84,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QLabel" name="label_img">
+    <widget class="AspectRatioLabel" name="label_img">
      <property name="text">
       <string/>
      </property>
@@ -92,6 +92,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>AspectRatioLabel</class>
+   <extends>QLabel</extends>
+   <header>gui.widgets.AspectRatioLabel</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
