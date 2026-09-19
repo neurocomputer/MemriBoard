@@ -4,9 +4,9 @@ import numpy as np
 import pyqtgraph as pg
 
 from PyQt5 import uic
-from PyQt5.QtWidgets import QWidget, QFrame, QLabel, QVBoxLayout, QComboBox, QPushButton, QCheckBox
+from PyQt5.QtWidgets import QWidget, QFrame, QLabel, QVBoxLayout, QComboBox, QPushButton, QCheckBox, QShortcut
 from PyQt5.QtCore import Qt, QTimer, QSize
-from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtGui import QFont, QPixmap, QKeySequence
 
 from gui.widgets.AspectRatioLabel import AspectRatioLabel
 from gui.widgets.SlideShow import SlideShow
@@ -38,8 +38,6 @@ class DemonstratorWindow(QWidget):
         self.y_units = ['ohm', 'ampere']  # Units corresponding to values
         self.x_value = 'voltage'  # Standard x axis
         self.y_value = 'current'  # Standard y axis
-        self.auto_slideshow = True  # Automatically change slides
-        self.pause_slideshow_texts = {True: 'pause_slideshow', False: 'cont_slideshow'}
         self.plotting = True  # Plot is running
         self.pause_plot_texts = {True: 'pause', False: 'continue'}
         self.graph_window = int(self.parent.man.ap_config['demonstration']['graph_window'])  # Amount of points on the graph
@@ -68,6 +66,10 @@ class DemonstratorWindow(QWidget):
         self.layout_slideshow: QVBoxLayout  # Layout which holds the slide show widget
         self.checkBox_log: QCheckBox
         self.label_static: AspectRatioLabel
+        # Shortcuts
+        QShortcut(QKeySequence('Right'), self).activated.connect(self.slideshow.next_slide)
+        QShortcut(QKeySequence('Space'), self).activated.connect(self.slideshow.handle_pause_btn)
+        QShortcut(QKeySequence('Left'), self).activated.connect(self.slideshow.previous_slide)
         # Centering splitter
         QTimer.singleShot(0, self.splitters_default)
         
@@ -92,7 +94,12 @@ class DemonstratorWindow(QWidget):
         
     def init_slideshow(self) -> None:
         """Initialize the slideshow"""
-        self.slideshow = SlideShow(self, slide_str=self.lang_pack.get('slide'), folder_path=self.slideshow_dir)
+        self.slideshow = SlideShow(
+            parent=self, 
+            slide_str=self.lang_pack.get('slide'), 
+            folder_path=self.slideshow_dir,
+            time_msec=int(self.parent.man.ap_config['demonstration']['slide_show_time_msec']),
+            timer_enabled=True)
         # Layout
         self.layout_slideshow.addWidget(self.slideshow)
         self.slideshow.show()
@@ -164,6 +171,7 @@ class DemonstratorWindow(QWidget):
             for i in range(start_count, self.plot_count + 1):
                 self.x_data.append(self.x_process(self.vol[i], i))
                 self.y_data.append(self.y_process(self.vol[i], self.res[i]))
+            self.plot_line.setData(self.x_data, self.y_data)
         
         
     def plot_point(self) -> None:
@@ -193,7 +201,7 @@ class DemonstratorWindow(QWidget):
         
     def splitters_default(self) -> None:
         """Center the QSplitters to default positions"""
-        # Horisontal splitter (center)
+        # Horizontal splitter (center)
         sizes = self.splitter.sizes()
         s1 = int(sum(sizes) / 2)
         s2 = sum(sizes) - s1

@@ -199,6 +199,7 @@
         "wl":"WL = ",
         "res":"R = ",
         "ohm":" Ohm",
+        "requests":"Request amount:",
         "update":"Update",
         "history":"History",
         "new_exp":"New experiment",
@@ -581,8 +582,6 @@
         "ohm":"Ω",
         "pause":"Pause",
         "continue":"Continue",
-        "pause_slideshow":"Pause Slide-Show",
-        "cont_slideshow":"Continue Slide-Show",
         "slide":"Slide:"
     }
 }

@@ -104,7 +104,7 @@ class SlideShow(QWidget):
             raise FileNotFoundError(f'No .png or .jpg slide file in directory {folder_path}')
         self.current_slide = 0
         self.comboBox_slide.clear()
-        self.comboBox_slide.addItems(map(str, range(len(self.slide_paths))))
+        self.comboBox_slide.addItems(map(str, range(1, len(self.slide_paths)+1)))
         self.comboBox_slide.setCurrentIndex(self.current_slide)
         self.update_current_image()
         
