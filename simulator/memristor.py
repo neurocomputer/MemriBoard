@@ -43,6 +43,12 @@ class MemristorModel:
     DR: int = 1
     fi_electron: int = 1
 
+    def __init__(self):
+        """
+        Инициализация модели VTEAM
+        """
+        self.last_resistance = 0.3 / self.apply_voltage(0.3) # сопротивление при создании модели
+
     def apply_voltage(self, v_inp: float) -> float:
         '''
         Подача напряжения v_inp на мемристор
@@ -88,4 +94,8 @@ class MemristorModel:
         if self.resistance_min:
             if v_inp/current < self.resistance_min:
                 current = v_inp/self.resistance_min
+        if current != 0:
+            self.last_resistance = v_inp / current
+        else:
+            self.last_resistance = float('inf')  # Если ток равен нулю, сопротивление бесконечно
         return current

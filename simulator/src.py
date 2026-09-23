@@ -56,13 +56,32 @@ def send_mode_7_to_crossbar(serial: str, crossbar: list, **kwargs) -> int:
     """
     # запись
     if kwargs['vol'] != 0:
-        for _ in range(int(kwargs['duration'])):
-            crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(kwargs['vol'])
+        if kwargs['vol'] > 0: # reset
+            for _ in range(int(kwargs['duration'])):
+                res_mem = crossbar[kwargs['bl']][kwargs['wl']].last_resistance
+                cur = kwargs['vol'] / (res_mem + 100) # 100 Ohm - load resistor in reset branch
+                vol_res = cur * 100
+                vol = kwargs['vol'] - vol_res
+                crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(vol)
+        else: # set
+            for _ in range(int(kwargs['duration'])):
+                res_mem = crossbar[kwargs['bl']][kwargs['wl']].last_resistance
+                cur = kwargs['vol'] / res_mem
+                if cur >= kwargs['soft_cc']: # ограничитель тока
+                    # Vm = Icc * Rm
+                    vol = kwargs['soft_cc'] * res_mem
+                else:
+                    vol = kwargs['vol']
+                crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(vol)
         save_crossbar_array(serial, crossbar)
     # чтение
-    current = crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(kwargs['vol_read'])
+    res_mem = crossbar[kwargs['bl']][kwargs['wl']].last_resistance
+    cur = kwargs['vol_read'] / (res_mem + kwargs['res_load'])
+    vol_res = cur * kwargs['res_load']
+    vol_read = kwargs['vol_read'] - vol_res
+    current = crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(vol_read)
     # переводим ток так, как если бы работала плата
-    model_resistance = kwargs['vol_read'] / current
+    model_resistance = vol_read / current
     v_out = kwargs['vol_read'] * kwargs['res_load'] / (model_resistance + kwargs['res_switches'] + kwargs['res_load'])
     v_out = v_out * kwargs['gain']
     res = int(2**kwargs['adc_bit'] * v_out / kwargs['vol_ref_adc'])
@@ -74,9 +93,13 @@ def send_mode_9_to_crossbar(crossbar: list, **kwargs) -> int:
     """
     # запись
     if kwargs['vol'] != 0:
-        current = crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(kwargs['vol'])
+        res_mem = crossbar[kwargs['bl']][kwargs['wl']].last_resistance
+        cur = kwargs['vol'] / (res_mem + kwargs['res_load'])
+        vol_res = cur * kwargs['res_load']
+        vol = kwargs['vol'] - vol_res
+        current = crossbar[kwargs['bl']][kwargs['wl']].apply_voltage(vol)
         # переводим ток так, как если бы работала плата
-        model_resistance = kwargs['vol'] / current
+        model_resistance = vol / current
         v_out = kwargs['vol'] * kwargs['res_load'] / (model_resistance + kwargs['res_switches'] + kwargs['res_load'])
         v_out = v_out * kwargs['gain']
         res = int(2**kwargs['adc_bit'] * v_out / kwargs['vol_ref_adc'])
@@ -152,7 +175,8 @@ class BoardSimulator:
                                       gain=float(self.config['board']['gain']),
                                       adc_bit=int(self.config['board']['adc_bit']),
                                       vol_ref_adc=float(self.config['board']['vol_ref_adc']),
-                                      duration=tms*1000+tus)
+                                      duration=tms*1000+tus,
+                                      soft_cc=float(self.config['board']['soft_cc']))
         return (res, task_id)
 
     def mode_9(self, v_dac, task_id, wl, bl):
