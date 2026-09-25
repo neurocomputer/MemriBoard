@@ -73,7 +73,8 @@ class Menu:
                 'smu_pot_dep': 'Potentiation-Depression (async)',
                 'smu_cc-cv': 'CC | CV (DC, async)',
                 'smu_cv-cc': 'CV | CC (DC, async)',
-                'smu_iv_current': 'Current Sweep (DC, async)'
+                'smu_iv_current': 'Current Sweep (DC, async)',
+                'com_command': 'COM command'
             }
             # Generator functions for each mode
             self._smu_gen = SMUGen(parent=self, logger=self.parent.ap_logger)
@@ -85,18 +86,20 @@ class Menu:
                 'smu_pot_dep': self._smu_gen.smu_pot_dep,
                 'smu_cc-cv': self._smu_gen.smu_cc_cv,
                 'smu_cv-cc': self._smu_gen.smu_cv_cc,
-                'smu_iv_current': self._smu_gen.smu_iv_current
+                'smu_iv_current': self._smu_gen.smu_iv_current,
+                'com_command': self._smu_gen.com_command
             }
             # UI fields necessary to configure this mode in Signal window (gui/widgets/SignalParametersConfig.py)
             self._ui_fields = {
                 'prog_sync': 'volt_sweep, +amp_read, +batch_pulses',  # Standard volt_sweep + read voltage
-                'smu_iv_dc': 'volt_sweep, pw_to_int',  # Replace pulse width with trigger interval
-                'smu_pulsed_retention': 'retention, +amp_read, +pw, +period, +comp, +batch_pulses',  # Standard retention (nothing) + read voltage + pulse width + pulse period + compliance
-                'smu_endurance': 'endurance, +period, +amp_read, -amount, time_unite, +batch_cycles_4',  # Add period, add read amplitude, remove amount, unite time fields, batch_size: 1 cycle is 4 pulses
-                'smu_pot_dep': 'endurance, +period, +batch_pulses',  # Add period
-                'smu_cc-cv': 'volt_sweep, dir_to_curr, pw_to_int',  # Dir sweep value is current
-                'smu_cv-cc': 'volt_sweep, rev_to_curr, pw_to_int',  # Rev sweep value is current
-                'smu_iv_current': 'volt_sweep, dir_to_curr, rev_to_curr, pw_to_int'  # Both dir and rev sweeps are for current
+                'smu_iv_dc': 'volt_sweep, pw_to_int, -term',  # Replace pulse width with trigger interval
+                'smu_pulsed_retention': 'retention, +amp_read, +pw, +period, +comp, +batch_pulses, -term',  # Standard retention (nothing) + read voltage + pulse width + pulse period + compliance
+                'smu_endurance': 'endurance, +period, +amp_read, -amount, time_unite, +batch_cycles_4, -term',  # Add period, add read amplitude, remove amount, unite time fields, batch_size: 1 cycle is 4 pulses
+                'smu_pot_dep': 'endurance, +period, +batch_pulses, -term',  # Add period
+                'smu_cc-cv': 'volt_sweep, dir_to_curr, pw_to_int, -term',  # Dir sweep value is current
+                'smu_cv-cc': 'volt_sweep, rev_to_curr, pw_to_int, -term',  # Rev sweep value is current
+                'smu_iv_current': 'volt_sweep, dir_to_curr, rev_to_curr, pw_to_int, -term',  # Both dir and rev sweeps are for current
+                'com_command': 'com_command, -term, -dir-rev'
             }
             # Setting crossbar scan generator (This group of drivers uses single ticket scanning) for crossbar window
             self.crossbar_scan_gen = self._smu_gen.crossbar_scan  # Single-ticket

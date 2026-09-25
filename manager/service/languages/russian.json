@@ -221,7 +221,12 @@
         "pulse":"Импульсы",
         "read_vol":"Напряжение чтения",
         "read_direction":"Направление чтения",
-        "voltage_in_settings":"Напряжение чтения задается в настройках"
+        "voltage_in_settings":"Напряжение чтения задается в настройках",
+        "com_command":"Команда в COM порт",
+        "command":"Команда",
+        "resp_type":"Тип ответа",
+        "resistance":"Сопротивление",
+        "bool":"Флаг True/False"
     },
     "cell_info":{
         "name":"Информация о ячейке",

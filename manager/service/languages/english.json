@@ -221,7 +221,12 @@
         "pulse":"Pulse",
         "read_vol":"Read voltage",
         "read_direction":"Read direction",
-        "voltage_in_settings":"Read voltage is set in the settings"
+        "voltage_in_settings":"Read voltage is set in the settings",
+        "com_command":"COM port command",
+        "command":"Command",
+        "resp_type":"Responce type",
+        "resistance":"Resistance",
+        "bool":"Boolean flag"
     },
     "cell_info":{
         "name":"Cell Info",

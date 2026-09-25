@@ -464,6 +464,37 @@ class SMUGen:
         except Exception as e:
             yield from self._handle_exception(e)
         yield from self._check_interruption()
+        
+        
+    def com_command(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:
+        """Send a direct command to COM port"""
+        self._prepare(terminate)
+        
+        # Generating
+        try:
+            config_task = {  # Config
+                'command': params['com_command'],
+                'response_type': params['response_type'],
+                'id': params['id']
+            }  # sign???
+            sense_task = {  # Sense dir
+                'mode_flag': 'sense_com',
+                'vol': 0,  # ???
+                'id': params['id'],
+                'sign': 0 # ???
+            }
+            
+            yield from self._connect_cell(params)
+            
+            for _ in range(params['count']):
+                yield [config_task, self.terminator]
+                
+                yield [sense_task, self.terminator]
+            
+            yield from self._disconnect_cell()
+        except Exception as e:
+            yield from self._handle_exception(e)
+        yield from self._check_interruption()
 
 
     def crossbar_scan(self, params: dict, terminate: dict, blank_type: str) -> Generator[list, None, None]:

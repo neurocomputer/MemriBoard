@@ -9,7 +9,8 @@ from PyQt5.QtWidgets import (
     QCheckBox, 
     QSpinBox, 
     QFrame, 
-    QComboBox
+    QComboBox,
+    QLineEdit
 )
 from PyQt5 import uic
 
@@ -34,6 +35,7 @@ class SignalParameters(QWidget):
         
         # Linting widget types for convenience
         self.groupBox_sweep_params: QGroupBox
+        self.groupBox_COM_command: QGroupBox
         # Labels
         self.label_dir: QLabel
         self.label_rev: QLabel
@@ -54,6 +56,8 @@ class SignalParameters(QWidget):
         self.label_united_1: QLabel  # Объединенные dir и rev виджеты (дополнительно)
         self.label_united_2: QLabel
         self.label_united_val: QLabel
+        self.label_command: QLabel
+        self.label_resp_type: QLabel
         # ScientificQLineEdits
         self.start_dir: ScientificQLineEdit
         self.stop_dir: ScientificQLineEdit
@@ -77,6 +81,8 @@ class SignalParameters(QWidget):
         self.double_rev: QCheckBox
         self.read_direction: QComboBox
         self.read_voltage_group: QGroupBox
+        self.lineEdit_command: QLineEdit
+        self.comboBox_resp_type: QComboBox
         
         self.create_item_groups()
         # Scientific widget warnings
@@ -108,6 +114,10 @@ class SignalParameters(QWidget):
         for item in self.direction_items.values():
             self.read_direction.addItem(lang_pack.get(item))
         self.read_direction.setCurrentIndex(1)  # TODO Check if it works
+        # COM
+        self.groupBox_COM_command.setTitle(self.lang_pack.get("com_command"))
+        self.label_command.setText(self.lang_pack.get("command"))
+        self.label_resp_type.setText(self.lang_pack.get("resp_type"))
         # ScientificQLineEdits
         self.read_voltage.set_unit(lang_pack.get("volt"))
         self.pulse_width_dir.set_unit(lang_pack.get("second"))
@@ -200,6 +210,18 @@ class SignalParameters(QWidget):
         if spl[1] == 'cycles':
             max_size = int(max_size / int(spl[2]))
         self.parent.show_batch_size(spl[1], max_size)
+        
+        
+    def enable_terminator(self, enable: bool) -> None:
+        """Enable or disable terminator"""
+        if enable:
+            self.parent.terminator_combobox.setCurrentText('pass')
+        self.parent.terminator_combobox.setEnabled(enable)
+        
+        
+    def enable_dir_rev(self, enable: bool) -> None:
+        """Enable or disable dir-rev combobox"""
+        self.parent.direction_combobox.setEnabled(enable)
             
             
     def set_sweep_units(self) -> None:
@@ -251,6 +273,8 @@ class SignalParameters(QWidget):
             self.show_endurance()
         elif self.base_mode == 'retention':
             self.show_retention()
+        elif self.base_mode == 'com_command':
+            self.show_com()
         else:
             raise RuntimeError(f'Unknown signal mode: {self.base_mode}')
         
@@ -258,6 +282,10 @@ class SignalParameters(QWidget):
     def show_sweep(self) -> None:
         """Show sweep ui"""
         self.used_scientific_widgets = []
+        self.groupBox_sweep_params.show()
+        self.groupBox_COM_command.hide()
+        self.enable_terminator('-term' not in self.ui_fields)
+        self.enable_dir_rev('-dir-rev' not in self.ui_fields)
         # Top widgets
         self.label_dir.show()
         self.label_rev.show()
@@ -299,6 +327,10 @@ class SignalParameters(QWidget):
     def show_endurance(self) -> None:
         """Show endurance ui (reduced)"""
         self.used_scientific_widgets = []
+        self.groupBox_sweep_params.show()
+        self.groupBox_COM_command.hide()
+        self.enable_terminator('-term' not in self.ui_fields)
+        self.enable_dir_rev('-dir-rev' not in self.ui_fields)
         # Top widgets
         self.label_dir.show()
         self.label_rev.show()
@@ -352,6 +384,10 @@ class SignalParameters(QWidget):
     def show_retention(self) -> None:
         """Show retention ui (reduced)"""
         self.used_scientific_widgets = []
+        self.groupBox_sweep_params.show()
+        self.groupBox_COM_command.hide()
+        self.enable_terminator('-term' not in self.ui_fields)
+        self.enable_dir_rev('-dir-rev' not in self.ui_fields)
         # Checking whether to show one column (dir) or hide the whole table
         show_table_flag = '+pw' in self.ui_fields or '+period' in self.ui_fields or '+comp' in self.ui_fields
         # Top widgets
@@ -406,6 +442,21 @@ class SignalParameters(QWidget):
             self.label_united_val.hide()
             
             
+    def show_com(self) -> None:
+        """Show COM ui"""
+        self.used_scientific_widgets = []
+        self.groupBox_sweep_params.hide()
+        self.groupBox_COM_command.show()
+        self.enable_terminator('-term' not in self.ui_fields)   
+        self.enable_dir_rev('-dir-rev' not in self.ui_fields)
+        # Response type combobox
+        self.comboBox_resp_type.clear()
+        self.comboBox_resp_type.addItems([
+            self.lang_pack.get('resistance'),
+            self.lang_pack.get('bool')
+        ])
+            
+            
     def fill_params_to_ticket(self, ticket: dict) -> tuple[bool, dict]:
         """Fill in params in the ticket dict"""
         # Checking if all scientific widgets are fine
@@ -420,6 +471,8 @@ class SignalParameters(QWidget):
             ticket = self.fill_params_endurance(ticket)
         elif self.base_mode == 'retention':
             ticket = self.fill_params_retention(ticket)
+        elif self.base_mode == 'com_command':
+            ticket = self.fill_params_com_command(ticket)
         else:
             print(f'Filling params: unknown mode {self.base_mode}')
             return False, ticket
@@ -507,6 +560,13 @@ class SignalParameters(QWidget):
         return ticket
     
     
+    def fill_params_com_command(self, ticket: dict) -> dict:
+        """Fill in params for com command mode"""
+        ticket['params']['com_command'] = self.lineEdit_command.text().strip()
+        ticket['params']['response_type'] = self.comboBox_resp_type.currentText()
+        return ticket
+    
+    
     def load_ticket_to_ui(self, ticket: dict) -> None:
         """Load ticket to the ui. The .set_mode() is expected to be called before this method"""
         # Filling in based on the mode
@@ -516,6 +576,8 @@ class SignalParameters(QWidget):
             self.load_ticket_endurance(ticket)
         elif self.base_mode == 'retention':
             self.load_ticket_retention(ticket)
+        elif self.base_mode == 'com_command':
+            self.load_ticket_com_command(ticket)
         else:
             raise RuntimeError(f'Loading ticket to ui: unknown mode {self.base_mode}')
         # Batch size
@@ -595,7 +657,13 @@ class SignalParameters(QWidget):
         # Read 
         if '+amp_read' in self.ui_fields:
             self.read_voltage.set_value(ticket['params']['read_voltage'])
-            self.read_direction.setCurrentIndex(self.direction_indexes[ticket['params']['read_direction']])      
+            self.read_direction.setCurrentIndex(self.direction_indexes[ticket['params']['read_direction']])     
+            
+            
+    def load_ticket_com_command(self, ticket: dict) -> None:
+        """Load a com command ticket to the UI""" 
+        self.lineEdit_command.setText(ticket['params']['com_command'])
+        self.comboBox_resp_type.setCurrentText(ticket['params']['response_type'])
  
         
         
