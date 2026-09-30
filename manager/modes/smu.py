@@ -473,12 +473,13 @@ class SMUGen:
         # Generating
         try:
             config_task = {  # Config
+                'mode_flag': 'config_com_command',
                 'command': params['com_command'],
                 'response_type': params['response_type'],
                 'id': params['id']
             }  # sign???
             sense_task = {  # Sense dir
-                'mode_flag': 'sense_com',
+                'mode_flag': 'sense',
                 'vol': 0,  # ???
                 'id': params['id'],
                 'sign': 0 # ???

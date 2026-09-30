@@ -40,6 +40,7 @@ class VisaImpact:
             'config_pulsed_retention': self.config_pulsed_retention,
             'config_endurance': self.config_endurance,
             'config_pot_dep': self.config_pot_dep,
+            'config_com_command': self.config_com_command,
         }
         
         
@@ -195,5 +196,15 @@ class VisaImpact:
             sign = task['sign']
         )
         self.log(flag, response, 'Configuring pot-dep error: ')
+        return int(flag)
+    
+    
+    def config_com_command(self, task: dict) -> tuple:
+        """Configure COM command mode (send a command to COM)"""
+        flag, response = self.interface.config_COM_command(
+            command = task['com_command'],
+            response_type = task['response_type']
+        )
+        self.log(flag, response, 'Configuring COM command error: ')
         return int(flag)
         

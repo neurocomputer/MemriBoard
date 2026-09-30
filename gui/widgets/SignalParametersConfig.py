@@ -479,6 +479,7 @@ class SignalParameters(QWidget):
         # Batch size
         if self.batch_size_field is not None:
             ticket['params']['batch_size'] = self.parent.batch_size.value()
+        print(ticket)
         return True, ticket
     
     
