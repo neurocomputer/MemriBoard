@@ -287,6 +287,28 @@ class Connector:
                         pass
                     except ConnectionError:
                         open_flag = False
+            elif self.board_type == 'ITC_1T1R_32x8_switched_COM':
+                # Checking row and column number
+                if kwargs['row_num'] != 32 or kwargs['col_num'] != 8:
+                    print('ERROR! Wrong crossbar shape for ITC_1T1R_32x8_switched driver. Correct shape: 32 rows, 8 columns.')
+                    open_flag = False
+                else:  # Connecting
+                    try:
+                        from RRAM_VISA_Drivers import ITC_1T1R_32x8_switched_COM  # type: ignore
+                        self.interface = ITC_1T1R_32x8_switched_COM(
+                            B2902B_1_address=kwargs['visa_addresses'][0],
+                            B2902B_2_address=kwargs['visa_addresses'][1],
+                            Switch_address=kwargs['visa_addresses'][2],
+                            COM_port=kwargs['com_port'],
+                            VISA_library_path=kwargs['visa_library_path']
+                        )
+                        open_flag = True
+                        if self.interface.sim:
+                            simulation_fallback = True  # Что-то не так с адресами, драйвер упал в режим симуляции
+                    except ModuleNotFoundError:
+                        pass
+                    except ConnectionError:
+                        open_flag = False
             elif self.board_type == 'ITC_1T1R_probe_station':
                 try:
                     from RRAM_VISA_Drivers import ITC_1T1R_probe_station  # type: ignore

@@ -137,14 +137,18 @@ class Manager(Application):
         self.driver_attr = get_driver_attr(self.board_type)
         self.menu = Menu(parent=self)
         # Preparing tickets for use with driver
-        if self.ap_config['gui']['last_ticket_modes'] != self.driver_attr['modes']:
+        if self.driver_attr['modes'].startswith('visa'):
+            modes = 'visa'
+        else:
+            modes = self.driver_attr['modes']
+        if self.ap_config['gui']['last_ticket_modes'] != modes:
             with open(TICKET_TEMPLATE_PATH, 'r', encoding='utf-8') as file:
                 data = json.load(file)
-            tickets = data[self.driver_attr['modes']]
+            tickets = data[modes]
             for ticket in tickets:
                 with open(os.path.join(TICKET_PATH, ticket['name'] + '.json'), 'w', encoding='utf-8') as file:
                     json.dump(ticket, file, ensure_ascii=False, indent=4)
-            self.save_settings(board_type=self.board_type, last_ticket_modes=self.driver_attr['modes'])
+            self.save_settings(board_type=self.board_type, last_ticket_modes=modes)
 
     def connect(self, **kwargs) -> bool:
         """
@@ -158,7 +162,7 @@ class Manager(Application):
                               crossbar_serial = self.crossbar_serial,
                               config = self.ap_config)
         # подключаемся к плате
-        if 'com_port' in kwargs:
+        if self.driver_attr['connect_args'] == 'com_port':
             # подключение по COM порту
             if 'pico' in kwargs:
                 self.connected_flag, self.simulation_fallback = self.conn.open_port(com_port=kwargs['com_port'],
@@ -169,8 +173,13 @@ class Manager(Application):
             self.connected_flag, self.simulation_fallback = self.conn.open_port(com_port=kwargs['com_port'],
                                                       attempts = int(self.ap_config['connector']['attempts_to_kick']),
                                                       timeout = float(self.ap_config["connector"]["timeout"]))
-        elif 'visa_addresses' in kwargs:  # Подключение к VISA
+        elif self.driver_attr['connect_args'].startswith('visa_adr'):  # Подключение к VISA
+            if '+COM' in self.driver_attr['connect_args']:
+                com_port = kwargs['com_port']
+            else:
+                com_port = None
             self.connected_flag, self.simulation_fallback = self.conn.open_port(visa_addresses=kwargs['visa_addresses'], 
+                                                                                com_port=com_port,
                                                                                 visa_library_path = self.visa_library_path,
                                                                                 row_num=self.row_num,
                                                                                 col_num=self.col_num)

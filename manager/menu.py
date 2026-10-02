@@ -63,7 +63,7 @@ class Menu:
             self.disconnect_cell = lambda: None
             
         # Generators for VISA-instruments
-        elif self.parent.driver_attr['modes'] == 'visa':
+        elif self.parent.driver_attr['modes'].startswith('visa'):
             # Modes and their aliases
             self._modes = {
                 'prog_sync': 'Programming (sync)',
@@ -74,7 +74,6 @@ class Menu:
                 'smu_cc-cv': 'CC | CV (DC, async)',
                 'smu_cv-cc': 'CV | CC (DC, async)',
                 'smu_iv_current': 'Current Sweep (DC, async)',
-                'com_command': 'COM command'
             }
             # Generator functions for each mode
             self._smu_gen = SMUGen(parent=self, logger=self.parent.ap_logger)
@@ -87,7 +86,6 @@ class Menu:
                 'smu_cc-cv': self._smu_gen.smu_cc_cv,
                 'smu_cv-cc': self._smu_gen.smu_cv_cc,
                 'smu_iv_current': self._smu_gen.smu_iv_current,
-                'com_command': self._smu_gen.com_command
             }
             # UI fields necessary to configure this mode in Signal window (gui/widgets/SignalParametersConfig.py)
             self._ui_fields = {
@@ -99,8 +97,12 @@ class Menu:
                 'smu_cc-cv': 'volt_sweep, dir_to_curr, pw_to_int, -term',  # Dir sweep value is current
                 'smu_cv-cc': 'volt_sweep, rev_to_curr, pw_to_int, -term',  # Rev sweep value is current
                 'smu_iv_current': 'volt_sweep, dir_to_curr, rev_to_curr, pw_to_int, -term',  # Both dir and rev sweeps are for current
-                'com_command': 'com_command, -term, -dir-rev'
             }
+            # Adding other modes
+            if '+COM' in self.parent.driver_attr['modes']:
+                self._modes['com_command'] = 'COM command'
+                self._mode_functions['com_command'] = self._smu_gen.com_command
+                self._ui_fields['com_command'] = 'com_command, -term, -dir-rev'  # Disable terminator and dir-rev combobox
             # Setting crossbar scan generator (This group of drivers uses single ticket scanning) for crossbar window
             self.crossbar_scan_gen = self._smu_gen.crossbar_scan  # Single-ticket
             self.connect_cell_needed = True
@@ -151,5 +153,5 @@ class Menu:
     
     def set_connect_cell_need(self, connect_cell_need: bool) -> None:
         """Set if the task generator needs to generate connect/disconnect tasks"""
-        if self.parent.driver_attr['modes'] == 'visa':
+        if self.parent.driver_attr['modes'].startswith('visa'):
             self.connect_cell_needed = connect_cell_need 

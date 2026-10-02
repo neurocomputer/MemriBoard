@@ -62,6 +62,7 @@ DRIVERS = [
         ['rp5_rram_python',	       'RRAMPiDriver',      True,	       'standard', 'soft',            'multi-ticket',    None,	       'rpi',	        'rpi',	     None,	          None,             None,           'no_crossbar', False,       ],
         ['pico_client',            'MemriCORE',         True,          'standard', 'soft',            'multi-ticket',    'com_close',  'pico',          'pico',      None,            None,             'com_port',     None,          True,        ],
         ['ITC_1T1R_32x8_switched', 'RRAM_VISA_Drivers', True,	       'visa',     'hard',            'single-ticket',   'disconnect', 'tech_data',	    'visa',	     'visa',	      'visa',           'visa_adr',     None,          False,       ],
+        ['ITC_1T1R_32x8_switched_COM', 'RRAM_VISA_Drivers', True,      'visa+COM', 'hard',            'single-ticket',   'disconnect', 'tech_data',     'visa',      'visa',          'visa',           'visa_adr+COM', None,          False,       ],
         ['ITC_1T1R_probe_station', 'RRAM_VISA_Drivers', False,	       'visa',     'hard',            None,              'disconnect', 'tech_data',	    'visa',	     'visa',	      None,             'visa_adr',     None,          False,       ],
         ['ITC_probe_station',	   'RRAM_VISA_Drivers', False,	       'visa',     'hard',            None,              'disconnect', 'tech_data',	    'visa',	     'visa',	      None,             'visa_adr',     None,          False,       ],
     ]

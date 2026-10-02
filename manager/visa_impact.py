@@ -202,7 +202,7 @@ class VisaImpact:
     def config_com_command(self, task: dict) -> tuple:
         """Configure COM command mode (send a command to COM)"""
         flag, response = self.interface.config_COM_command(
-            command = task['com_command'],
+            command = task['command'],
             response_type = task['response_type']
         )
         self.log(flag, response, 'Configuring COM command error: ')

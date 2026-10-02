@@ -34,7 +34,7 @@ def plot_for_signal_graph(manager, ticket: dict, plot_type: str, ax: Axes, plot_
     """Plot the graph on the Signal window and return task count"""
     if manager.driver_attr['modes'] == 'standard':
         return plot_standard(manager, ticket, plot_type, ax, plot_limits, lang_pack)
-    elif manager.driver_attr['modes'] == 'visa':
+    elif manager.driver_attr['modes'].startswith('visa'):
         plotter = VisaPlotter(manager, ticket, plot_type, ax, plot_limits, lang_pack)
         return plotter.plot()
     else:

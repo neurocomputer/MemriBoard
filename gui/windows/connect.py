@@ -263,9 +263,9 @@ class ConnectDialog(QDialog):
                 self.show_core_settings_layout(True)
             else:
                 self.show_core_settings_layout(False)
-        elif get_driver_attr(combo_board_type)['connect_args'] == 'visa_adr':
+        elif get_driver_attr(combo_board_type)['connect_args'].startswith('visa_adr'):
             self.show_VISA_layout(combo_board_type)
-            self.show_com_settings_layout(False)
+            self.show_com_settings_layout('+COM' in get_driver_attr(combo_board_type)['connect_args'])
             self.show_core_settings_layout(False)
             self.ui.label_status.setText(self.lang_pack.get("status_visa"))
         else:
@@ -330,8 +330,13 @@ class ConnectDialog(QDialog):
                                 self.ui.label_status.setText("Core не выбран")    
                                 return
                         connected_flag = self.parent.man.connect(com_port=self.com_port)
-                    elif get_driver_attr(combo_board_type)['connect_args'] == 'visa_adr':
-                        connected_flag = self.parent.man.connect(visa_addresses=[self.visa_combo[i].currentText().strip() for i in range(5)])
+                    elif get_driver_attr(combo_board_type)['connect_args'].startswith('visa_adr'):
+                        visa_addresses = [self.visa_combo[i].currentText().strip() for i in range(5)]
+                        if '+COM' in get_driver_attr(combo_board_type)['connect_args']:
+                            connected_flag = self.parent.man.connect(visa_addresses=visa_addresses,
+                                                                     com_port=self.com_port)
+                        else:
+                            connected_flag = self.parent.man.connect(visa_addresses=visa_addresses)
                     else:
                         connected_flag = self.parent.man.connect()
                     if connected_flag:
