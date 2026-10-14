@@ -70,6 +70,8 @@ AVAILABLE_DRIVERS = [row[0] for row in DRIVERS[1:]]
 
 def get_driver_attr(driver: str) -> dict:
     """Get driver attributes"""    
+    if driver == 'offline':
+        return {attr: None for attr in DRIVERS[0][1:]}
     if driver not in AVAILABLE_DRIVERS:
         raise Exception(f'Unknown driver: {driver}')
     driver_index = np.where(driver == np.array(AVAILABLE_DRIVERS))[0][0] + 1

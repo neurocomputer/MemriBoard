@@ -134,6 +134,8 @@ class Manager(Application):
         Initialize board attributes
         """
         self.board_type = board_type
+        if board_type == 'offline':
+            return
         self.driver_attr = get_driver_attr(self.board_type)
         self.menu = Menu(parent=self)
         # Preparing tickets for use with driver
