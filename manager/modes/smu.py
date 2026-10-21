@@ -35,6 +35,7 @@ class SMUGen:
     def _prepare(self, terminate: dict) -> None:
         """Prepare parameters before generating tasks"""
         self.interrupt_flag = False
+        self.terminator_interrupt = False
         self.terminator = terminators[terminate['type']](terminate['value'])
         
         
@@ -60,6 +61,10 @@ class SMUGen:
     def _handle_exception(self, e: Exception) -> Generator[list, None, None]:
         """Handle exeption while generating"""
         self.logger.warning(f'Task_generator: {type(e).__name__}: {e}')
+        if str(e) == 'interrupt':  # Terminator interrupt
+            self.terminator_interrupt = True
+        else:
+            self.terminator_interrupt = False
         self.interrupt_flag = True
         yield
         
@@ -67,7 +72,10 @@ class SMUGen:
     def _check_interruption(self) -> Generator[list, None, None]:
         """Check if the experiment was interrupted and send panic flag"""
         if self.interrupt_flag:
-            task = {'mode_flag': 'panic', 'id': 0}
+            if self.terminator_interrupt:
+                task = {'mode_flag': 'terminator_interrupt', 'id': 0}
+            else:
+                task = {'mode_flag': 'panic', 'id': 0}
             yield [task, self.terminator]
             
             

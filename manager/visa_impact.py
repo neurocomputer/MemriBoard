@@ -32,6 +32,7 @@ class VisaImpact:
             'connect_cell': self.connect_cell,
             'standby': self.standby,
             'panic': self.panic,
+            'terminator_interrupt': self.terminator_interrupt,
             'need_stop': self.send_need_stop,
             'sense': self.sense,
             'config_std': self.config_std,
@@ -59,21 +60,21 @@ class VisaImpact:
             self.parent.logger.critical(add_error_info + str(response))
         
         
-    def connect_cell(self, task: dict) -> tuple:
+    def connect_cell(self, task: dict) -> int:
         """Connect cell of the crossbar"""
         flag, response = self.interface.connect_cell(wl=task['wl'], bl=task['bl'])
         self.log(flag, response)
         return int(flag)
     
     
-    def standby(self, task: dict) -> tuple:
+    def standby(self, task: dict) -> int:
         """Set instruments to standby mode"""
         flag, response = self.interface.standby()
         self.log(flag, response)
         return int(flag)
     
     
-    def panic(self, task: dict) -> tuple:
+    def panic(self, task: dict) -> int:
         """Stop the ongoing experiment"""
         self.parent.logger.info('Panic started for VISA-instruments')
         flag, response = self.interface.panic()
@@ -82,9 +83,20 @@ class VisaImpact:
         else:
             self.parent.logger.critical(f'Panic was not resolved!: {response}')
         return int(flag)
+
+
+    def terminator_interrupt(self, task: dict) -> int:
+        """Terminate current experiment without closing the switch matrix"""
+        self.parent.logger.info('Terminator interrupt sent to VISA-instruments')
+        flag, response = self.interface.panic(no_matrix = True)
+        if flag:
+            self.parent.logger.info('Interrupted successfully')
+        else:
+            self.parent.logger.critical(f'Could not interrupt the experiment!: {response}')
+        return int(flag)
     
     
-    def send_need_stop(self, task) -> tuple:
+    def send_need_stop(self, task) -> int:
         """Send need stop flag to the driver if it's stuck"""
         self.interface.stop_experiment()
         self.parent.logger.info('Need stop sent to the driver')
