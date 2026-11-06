@@ -489,8 +489,8 @@ class SMUGen:
             
             for _ in range(params['count']):
                 yield [config_task, self.terminator]
-                
-                yield [sense_task, self.terminator]
+                if params['response_type'] in ['Resistance']:
+                    yield [sense_task, self.terminator]
             
             yield from self._disconnect_cell()
         except Exception as e:

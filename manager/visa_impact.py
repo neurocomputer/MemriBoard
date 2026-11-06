@@ -5,7 +5,7 @@ import numpy as np
 from manager.service import r2a
 
 try:
-    from RRAM_VISA_Drivers import ITC_probe_station, ITC_1T1R_probe_station, ITC_1T1R_32x8_switched
+    from RRAM_VISA_Drivers import ITC_probe_station, ITC_1T1R_probe_station, ITC_1T1R_32x8_switched, ITC_1T1R_32x8_switched_COM
     drivers_available = True
 except ModuleNotFoundError:
     drivers_available = False
@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 class VisaImpact:
     """Class the implements Connector.impact() for visa drivers"""
     
-    interface: Union[ITC_probe_station, ITC_1T1R_probe_station, ITC_1T1R_32x8_switched]
+    interface: Union[ITC_probe_station, ITC_1T1R_probe_station, ITC_1T1R_32x8_switched, ITC_1T1R_32x8_switched_COM]
     
     def __init__(
         self,

@@ -596,9 +596,9 @@ class ApplyExp(QThread):
                                 # проверка прерывания тикета
                                 interrupt = task[1](result)
                                 self.last_voltage = task[0]['vol']
-                            if interrupt:
-                                    task_generator.throw(Exception("interrupt"))
-                                    continue
+                                if interrupt:
+                                        task_generator.throw(Exception("interrupt"))
+                                        continue
                         else:
                             self.flag_soft_cc = 1
                             self.parent.parent.man.ap_logger.critical(self.lang_pack.get("prog_stop"))
