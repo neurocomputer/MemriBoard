@@ -178,7 +178,10 @@ MemriDriverC/
 backup.db
 test.py
 models/
-tests/
+tests/*
+!tests/__init__.py
+!tests/test_simulator_backends.py
+!tests/benchmark_simulator_backends.py
 tickets/blank_1912.json
 tickets/blank_1913.json
 tickets/iv-curve-reversed_1914.json

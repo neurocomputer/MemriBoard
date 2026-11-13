@@ -65,6 +65,12 @@ class Connector:
         self.silent = silent
         self.logger = logger
         self.cb_type = cb_type
+        # Optional SIM acceleration. Real drivers retain their existing path.
+        self.simulator_backend = kwargs.get('simulator_backend', 'legacy')
+        if self.simulator_backend not in ('legacy', 'cpu', 'cuda'):
+            raise ValueError('simulator_backend must be legacy, cpu or cuda')
+        if cb_type != 'simulator' and self.simulator_backend != 'legacy':
+            raise ValueError('simulator_backend is only supported for simulator')
         self.board_type = board_type
         if driver_attr is None:
             self.driver_attr = get_driver_attr(board_type)
@@ -73,6 +79,13 @@ class Connector:
         # для симулятора
         if 'config' in kwargs:
             self.config = kwargs['config']
+        self._sim_board = None
+        self._sim_conversions = None
+        if cb_type == 'simulator' and self.simulator_backend != 'legacy':
+            # Explicit opt-in snapshot; recreate Connector after changing INI.
+            self._sim_board = dict(self.config['board'])
+            from simulator.conversions import SimulatorConversions
+            self._sim_conversions = SimulatorConversions(self._sim_board)
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
         if task_format.lower() not in ['dac', 'si']:
@@ -115,7 +128,7 @@ class Connector:
         if self.cb_type == 'simulator':
             # загрузка симулятора
             from simulator.src import BoardSimulator
-            self.interface = BoardSimulator()
+            self.interface = BoardSimulator(backend=self.simulator_backend)
             open_flag = self.interface.connect(self.crossbar_serial)
         elif self.cb_type == 'real':
             # для плат на базе Arduino
@@ -522,6 +535,24 @@ class Connector:
             self.logger.info('Received data: %s', str(res))
         return res
 
+    def impact_many(self, tasks: list[dict]) -> list[tuple]:
+        """Execute an ordered batch through Connector, preserving result order.
+
+        CUDA SIM can batch consecutive mode10 commands. Other backends and
+        mixed command batches use ordinary impact. Programming is never moved
+        across a read. Use bounded batches to limit GPU memory consumption.
+        """
+        if len(tasks) > 4096:
+            raise ValueError('At most 4096 commands per batch')
+        if not tasks:
+            return []
+        if (self.cb_type == 'simulator' and self.simulator_backend == 'cuda'
+                and all(task['mode_flag'] == 10 for task in tasks)):
+            converted = [self.task_volt_to_dac({**task,'vol':list(task['vol'])}) for task in tasks]
+            adc = self.interface.mode_mvm_many([(t['wl'],t['vol']) for t in converted])
+            return [(self.a2r(value),int(task['id']),int(value)) for value,task in zip(adc,converted)]
+        return [self.impact({**task,'vol':list(task['vol']) if isinstance(task['vol'],list) else task['vol']}) for task in tasks]
+
     def custom_impact(self, command: str, timeout: float, attempts: int):
         """
         Кастомная команда для отладки
@@ -599,18 +630,24 @@ class Connector:
             
     def v2d(self, vol: float) -> int:
         """Convert voltage to DAC counts (integer)"""
-        return v2d(int(self.config['board']['dac_bit']), 
-                   float(self.config['board']['vol_ref_dac']), 
+        if self._sim_conversions is not None:
+            return self._sim_conversions.encode(vol)
+        board = self._sim_board if self._sim_board is not None else self.config['board']
+        return v2d(int(board['dac_bit']),
+                   float(board['vol_ref_dac']),
                    abs(float(vol)))
         
     def a2r(self, adc: int) -> int:
         """Convert resistance from ADC voltage to Ohms (integer)"""
-        return a2r(float(self.config['board']['gain']),
-                   float(self.config['board']['res_load']),
-                   float(self.config['board']['vol_read']),
-                   int(self.config['board']['adc_bit']),
-                   float(self.config['board']['vol_ref_adc']),
-                   float(self.config['board']['res_switches']),
+        if self._sim_conversions is not None:
+            return self._sim_conversions.resistance(adc)
+        board = self._sim_board if self._sim_board is not None else self.config['board']
+        return a2r(float(board['gain']),
+                   float(board['res_load']),
+                   float(board['vol_read']),
+                   int(board['adc_bit']),
+                   float(board['vol_ref_adc']),
+                   float(board['res_switches']),
                    int(adc))
             
     def task_volt_to_dac(self, task: dict, retain_key_order: bool = False) -> dict:
@@ -643,4 +680,4 @@ class Connector:
             if key in task:
                 ordered_task[key] = task[key]
         return ordered_task
-    
+
