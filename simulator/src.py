@@ -137,7 +137,7 @@ class BoardSimulator:
     serial: str
     crossbar: list
 
-    def __init__(self):
+    def __init__(self, backend='legacy'):
         """
         Создание симулятора
         """
@@ -146,6 +146,17 @@ class BoardSimulator:
             self.config.read(os.path.join('simulator','simulator_settings.ini'), encoding="utf-8")  # читаем конфиг
         else:
             print("simulator_settings.ini не найден в", os.getcwd())
+        self.backend = backend
+        self.read_engine = None
+        self.conversions = None
+        if backend != 'legacy':
+            # Fixed parameters for this connection; no repeated interpolation.
+            self.config = {'board': dict(self.config['board'])}
+            from simulator.conversions import SimulatorConversions
+            self.conversions = SimulatorConversions(self.config['board'])
+        if backend == 'cuda':
+            from simulator.cuda_read import CudaRead
+            self.read_engine = CudaRead()
 
     def connect(self, crossbar_serial):
         """
@@ -206,10 +217,11 @@ class BoardSimulator:
         """
         vol = []
         for item in vols:
-            vol.append(d2v(int(self.config['board']['dac_bit']),
+            vol.append(self.conversions.decode(item) if self.conversions is not None else d2v(int(self.config['board']['dac_bit']),
                         float(self.config['board']['vol_ref_dac']),
                         item))
-        res = send_mode_mvm_to_crossbar(self.crossbar,
+        operation = send_mode_mvm_to_crossbar if self.read_engine is None else self.read_engine.mvm
+        res = operation(self.crossbar,
                                         vol = vol,
                                         wl = wl,
                                         gain = float(self.config['board']['gain']),
@@ -217,3 +229,12 @@ class BoardSimulator:
                                         adc_bit = int(self.config['board']['adc_bit']),
                                         vol_ref_adc = float(self.config['board']['vol_ref_adc']))
         return (res, task_id)
+
+    def mode_mvm_many(self, commands):
+        """Internal SIM batch; Connector remains the public entry point."""
+        board = self.config['board']
+        decoded = [(wl,[d2v(int(board['dac_bit']),float(board['vol_ref_dac']),v)
+                        for v in volts]) for wl,volts in commands]
+        return self.read_engine.mvm_batch(self.crossbar,decoded,
+            gain=float(board['gain']),sum_gain=float(board['sum_gain']),
+            adc_bit=int(board['adc_bit']),vol_ref_adc=float(board['vol_ref_adc']))
