@@ -7,6 +7,7 @@
 import os
 import pickle
 import random
+from pathlib import Path
 from typing import Union
 from configparser import ConfigParser
 import numpy as np
@@ -141,9 +142,11 @@ class BoardSimulator:
         """
         Создание симулятора
         """
-        if os.path.exists(os.path.join('simulator','simulator_settings.ini')):
+        settings_path = (Path(__file__).with_name('simulator_settings.ini') if backend != 'legacy'
+                         else Path('simulator')/'simulator_settings.ini')
+        if settings_path.is_file():
             self.config = ConfigParser()
-            self.config.read(os.path.join('simulator','simulator_settings.ini'), encoding="utf-8")  # читаем конфиг
+            self.config.read(settings_path, encoding="utf-8")  # читаем конфиг
         else:
             print("simulator_settings.ini не найден в", os.getcwd())
         self.backend = backend

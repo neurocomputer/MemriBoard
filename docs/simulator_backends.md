@@ -26,6 +26,9 @@ MVM responses. It does not change device equations, stochastic updates, pulse
 length, ADC/DAC conversions, per-write persistence, or command order. Recreate
 the Connector after changing its configuration. Simulator INI is likewise
 snapshotted on simulator construction. `legacy` preserves dynamic lookup.
+Opt-in modes resolve simulator INI relative to the simulator module, allowing
+headless callers to keep their own working directory. Legacy retains its
+existing working-directory lookup.
 
 `cuda` additionally evaluates subthreshold mode10 device currents with optional
 CUDA-enabled PyTorch and FP64 tensors. PyTorch is imported only when CUDA is
