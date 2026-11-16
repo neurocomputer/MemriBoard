@@ -79,13 +79,19 @@ class Connector:
         # для симулятора
         if 'config' in kwargs:
             self.config = kwargs['config']
-        self._sim_board = None
-        self._sim_conversions = None
         if cb_type == 'simulator' and self.simulator_backend != 'legacy':
             # Explicit opt-in snapshot; recreate Connector after changing INI.
             self._sim_board = dict(self.config['board'])
             from simulator.conversions import SimulatorConversions
             self._sim_conversions = SimulatorConversions(self._sim_board)
+            # Converter functions
+            self.v2d = self._sim_conversions.encode
+            self.a2r = self._sim_conversions.resistance
+        else:
+            self._sim_board = None
+            self._sim_conversions = None
+            self.v2d = self._v2d
+            self.a2r = self._a2r
         if 'crossbar_serial' in kwargs:
             self.crossbar_serial = kwargs['crossbar_serial']
         if task_format.lower() not in ['dac', 'si']:
@@ -628,26 +634,20 @@ class Connector:
         else:
             self.request_id = 0
             
-    def v2d(self, vol: float) -> int:
+    def _v2d(self, vol: float) -> int:
         """Convert voltage to DAC counts (integer)"""
-        if self._sim_conversions is not None:
-            return self._sim_conversions.encode(vol)
-        board = self._sim_board if self._sim_board is not None else self.config['board']
-        return v2d(int(board['dac_bit']),
-                   float(board['vol_ref_dac']),
+        return v2d(int(self.config['board']['dac_bit']), 
+                   float(self.config['board']['vol_ref_dac']), 
                    abs(float(vol)))
         
-    def a2r(self, adc: int) -> int:
+    def _a2r(self, adc: int) -> int:
         """Convert resistance from ADC voltage to Ohms (integer)"""
-        if self._sim_conversions is not None:
-            return self._sim_conversions.resistance(adc)
-        board = self._sim_board if self._sim_board is not None else self.config['board']
-        return a2r(float(board['gain']),
-                   float(board['res_load']),
-                   float(board['vol_read']),
-                   int(board['adc_bit']),
-                   float(board['vol_ref_adc']),
-                   float(board['res_switches']),
+        return a2r(float(self.config['board']['gain']),
+                   float(self.config['board']['res_load']),
+                   float(self.config['board']['vol_read']),
+                   int(self.config['board']['adc_bit']),
+                   float(self.config['board']['vol_ref_adc']),
+                   float(self.config['board']['res_switches']),
                    int(adc))
             
     def task_volt_to_dac(self, task: dict, retain_key_order: bool = False) -> dict:
