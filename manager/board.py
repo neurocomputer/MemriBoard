@@ -45,6 +45,7 @@ class Connector:
         board_type: str, 
         driver_attr: Union[dict, None] = None, 
         task_format: str = 'SI',
+        simulator_backend: str = 'legacy',
         **kwargs
     ):
         """Connector class used for communicating with the measurement board.
@@ -61,12 +62,17 @@ class Connector:
             task_format (str, optional): Format of the tasks sent to connector: 
                 'dac': voltage (task['vol']) in DAC count, pulse width is set by 't_us' and 't_ms'.
                 'SI': voltage (task['vol']) in Volts, pulse width is set by 'pulse_width' key (in seconds).
+            simulator_backend (str, optional): Simulator backend:
+                'legacy': Legacy format for compatibility.
+                'cpu': CPU backend, converter functions support caching.
+                'cuda': CUDA backend (GPU), converter functions support caching.
+                Defaults to 'legacy'.
         """
         self.silent = silent
         self.logger = logger
         self.cb_type = cb_type
         # Optional SIM acceleration. Real drivers retain their existing path.
-        self.simulator_backend = kwargs.get('simulator_backend', 'legacy')
+        self.simulator_backend = simulator_backend
         if self.simulator_backend not in ('legacy', 'cpu', 'cuda'):
             raise ValueError('simulator_backend must be legacy, cpu or cuda')
         if cb_type != 'simulator' and self.simulator_backend != 'legacy':
